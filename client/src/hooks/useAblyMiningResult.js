@@ -25,7 +25,6 @@ export function useAblyMiningResult() {
                 avatar: avatar,
                 bet: bet,
                 win: win,
-                turn: turn,
                 date: date,
                 isWin: isWin,
             };

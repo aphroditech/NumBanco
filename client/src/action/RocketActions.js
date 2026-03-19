@@ -1,6 +1,6 @@
 import axiosInstance from "../api/axiosConfig";
 
-export const rocketBet = async (data, dispatch) => {
+export const rocketBet = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/rocket/bet', data); // data contains bet, level
         if(res.data.balance != null) {
@@ -12,11 +12,14 @@ export const rocketBet = async (data, dispatch) => {
         return res.data.multiplier || 0;
     } catch (error) {
         console.error(error);
+        if (error.response?.status === 401 && history) {
+            history.push("/auth/landing");
+        }
         return 0;
     }
 };
 
-export const rocketShotResult = async (data, dispatch) => {
+export const rocketShotResult = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/rocket/shotResult', data); // data contains isWin, betAmount, level. The goal is to save the result to the database
         if(res.data.balance != null) {
@@ -27,10 +30,13 @@ export const rocketShotResult = async (data, dispatch) => {
         }   
     } catch (error) {
         console.error(error);
+        if (error.response?.status === 401 && history) {
+            history.push("/auth/landing");
+        }
     }
 };
 
-export const getRocketResults = async (history) => {
+export const getRocketResults = (history) => async () => {
     try {
         const res = await axiosInstance.get('/rocket/getRocketResults');
         return res.data;

@@ -1,6 +1,6 @@
 import axiosInstance from "../api/axiosConfig";
 
-export const checkCanWin = async (data, dispatch) => {
+export const checkCanWin = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/mining/checkCanWin', data);
         if (res.data.user != null) {
@@ -12,11 +12,14 @@ export const checkCanWin = async (data, dispatch) => {
         return res.data.M1uXj3sZpU; // if true, can win, if false, can't win
     } catch (error) {
         console.error(error);
+        if (error.response?.status === 401 && history) {
+            history.push("/auth/landing");
+        }
         return null;
     }
 }
 
-export const resultGameMining = async (data, dispatch) => {
+export const resultGameMining = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/mining/resultGameMining', data);
         if (res.data.user != null) {
@@ -33,11 +36,14 @@ export const resultGameMining = async (data, dispatch) => {
         }
     } catch (error) {
         console.error(error);
+        if (error.response?.status === 401 && history) {
+            history.push("/auth/landing");
+        }
         return null;
     }
 }
 
-export const getMiningHistory = () => async (dispatch) => {
+export const getMiningHistory = (history) => async (dispatch) => {
     try {
         const res = await axiosInstance.get('/mining/getMiningHistory');
         dispatch({
@@ -46,15 +52,21 @@ export const getMiningHistory = () => async (dispatch) => {
         });
     } catch (error) {
         console.error(error);
+        if (error.response?.status === 401 && history) {
+            history.push("/auth/landing");
+        }
     }
 }
 
-export const getMiningResult = () => async () => {
+export const getMiningResult = (history) => async () => {
     try {
         const res = await axiosInstance.get('/mining/getMiningResult');
         return res.data;
     } catch (error) {
         console.error(error);
+        if (error.response?.status === 401 && history) {
+            history.push("/auth/landing");
+        }
         return null;
     }
 }
