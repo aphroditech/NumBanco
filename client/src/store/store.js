@@ -23,7 +23,13 @@ const store = configureStore({
   },
 
   // 🔐 Disable Redux DevTools in production
-  devTools: process.env.MY_REACRT_VAR !== "production",
+  devTools:
+    process.env.MY_REACRT_VAR !== "production"
+      ? {
+          serialize: false,
+          trace: false,
+        }
+      : false,
 
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

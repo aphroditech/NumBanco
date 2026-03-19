@@ -15,6 +15,7 @@ export const userActive = async () => {
         const pumpingUsers = users.filter(user => (user.active === 6)).length + 270;
         const gravityUsers = users.filter(user => (user.active === 7)).length + 100;
         const doveUsers = users.filter(user => (user.active === 8)).length + 123;
+        const cocoUsers = users.filter(user => (user.active === 10)).length + 88;
 
         return {
             offlineUsers,
@@ -26,7 +27,8 @@ export const userActive = async () => {
             otherPageUsers,
             pumpingUsers,
             gravityUsers,
-            doveUsers
+            doveUsers,
+            cocoUsers,
         }
     } catch (err) {
         console.log("Error fetching active users:", err);

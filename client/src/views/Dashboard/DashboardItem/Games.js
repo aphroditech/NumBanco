@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
 import {
@@ -21,21 +21,77 @@ import rubic from "assets/img/Games/dice5.png";
 import pumping from "assets/img/Games/pumping.png";
 import gravity from "assets/img/Games/gravity.png";
 import dove from "assets/img/Games/dove.png"
+import coco from "assets/img/Games/coco.png"
+
+const DEFAULT_DISPLAY_TICK_MS = 3000;
+const DISPLAY_RANGE_ABOVE_BASE = 10;
+
+const DASHBOARD_GAMES = [
+    { img: tierA, name: "NumBanco Tier A", path: "/numbanco/tierA", reduxKey: "tierAUsers", tickMs: 4200 },
+    { img: tierB, name: "NumBanco Tier B", path: "/numbanco/tierB", reduxKey: "tierBUsers", tickMs: 4800 },
+    { img: tierC, name: "NumBanco Tier C", path: "/numbanco/tierC", reduxKey: "tierCUsers", tickMs: 5500 },
+    { img: rubic, name: "Rubic", path: "/game/rubic", reduxKey: "rubicUsers", tickMs: 6000 },
+    { img: pumping, name: "Pumping", path: "/game/pumping", reduxKey: "pumpingUsers", tickMs: 3800 },
+    { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
+    { img: dove, name: "Dove Cross", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
+    { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
+];
+
+function stepOneGameDisplay(path, reduxKey, prev, au) {
+    const base = Number(au[reduxKey]) || 0;
+    const min = base;
+    const max = base + DISPLAY_RANGE_ABOVE_BASE;
+    let cur = prev[path] ?? base;
+    cur = Math.min(max, Math.max(min, cur));
+    let delta = Math.random() < 0.5 ? -1 : 1;
+    if (cur <= min) delta = 1;
+    else if (cur >= max) delta = -1;
+    return { ...prev, [path]: cur + delta };
+}
+
 function Games() {
     const history = useHistory();
     const activeUsers = useSelector((state) => state.user.activeUsers);
+    const activeUsersRef = useRef(activeUsers);
+    activeUsersRef.current = activeUsers;
+    const [displayCounts, setDisplayCounts] = useState(() => ({}));
 
-    const games = [
-        { img: tierA, name: "NumBanco Tier A", color: "#38A169", path: "/numbanco/tierA", activeUsers: activeUsers['tierAUsers'] },
-        { img: tierB, name: "NumBanco Tier B", color: "#805AD5", path: "/numbanco/tierB", activeUsers: activeUsers['tierBUsers'] },
-        { img: tierC, name: "NumBanco Tier C", color: "#D69E2E", path: "/numbanco/tierC", activeUsers: activeUsers['tierCUsers'] },
-        { img: rubic, name: "Rubic", color: "#ed7ecc", path: "/game/rubic", activeUsers: activeUsers['rubicUsers']},
-        { img: pumping, name: "Pumping", color: "#DD6B20", path: "/game/pumping", activeUsers: activeUsers['pumpingUsers']},
-        { img: gravity, name: "Gravity", color: "#dd55f2", path: "/game/gravity", activeUsers: activeUsers['gravityUsers']},
-        { img: dove, name: "Dove Cross", color: "#f26196", path: "/game/dove", activeUsers: activeUsers['doveUsers']},
-    ];
+    useEffect(() => {
+        setDisplayCounts((prev) => {
+            const next = { ...prev };
+            for (const g of DASHBOARD_GAMES) {
+                const base = Number(activeUsers[g.reduxKey]) || 0;
+                const min = base;
+                const max = base + DISPLAY_RANGE_ABOVE_BASE;
+                const cur = prev[g.path] ?? base;
+                next[g.path] = Math.min(max, Math.max(min, cur));
+            }
+            return next;
+        });
+    }, [activeUsers]);
 
-  return (
+    useEffect(() => {
+        const ids = DASHBOARD_GAMES.map((g) => {
+            const ms = g.tickMs ?? DEFAULT_DISPLAY_TICK_MS;
+            return setInterval(() => {
+                const au = activeUsersRef.current;
+                setDisplayCounts((prev) => stepOneGameDisplay(g.path, g.reduxKey, prev, au));
+            }, ms);
+        });
+        return () => ids.forEach(clearInterval);
+    }, []);
+
+    const games = useMemo(
+        () =>
+            DASHBOARD_GAMES.map((g) => ({
+                ...g,
+                displayUsers:
+                    displayCounts[g.path] ?? (Number(activeUsers[g.reduxKey]) || 0),
+            })),
+        [activeUsers, displayCounts]
+    );
+
+    return (
         <Grid>
             <SimpleGrid
                 columns={{ sm: 2, md: 3, lg: 3, xl: 3, "1625px": 6, "2xl": 6 }}
@@ -132,7 +188,7 @@ function Games() {
                                 >
                                     <Icon as={FaUser} color="white" w={5} h={5} mr="6px" />
                                     <Box color="white" fontSize="sm" fontWeight="bold">
-                                        {game.activeUsers || 0}
+                                        {game.displayUsers || 0}
                                     </Box>
                                 </Flex>
                             </Box>
