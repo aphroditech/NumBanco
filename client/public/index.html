@@ -159,7 +159,6 @@
   <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet" />
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="%PUBLIC_URL%/index.css" />
@@ -177,11 +176,13 @@
   <link rel="shortcut icon" type="image/x-icon" href="./favicon.ico" />
   <style>
     @import url(https://cdn.jsdelivr.net/npm/@xz/fonts@1/serve/plus-jakarta-display.min.css);
+    @import url(https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&display=swap);
 
     body {
       font-family: "Plus Jakarta Display", sans-serif;
     }
   </style>
+
 </head>
 <script>
   function initFreshdesk() {
@@ -191,9 +192,9 @@
       widgetId: "01KK9K6A89AR5CW45ADFWA3GD9"
     });
   }
-  
-  function initialize(i,t){var e;i.getElementById(t)?initFreshdesk():((e=i.createElement("script")).id=t,e.async=!0,e.src="https://numexa.freshdesk.com/webchat/js/widget.js",e.onload=initFreshdesk,i.head.appendChild(e))}function initiateCall(){initialize(document,"Freshdesk-js-sdk")}window.addEventListener?window.addEventListener("load",initiateCall,!1):window.attachEvent("load",initiateCall,!1);
-  </script>
+
+  function initialize(i, t) { var e; i.getElementById(t) ? initFreshdesk() : ((e = i.createElement("script")).id = t, e.async = !0, e.src = "https://numexa.freshdesk.com/webchat/js/widget.js", e.onload = initFreshdesk, i.head.appendChild(e)) } function initiateCall() { initialize(document, "Freshdesk-js-sdk") } window.addEventListener ? window.addEventListener("load", initiateCall, !1) : window.attachEvent("load", initiateCall, !1);
+</script>
 
 <body>
   <div id="root"></div>

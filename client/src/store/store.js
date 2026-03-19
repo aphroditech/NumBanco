@@ -7,6 +7,7 @@ import { notificationReducer } from "../reducers/notificationReducer";
 import { myBetIdsReducer } from "../reducers/myBetIdsReducer";
 import { slideIndexReducer } from "../reducers/slideIndexReducer";
 import { upDownReducer } from "../reducers/upDownReducer";
+import { miningHistoryReducer } from "../reducers/miningHistoryReducer";
 
 const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ const store = configureStore({
     notifications: notificationReducer,
     slideIndex: slideIndexReducer,
     upDown: upDownReducer,
+    miningHistory: miningHistoryReducer,
   },
 
   // 🔐 Disable Redux DevTools in production

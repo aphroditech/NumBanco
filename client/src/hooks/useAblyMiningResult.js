@@ -1,0 +1,50 @@
+import { useEffect, useState } from "react";
+import ablyClient from "../ably/ablyClient";
+
+const MAX_ROWS = 12;
+
+export function useAblyMiningResult() {
+    const [miningResults, setMiningResults] = useState([]);
+
+    useEffect(() => {
+        if (!ablyClient) {
+            console.error("❌ [useAblyMiningResult] Ably client is not initialized.");
+            return;
+        }
+
+        const channel = ablyClient.channels.get("miningResult");
+
+        const handleMessage = (message) => {
+            const data = message?.data;
+            if (!data) return;
+
+            const { userName, avatar, isWin, bet, turn, win, date } = data;
+
+            const row = {
+                userName: userName,
+                avatar: avatar,
+                bet: bet,
+                win: win,
+                turn: turn,
+                date: date,
+                isWin: isWin,
+            };
+
+            setMiningResults((prev) => {
+                const next = [row, ...prev];
+                return next.slice(0, MAX_ROWS);
+            });
+        };
+
+        channel.subscribe("MINING_RESULT", handleMessage);
+
+        return () => {
+            channel.unsubscribe("MINING_RESULT", handleMessage);
+        };
+    }, []);
+
+    return {
+        miningResults,
+        setMiningResults,
+    };
+}

@@ -30,6 +30,9 @@ import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
 import CloudDownloadRoundedIcon from '@mui/icons-material/CloudDownloadRounded';
 import CasinoIcon from '@mui/icons-material/Casino';
 import TwitterIcon from '@mui/icons-material/Twitter';
+import PlinkoPage from "views/Plinko/Plinko";
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 
 import SupportPage from "views/Support/Support";
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -39,6 +42,9 @@ import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
 import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
+
+import Mining from "views/Mining/Mining";
+import RocketShotPage from "views/RocketShot/RocketShot"
 
 import {
   DocumentIcon,
@@ -99,6 +105,20 @@ var dashRoutes = [
     name: "DOVE CROSS GAME",
     icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
+    layout: "/game",
+  },
+  {
+    path: "/mining",
+    name: "JACKAL",
+    icon: <ImageSearchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Mining,
+    layout: "/game",
+  },
+  {
+    path: "/rocket-shot",
+    name: "ROCKET SHOT",
+    icon: <RocketLaunchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RocketShotPage,
     layout: "/game",
   },
   {

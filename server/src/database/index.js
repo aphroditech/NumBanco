@@ -8,6 +8,8 @@ import { initializePumpingMultis } from './pumpingMultis.js';
 import { initializeGravityBot } from './initGravityBot.js';
 import { initializeSetting } from './initSetting.js';
 import { initDoveSetting } from './initDoveSetting.js';
+import { initMiningSetting } from './initMiningSetting.js';
+import { initRocketSetting } from './initRocket.js';
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
 
@@ -22,6 +24,8 @@ export const initializeDatabase = async () => {
     await initializeGravityBot();
     await initializeSetting();
     await initDoveSetting();
+    await initMiningSetting();
+    await initRocketSetting();
 
     console.log('✅ Database initialization complete');
 };

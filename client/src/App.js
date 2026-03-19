@@ -80,6 +80,7 @@ const App = () => {
                 if (isMounted) {
                     setIsLoading(true);
                 }
+                await getUserData(dispatch);
                 await getActiveUsers(dispatch);
             } catch (error) {
                 console.error("Failed to fetch user data:", error);
