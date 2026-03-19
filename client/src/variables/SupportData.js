@@ -1,0 +1,16 @@
+export const SUPPORT_DATA = [
+    { question: "How do I reset my password?", answer: "Go to the profile page and click 'Password Tab'. Type your old password and your new password. Also you have to confirm your new password.", tag: "Account" },
+    { question: "Why is my deposit pending?", answer: "Deposits may remain pending due to network congestion or incorrect transaction details. Once confirmed on the blockchain, your balance will update automatically.", tag: "Payments" },
+    { question: "What is the Medal feature?", answer: "The Medal feature rewards users for their total betting activity. The more you bet, the higher your medal and the better rewards you can earn. If your total bet amount is more than 100 you will get plus medal. If the amount is more than 1000 then you will get pro medal", tag: "medal"},
+    { question: "What kind of rewards do Plus and Pro Medals provide?", answer: "Rewards may include good. The higher your medal, the better the rewards. ", tag: "medal"},
+    { question: "How long do withdrawals take?", answer: "Withdrawals are usually processed within 1–2 minutes. Blockchain confirmation time may vary depending on network conditions.", tag: "Payments" },
+    { question: "Why was my withdrawal rejected?", answer: "Withdrawals can be rejected due to incorrect wallet address, insufficient balance, or security verification issues. You can only withdraw if you have already deposited at least $10.", tag: "Payments" },
+    { question: "How can I use the affiliation program?", answer: "Go to the Affiliation page and click 'Share Affiliate Link'. Send it to users you want to refer and start earning instantly.", tag: "Affiliate" },
+    { question: "How does the affiliate program work?", answer: "You earn 1–5% commission when referred users deposit. Details are available on the affiliation page.", tag: "Affiliate" },
+    { question: "How do I enable 2FA?", answer: "Go to Profile → Security → Enable Two-Factor Authentication and follow the steps.", tag: "Security" },
+    { question: "My account is locked. What should I do?", answer: "Inactive accounts for 15 days may be blocked. Contact support to restore access.", tag: "Account" },
+    { question: "When can I not withdraw money?", answer: "Only money earned from betting can be withdrawn. Place bets to unlock withdrawals.", tag: "Rules" },
+    { question: "How are rewards calculated?", answer: "Rewards equal 2% of your total bets. After payout, the bet amount resets.", tag: "Rewards" },
+    { question: "How long do I have to wait for daily loot?", answer: "Daily loot can be claimed every 24 hours. Early clicks reset the timer.", tag: "Rewards" },
+    { question: "What does the balance graph represent?", answer: "It shows your total balance at the end of each day over time.", tag: "Dashboard" },
+];

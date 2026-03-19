@@ -1,0 +1,21 @@
+{
+  "short_name": "NumBanco",
+  "name": "NumBanco - Transparent and Fair Gaming Platform",
+  "description": "A modern number-based gaming platform built for speed, transparency, and smart play. Fast-paced rounds, provably fair systems, and seamless crypto experience.",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "categories": ["games", "entertainment"],
+  "lang": "en-US",
+  "dir": "ltr"
+}

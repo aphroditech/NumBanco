@@ -1,0 +1,270 @@
+:root {
+  --toastify-color-success: #485051 !important;
+  --toastify-color-info: #485051 !important;
+  --toastify-color-success: #485051 !important;
+  --toastify-color-warning: #485051 !important;
+  --toastify-color-error: #485051 !important;
+}
+
+.Toastify__toast-theme--light {
+  background: #2a2d2e !important;
+  color: #aeb6b7 !important;
+  font-size: 13px !important;
+}
+
+.Toastify__close-button--light {
+  color: #eee !important;
+  opacity: 0.3 !important;
+}
+
+.star-button {
+  background: #ffcc00;
+  border: none;
+  padding: 12px 25px;
+  font-size: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+  position: relative;
+  transition: 0.3s;
+  box-shadow: 0 0 10px #ffd700, 0 0 20px #ffa500;
+}
+
+.star-button:hover {
+  box-shadow: 0 0 15px #fff,
+    0 0 30px #ffd700,
+    0 0 45px #ffae00;
+  transform: scale(1.05);
+}
+
+.star-button::after {
+  content: "✨";
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  font-size: 18px;
+  opacity: 0;
+  animation: sparkle 1.5s infinite;
+}
+
+@keyframes sparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(0deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.3) rotate(180deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.5) rotate(360deg);
+  }
+}
+
+.mr-3 {
+  margin-right: 30px;
+}
+
+
+
+.countdown-animation {
+  animation: grow-shrink 1s infinite alternate, flash 1s infinite alternate;
+}
+
+@keyframes grow-shrink {
+  0% {
+    font-size: 1.5rem;
+  }
+
+  100% {
+    font-size: 2.5rem;
+  }
+}
+
+@keyframes flash {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes borderPulse {
+  0% {
+    box-shadow:
+      0 0 6px rgba(80, 110, 255, 0.45),
+      0 0 14px rgba(80, 110, 255, 0.35),
+      0 0 28px rgba(80, 110, 255, 0.22);
+  }
+
+  50% {
+    box-shadow:
+      0 0 12px rgba(120, 150, 255, 0.85),
+      0 0 26px rgba(120, 150, 255, 0.6),
+      0 0 48px rgba(120, 150, 255, 0.4);
+  }
+
+  100% {
+    box-shadow:
+      0 0 6px rgba(80, 110, 255, 0.45),
+      0 0 14px rgba(80, 110, 255, 0.35),
+      0 0 28px rgba(80, 110, 255, 0.22);
+  }
+}
+
+
+.neon-hover {
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.neon-hover:hover {
+  color: #00f6ff;
+  text-shadow:
+    0 0 5px #00f6ff,
+    0 0 10px #00f6ff,
+    0 0 20px #7a00ff,
+    0 0 30px #ff00ff;
+}
+
+
+.m-auto {
+  margin: auto !important;
+}
+
+@keyframes shine {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px #274fd1) drop-shadow(0 0 20px #274fd1);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 20px #274fd1) drop-shadow(0 0 40px #274fd1);
+  }
+}
+
+.animate-shine {
+  animation: shine 2s infinite ease-in-out;
+}
+
+.real_th_font {
+  font-family: inherit !important;
+}
+
+.gt_selector {
+  background-color: transparent !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 9999px !important;
+  padding: 6px 14px !important;
+  cursor: pointer;
+  outline: none;
+  width: 110px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.gtranslate_wrapper select option {
+  color: #ffffff;
+  background: #323738;
+  border-radius: 5px !important;
+}
+
+/* Hide "Select Language" option from dropdown */
+.gtranslate_wrapper select option[value=""],
+.gtranslate_wrapper select option:first-child[value=""],
+[id^="gtranslate_wrapper_"] select option[value=""],
+[id^="gtranslate_wrapper_"] select option:first-child[value=""] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Wrapper and dropdown visibility - ensure widget displays */
+[id^="gtranslate_wrapper_"] .gt_container,
+.gtranslate_wrapper .gt_container {
+  display: inline-block !important;
+  visibility: visible !important;
+}
+
+.gtranslate_wrapper select {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.gtranslate_wrapper,
+[id^="gtranslate_wrapper_"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: auto !important;
+  min-width: 100px !important;
+  min-height: 36px !important;
+  height: auto !important;
+}
+
+/* Adding a fallback background and padding */
+.gtranslate_wrapper select {
+  background-color: transparent !important;
+  color: white !important;
+  padding: 6px 10px !important;
+  /* Add padding to make the dropdown more visible */
+  border-radius: 5px !important;
+}
+
+
+.responsive-margin {
+  margin-left: calc(13%);
+}
+
+.ml-10 {
+  margin-right: 10px !important;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.6);
+  }
+
+  50% {
+    box-shadow: 0 0 22px rgba(168, 85, 247, 1);
+  }
+
+  100% {
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.6);
+  }
+}
+
+/* Custom scrollbar styling for Pumping modal */
+.pumping-modal-content::-webkit-scrollbar,
+.pumping-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pumping-modal-content::-webkit-scrollbar-track,
+.pumping-modal-body::-webkit-scrollbar-track {
+  background: #1a1d1e;
+  border-radius: 4px;
+}
+
+.pumping-modal-content::-webkit-scrollbar-thumb,
+.pumping-modal-body::-webkit-scrollbar-thumb {
+  background: #323738;
+  border-radius: 4px;
+  border: 1px solid #323738;
+}
