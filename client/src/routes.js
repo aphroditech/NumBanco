@@ -78,7 +78,7 @@ var dashRoutes = [
   {
     // redirect: true,
     path: "/rubic",
-    name: "RUBIC GAME",
+    name: "RUBIC",
     icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: RubicPage,
     layout: "/game",
@@ -86,7 +86,7 @@ var dashRoutes = [
   {
     // redirect: true,
     path: "/pumping",
-    name: "PUMPING GAME",
+    name: "PUMPING",
     icon: <GavelIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PumpingPage,
     layout: "/game",
@@ -94,7 +94,7 @@ var dashRoutes = [
   {
     // redirect: true,
     path: "/gravity",
-    name: "GRAVITY GAME",
+    name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: GravityPage,
     layout: "/game",
@@ -102,7 +102,7 @@ var dashRoutes = [
   {
     // redirect: true,
     path: "/dove",
-    name: "DOVE CROSS GAME",
+    name: "DOVE CROSS",
     icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
     layout: "/game",
