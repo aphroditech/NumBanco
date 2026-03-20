@@ -4,7 +4,6 @@ import http from "http";
 import fs from "fs";
 import app from "./app.js";
 import { connectDB } from "./config/db.js";
-import { createAblyClient } from "./config/ably.js";
 import { getUserStatusChannel } from "./services/ably.service.js";
 import { startBetEngine } from "./services/bet/betEngine.service.js";
 import { initMoralis } from "./config/moralis.js";

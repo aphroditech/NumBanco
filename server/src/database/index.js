@@ -5,7 +5,6 @@ import { initializePumpingPercentages } from './PumpingPercentages.js';
 import { initializePumpingLimits } from './pumpingLimits.js';
 import { initializeRubicMode } from './rubicMode.js';
 import { initializePumpingMultis } from './pumpingMultis.js';
-import { initializeGravityBot } from './initGravityBot.js';
 import { initializeSetting } from './initSetting.js';
 import { initDoveSetting } from './initDoveSetting.js';
 import { initMiningSetting } from './initMiningSetting.js';
@@ -23,7 +22,6 @@ export const initializeDatabase = async () => {
     await initializePumpingPercentages();
     await initializePumpingLimits();
     await initializePumpingMultis();
-    await initializeGravityBot();
     await initializeSetting();
     await initDoveSetting();
     await initMiningSetting();
