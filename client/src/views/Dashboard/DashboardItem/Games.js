@@ -21,6 +21,8 @@ import rubic from "assets/img/Games/dice5.png";
 import pumping from "assets/img/Games/pumping.png";
 import gravity from "assets/img/Games/gravity.png";
 import dove from "assets/img/Games/dove.png"
+import rocket from "assets/img/Games/rocket.png"
+import jackal from "assets/img/Games/jackal.png"
 function Games() {
     const history = useHistory();
     const activeUsers = useSelector((state) => state.user.activeUsers);
@@ -33,6 +35,8 @@ function Games() {
         { img: pumping, name: "Pumping", color: "#DD6B20", path: "/game/pumping", activeUsers: activeUsers['pumpingUsers']},
         { img: gravity, name: "Gravity", color: "#dd55f2", path: "/game/gravity", activeUsers: activeUsers['gravityUsers']},
         { img: dove, name: "Dove Cross", color: "#f26196", path: "/game/dove", activeUsers: activeUsers['doveUsers']},
+        { img: rocket, name: "Rocket Shot", color: "#f26196", path: "/game/rocket-shot", activeUsers: activeUsers['rocketUsers']},
+        { img: jackal, name: "Jackal", color: "#f26196", path: "/game/mining", activeUsers: activeUsers['jackalUsers']},
     ];
 
   return (

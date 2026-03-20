@@ -40,9 +40,9 @@ export default function OtherUserHistory() {
     const [isLoading, setIsLoading] = useState(true);
     const history = useHistory();
 
-    useEffect(() => {
+    useEffect(async() => {
         let isMounted = true;
-        getMiningResult(history)()
+        await getMiningResult(history)()
             .then((data) => {
                 if (isMounted && Array.isArray(data)) {
                     setMiningResults(data);

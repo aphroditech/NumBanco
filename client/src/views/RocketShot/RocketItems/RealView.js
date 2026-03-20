@@ -16,12 +16,14 @@ import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import { getRocketResults } from 'action/RocketActions';
 import { useAblyRocketResult } from 'hooks/useAblyRocketResult';
 import { useHistory } from 'react-router-dom';
+import Loading from 'components/Loading/Loading';
 
 function RealView() {
     const { rocketResults, setRocketResults } = useAblyRocketResult();
     const [newRowIds, setNewRowIds] = useState(new Set());
     const prevRowIdsRef = useRef(new Set());
     const hasInitializedRef = useRef(false);
+    const [isLoading, setIsLoading] = useState(true);
     const history = useHistory();
     const getRowId = (row) => {
         if (!row) return "";
@@ -65,14 +67,20 @@ function RealView() {
         try {
             const data = await getRocketResults(history)();
             setRocketResults(data);
+            setIsLoading(false);
         } catch(err) {
             console.log(err);
+            setIsLoading(false);
         }
     }, []);
 
     const maxRows = 23;
     const baseRows = Array.isArray(rocketResults) ? rocketResults : [];
     const rowsToRender = baseRows.slice(0, maxRows);
+
+    if (isLoading) {
+        return <Loading />;
+    }
     
     return (
         <Card p="24px" pt="30px" overflowX="hidden" minH="800px">

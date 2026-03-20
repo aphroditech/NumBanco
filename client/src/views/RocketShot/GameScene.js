@@ -165,6 +165,9 @@ export default class GameScene extends Phaser.Scene {
         // If the hand points slightly off, tweak this value.
         // Most "pointer" sprites are drawn facing one direction; `+PI` flips to match our rotation math.
         this.handPointerRotationOffset = Math.PI;
+        // Only show the tutorial hand briefly after the page/scene renders.
+        // We still update rotation while visible; once the window expires we force alpha=0.
+        this.handVisibleUntilMs = this.time.now + 5000;
 
         // Rocket projectiles
         this.balls = this.physics.add.group({ allowGravity: false });
@@ -257,6 +260,12 @@ export default class GameScene extends Phaser.Scene {
             return;
         }
 
+        // Hide tutorial hand after the initial window.
+        if (typeof this.handVisibleUntilMs === "number" && this.time.now >= this.handVisibleUntilMs) {
+            this.hand.setAlpha(0);
+            return;
+        }
+
         const pointingTarget = this.rocketOnPad ?? this.launchPad ?? null;
         if (!pointingTarget) return;
 
@@ -269,7 +278,7 @@ export default class GameScene extends Phaser.Scene {
         // Tiny bob animation.
         const bob = Math.sin(this.time.now / 180 + this.handBobbingPhase) * 3;
 
-        this.hand.x = this.pivotX + handOffsetX;
+        this.hand.x = this.pivotX + handOffsetX*2;
         this.hand.y = this.pivotY - handOffsetY + bob;
         this.hand.setAlpha(1);
 

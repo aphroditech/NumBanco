@@ -61,7 +61,6 @@ export default function RocketShotPage() {
     const dispatch = useDispatch();
     const history = useHistory();
 
-    const [isLoading, setIsLoading] = useState(true);
     const [amount, setAmount] = useState('0.5');
     const [isFiring, setIsFiring] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -207,24 +206,6 @@ export default function RocketShotPage() {
         };
         rocketShotResult(data, dispatch, history);
     };
-
-    
-
-    // Set Loading Time
-    useEffect(() => {
-        const loadingTime = (Math.floor(Math.random() * 10) + 1) * 100;
-
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, loadingTime);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    // Show Loading Page
-    if (isLoading) {
-        return <Loading />;
-    }
 
     return (
         <Box px={{ base: '16px', md: '24px' }} minH="90vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
