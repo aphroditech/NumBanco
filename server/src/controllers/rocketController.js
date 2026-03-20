@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import RocketSettings from "../models/RocketSettings.js";
 import RocketHistory from "../models/RocketHistory.js";
 import RocketResult from "../models/RocketResult.js";
+import CalendarRocket from "../models/CalendarRocket.js";
 
 export const bet = async (req, res) => {
     try {
@@ -107,6 +108,13 @@ export const shotResult = async (req, res) => {
             });
             await rocketHistory.save();
         }
+        await CalendarRocket.create({
+            userName: user.altas,
+            isWin: isWin,
+            betAmount: betAmount,
+            winAmount: winAmount,
+            date: new Date()
+        })
 
         // save bet result
         const data = {

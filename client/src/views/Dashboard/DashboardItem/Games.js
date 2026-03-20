@@ -22,6 +22,8 @@ import pumping from "assets/img/Games/pumping.png";
 import gravity from "assets/img/Games/gravity.png";
 import dove from "assets/img/Games/dove.png"
 import coco from "assets/img/Games/coco.png"
+import jackal from "assets/img/Games/jackal.png"
+import rocket from "assets/img/Games/rocket.png"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -35,6 +37,8 @@ const DASHBOARD_GAMES = [
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
     { img: dove, name: "Dove Cross", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
+    { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 4600 },
+    { img: jackal, name: "Jackal", path: "/game/mining", reduxKey: "jackalUsers", tickMs: 4600 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {
