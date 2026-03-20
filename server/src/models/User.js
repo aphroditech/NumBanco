@@ -337,6 +337,10 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  rocketMode: {
+    type: Number,
+    default: 0 // 0: normal, 1: hard
+  },
   rocketWinAmount: {
     type: Number,
     default: 0

@@ -8,14 +8,31 @@ const RocketSettingsSchema = new mongoose.Schema({
         type: Number,
         default: 0.4
     },
-    multiple: {
+    limitNormalToHard: {
+        type: Number,
+        default: 1.2
+    },
+    limitHardToNormal: {
+        type: Number,
+        default: 0.7
+    },
+    normalMultiple: {
         type: [
             {
                 number: Number,
                 probability: Number
             }
         ],
-        default: [{number: 0.5, probability: 0.5}]
+        default: [{number: 0.5, probability: 5}]
+    },
+    hardMultiple: {
+        type: [
+            {
+                number: Number,
+                probability: Number
+            }
+        ],
+        default: [{number: 1, probability: 5}]
     }
 });
 
