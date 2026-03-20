@@ -24,13 +24,13 @@ import CardBody from 'components/Card/CardBody.js';
 import { useSelector, useDispatch } from 'react-redux';
 import { rocketBet, rocketShotResult } from 'action/RocketActions';
 
-import History from './RocketItems/History';
 import RealView from './RocketItems/RealView';
 import Loading from 'components/Loading/Loading';
 import JavelinGame from './JavelinGame';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
+import { useHistory } from 'react-router-dom';
 
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
@@ -59,6 +59,7 @@ function getWalletBalanceInfo(user) {
 
 export default function RocketShotPage() {
     const dispatch = useDispatch();
+    const history = useHistory();
 
     const [isLoading, setIsLoading] = useState(true);
     const [amount, setAmount] = useState('0.5');
@@ -110,7 +111,7 @@ export default function RocketShotPage() {
         firingLockRef.current = true;
         setIsFiring(true);
         try {
-            const multiplier = await rocketBet({ bet: parseFloat(amount), level: mode }, dispatch);
+            const multiplier = await rocketBet({ bet: parseFloat(amount), level: mode }, dispatch, history);
             // Store multiplier for the current shot.
             // `GameScene.hitTarget()` will display this value only if the shot hits.
             if (typeof window !== 'undefined') {
@@ -194,7 +195,7 @@ export default function RocketShotPage() {
             multiplier: 0,
             level: mode,
         };
-        rocketShotResult(data, dispatch);
+        rocketShotResult(data, dispatch, history);
     };
 
     window.onJavelinWin = (multiplier) => {
@@ -204,7 +205,7 @@ export default function RocketShotPage() {
             multiplier: multiplier,
             level: mode,
         };
-        rocketShotResult(data, dispatch);
+        rocketShotResult(data, dispatch, history);
     };
 
     

@@ -32,6 +32,7 @@ import UserMiningHistory from './UserMiningHistory'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HandshakeRoundedIcon from '@mui/icons-material/HandshakeRounded';
 import OtherUserHistory from './OtherUserHistory';
+import { useHistory } from 'react-router-dom';
 
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
@@ -46,6 +47,7 @@ function getMultiplier(turns) {
 
 export default function Mining() {
     const dispatch = useDispatch();
+    const history = useHistory();
     const user = useSelector((state) => state.user.userInfo) || {};
     const balance = Number(user?.balance ?? 0);
     const maxAmount = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, balance));
@@ -79,8 +81,7 @@ export default function Mining() {
         const bet = parseFloat(amount) || 0;
         if (bet < MIN_AMOUNT || bet > MAX_AMOUNT || bet > balance) return;
 
-        const allowedToWin = await checkCanWin({ betAmt: bet, turn: maxTurns }, dispatch);
-        console.log(allowedToWin);
+        const allowedToWin = await checkCanWin({ betAmt: bet, turn: maxTurns }, dispatch, history);
         setCanWin(allowedToWin === true);
 
         if (allowedToWin === true) {
@@ -115,7 +116,7 @@ export default function Mining() {
             if (isJackal) {
                 setGameState('won');
                 setResultMessage(`Jackal found! You win ${potentialWin.toFixed(2)}`);
-                resultGameMining({ betAmt: parseFloat(amount), turn: maxTurns, isWin: true }, dispatch);
+                resultGameMining({ betAmt: parseFloat(amount), turn: maxTurns, isWin: true }, dispatch, history);
             } else if (flippedCount + 1 >= maxTurns) {
                 setGameState('lost');
                 setResultMessage('No jackal in your turns. Try again!');
@@ -124,7 +125,7 @@ export default function Mining() {
                     next[jackalIndex] = true;
                     return next;
                 });
-                resultGameMining({ betAmt: parseFloat(amount), turn: maxTurns, isWin: false }, dispatch);
+                resultGameMining({ betAmt: parseFloat(amount), turn: maxTurns, isWin: false }, dispatch, history);
             }
         } else {
             setTiles((prev) => {

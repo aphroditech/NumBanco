@@ -61,10 +61,13 @@ function RealView() {
         }
     }, [rocketResults]);
 
-    useEffect(() => {
-        getRocketResults(history).then((res) => {
-            setRocketResults(res);
-        });
+    useEffect(async () => {
+        try {
+            const data = await getRocketResults(history)();
+            setRocketResults(data);
+        } catch(err) {
+            console.log(err);
+        }
     }, []);
 
     const maxRows = 23;

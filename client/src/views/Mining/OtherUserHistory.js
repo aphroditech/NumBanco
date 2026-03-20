@@ -5,6 +5,7 @@ import { useAblyMiningResult } from 'hooks/useAblyMiningResult';
 import { getMiningResult } from 'action/MiningActions';
 import truncateToTwo from 'variables/truncateToTwo';
 import Loading from 'components/Loading/Loading';
+import { useHistory } from 'react-router-dom';
 
 const miningUserHistoryStyles = `
     @keyframes mining-row-slide-in {
@@ -37,10 +38,11 @@ if (typeof document !== 'undefined') {
 export default function OtherUserHistory() {
     const { miningResults, setMiningResults } = useAblyMiningResult();
     const [isLoading, setIsLoading] = useState(true);
+    const history = useHistory();
 
     useEffect(() => {
         let isMounted = true;
-        getMiningResult()()
+        getMiningResult(history)()
             .then((data) => {
                 if (isMounted && Array.isArray(data)) {
                     setMiningResults(data);
@@ -74,9 +76,6 @@ export default function OtherUserHistory() {
                                 </Th>
                                 <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
                                     Bet($)
-                                </Th>
-                                <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                    Turn
                                 </Th>
                                 <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
                                     Win($)
@@ -121,7 +120,7 @@ export default function OtherUserHistory() {
                                                         )}
                                                         <Tooltip label={row.userName || ''} placement="top" hasArrow>
                                                             <Text color={winColor} fontSize="xs">
-                                                                {row.userName?.length > 7 ? row.userName.slice(0, 3) + '...' : row.userName || '—'}
+                                                                {row.userName?.length > 7 ? row.userName.slice(0, 6) + '...' : row.userName || '—'}
                                                             </Text>
                                                         </Tooltip>
                                                     </HStack>
@@ -129,24 +128,13 @@ export default function OtherUserHistory() {
                                             </Td>
                                             <Td
                                                 textAlign="left"
-                                                py="4px"
+                                                py="2px"
                                                 h="16px"
                                                 border="none"
                                                 overflow="visible"
                                             >
                                                 <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
                                                     {row.bet != null ? row.bet : '—'}
-                                                </Text>
-                                            </Td>
-                                            <Td
-                                                textAlign="left"
-                                                py="4px"
-                                                h="16px"
-                                                border="none"
-                                                overflow="visible"
-                                            >
-                                                <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-                                                    {row.turn != null ? row.turn : '—'}
                                                 </Text>
                                             </Td>
                                             <Td
