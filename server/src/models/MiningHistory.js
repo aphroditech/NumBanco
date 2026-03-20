@@ -21,6 +21,10 @@ const MiningHistorySchema = new mongoose.Schema({
                     type: Number,
                     default: 0,
                 },
+                multiplier: {
+                    type: Number,
+                    default: 0,
+                },
                 winAmount: {
                     type: Number,
                     default: 0,

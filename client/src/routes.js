@@ -33,6 +33,7 @@ import TwitterIcon from '@mui/icons-material/Twitter';
 import PlinkoPage from "views/Plinko/Plinko";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
+import DiamondIcon from '@mui/icons-material/Diamond';
 
 import SupportPage from "views/Support/Support";
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -40,13 +41,15 @@ import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
 import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
+import FishingPage from "views/Fishing/FishingPage";
 import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
+import MinesPage from "views/Mines/MinesPage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
 import Coco from "views/Coco/CocoPage";
-import { GiChicken } from "react-icons/gi";
+import { GiChicken, GiFishingHook } from "react-icons/gi";
 
 
 import {
@@ -74,12 +77,12 @@ var dashRoutes = [
     name: "NUMEXA",
     icon: <PixIcon style={{ fontSize: "24px", color: "#00D4FF" }} />
   },
-  // {
-  //   name: "GAMES",
-  //   icon: <GamesIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-  // },
   {
-    // redirect: true,
+    name: "GAMES",
+    icon: <GamesIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+  },
+  {
+    redirect: true,
     path: "/rubic",
     name: "RUBIC",
     icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -87,7 +90,7 @@ var dashRoutes = [
     layout: "/game",
   },
   {
-    // redirect: true,
+    redirect: true,
     path: "/pumping",
     name: "PUMPING",
     icon: <GavelIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -95,7 +98,15 @@ var dashRoutes = [
     layout: "/game",
   },
   {
-    // redirect: true,
+    redirect: true,
+    path: "/fishing",
+    name: "Fishing",
+    icon: <GiFishingHook  style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: FishingPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/gravity",
     name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -103,7 +114,7 @@ var dashRoutes = [
     layout: "/game",
   },
   {
-    // redirect: true,
+    redirect: true,
     path: "/dove",
     name: "DOVE CROSS",
     icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -111,7 +122,7 @@ var dashRoutes = [
     layout: "/game",
   },
   {
-    // redirect: true,
+    redirect: true,
     path: "/coco",
     name: "COCO TAP CRASH",
     icon: <GiChicken style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -119,13 +130,23 @@ var dashRoutes = [
     layout: "/game",
   },
   {
-    path: "/mining",
+    redirect: true,
+    path: "/jackal",
     name: "JACKAL",
     icon: <ImageSearchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Mining,
     layout: "/game",
   },
   {
+    redirect: true,
+    path: "/mine",
+    name: "MINE",
+    icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: MinesPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/rocket-shot",
     name: "ROCKET SHOT",
     icon: <RocketLaunchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,

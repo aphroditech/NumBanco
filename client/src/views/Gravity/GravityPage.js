@@ -1,991 +1,414 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import {
-    Box,
-    Grid,
-    Flex,
-    Text,
-    Button,
-    HStack,
-    VStack,
-    Input,
-    IconButton,
-    Modal,
-    ModalOverlay,
-    ModalContent,
-    ModalHeader,
-    ModalBody,
-    ModalCloseButton,
-    useDisclosure,
-} from "@chakra-ui/react";
-import Card from "components/Card/Card.js";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
-import { ArrowUpward, ArrowDownward } from "@mui/icons-material";
-import truncateToTwo from "variables/truncateToTwo";
-import History from "./gravityItems/History";
-import GravityChart from "./GravityChart";
-import GravityChartFlowContainer from "./GravityChartFlowContainer";
-import axiosInstance from "api/axiosConfig";
-import { useAblyUpDownLive } from "hooks/useAblyUpDownLive";
-import { useAblyUpDownState } from "hooks/useAblyUpDownState";
-import { useAblyUpDownBets } from "hooks/useAblyUpDownBets";
-import { useAblyUpDownResult } from "hooks/useAblyUpDownResult";
-import { placeBetUpDown, addBetToDisplay, clearUpDownBets } from "action/UpDownActions";
-import Loading from 'components/Loading/Loading';
-import { toast } from "react-toastify"
-import { onlineUser, offlineUser } from "action/BetActions";
+import React, { useEffect, useMemo, useState } from "react";
+import { Badge, Box, Button, CircularProgress, CircularProgressLabel, Flex, Grid, GridItem, HStack, Input, Progress, Select, Text, useBreakpointValue, useToast, VStack } from "@chakra-ui/react";
+import { useDispatch } from "react-redux";
+import ablyClient from "../../ably/ablyClient";
+import Card from "components/Card/Card";
+import CardBody from "components/Card/CardBody";
+import GravityBetHistory from "./GravityItem/BetHistory";
+import GravityCanvasChart from "./GravityItem/GravityCanvasChart";
+import { getGravityState, getLiveGravityHistory, getMyGravityHistory, placeGravityBet } from "action/GravityActions";
+import { getUserData } from "action";
 
-const MIN_AMOUNT = 1;
-const MAX_AMOUNT = 1000;
-const PREVIEW_SECONDS = 5;
-const BETTING_SECONDS = 10;
-const COUNTDOWN_SECONDS = 5;
-const TRADING_SECONDS = 5;
-const RESULT_SECONDS = 3;
-const INITIAL_VALUE = 100;
-/** Graph duration during place bets (10s); trading uses 5s */
-const BETTING_GRAPH_SECONDS = 10;
-/** Graph flowing speed: 0.1 s per point (must match server) */
-const GRAPH_FLOW_STEP_SEC = 0.1;
-/** Expected points for place-bets graph (10s) and trading graph (5s) */
-/** Matches server: 101 betting points at 0.1s (0–10s) + 25 trading = 126 total */
-const EXPECTED_BETTING_POINTS = 101;
-const INTERPOLATION_STEP_SEC = 0.02;
-/** Same as GravityChartFlowContainer: 0.2s display step so result graph shape matches end of trading */
-const PLACE_BETS_DISPLAY_STEP_SEC = 0.2;
-const COMBINED_GRAPH_SECONDS = BETTING_GRAPH_SECONDS + TRADING_SECONDS;
-
-function interpolateAtTimeForGraph(gd, t) {
-    // console.log(gd, t)
-    if (!gd || gd.length === 0) return null;
-    const time = (p) => (p.time != null ? p.time : 0);
-    if (t <= time(gd[0])) return { time: t, price: gd[0].value };
-    if (t >= time(gd[gd.length - 1])) return { time: t, price: gd[gd.length - 1].value };
-    for (let i = 0; i < gd.length - 1; i++) {
-        const t0 = time(gd[i]);
-        const t1 = time(gd[i + 1]);
-        if (t >= t0 && t <= t1) {
-            const frac = t1 > t0 ? (t - t0) / (t1 - t0) : 1;
-            const price = gd[i].value + frac * (gd[i + 1].value - gd[i].value);
-            return { time: t, price };
-        }
-    }
-    return { time: t, price: gd[gd.length - 1].value };
-}
-
-function interpolateBetweenPoints(points, stepSec = INTERPOLATION_STEP_SEC) {
-    if (points.length <= 1) return points;
-    const out = [];
-    for (let i = 0; i < points.length - 1; i++) {
-        const a = points[i];
-        const b = points[i + 1];
-        out.push(a);
-        const dt = b.time - a.time;
-        const n = Math.max(1, Math.floor(dt / stepSec));
-        for (let k = 1; k < n; k++) {
-            const t = a.time + (dt * k) / n;
-            const frac = (t - a.time) / dt;
-            out.push({ time: t, price: a.price + frac * (b.price - a.price) });
-        }
-    }
-    out.push(points[points.length - 1]);
-    return out;
-}
-
-/** Circular countdown with smooth arc animation (RAF so timeline flows smoothly) */
-function CountdownCircle({
-    phaseEndAtMs,
-    phaseTotalMs,
-    lastServerTimeMsRef,
-    lastClientReceiveTimeMsRef,
-    roundPhase,
-    roundResult,
-    bettingCountdown,
-    previewCountdown,
-    roundCountdown,
-    resultCountdown,
-}) {
-    const [progress, setProgress] = useState(0);
-    const remainingSeconds = Math.max(
-    0,
-    Math.ceil(
-        phaseEndAtMs > 0
-        ? (
-            (typeof lastServerTimeMsRef?.current === "number"
-                ? (phaseEndAtMs - lastServerTimeMsRef.current)
-                : phaseEndAtMs - Date.now()
-            ) / 1000
-            )
-        : phaseTotalMs / 1000
-    )
-    );
-    useEffect(() => {
-        if (phaseTotalMs <= 0) return;
-        let rafId;
-        const tick = () => {
-            const now = Date.now();
-            const serverMs = lastServerTimeMsRef?.current;
-            const clientReceiveMs = lastClientReceiveTimeMsRef?.current;
-            const useServerTime = typeof serverMs === "number" && typeof clientReceiveMs === "number";
-            const remainingMs = phaseEndAtMs > 0
-                ? (useServerTime ? (phaseEndAtMs - serverMs) - (now - clientReceiveMs) : phaseEndAtMs - now)
-                : phaseTotalMs;
-            // console.log(remainingMs);
-            const p = Math.max(0, Math.min(1, 1 - remainingMs / phaseTotalMs));
-            setProgress(p);
-            rafId = requestAnimationFrame(tick);
-        };
-        rafId = requestAnimationFrame(tick);
-        return () => (rafId != null && cancelAnimationFrame(rafId));
-    }, [phaseEndAtMs, phaseTotalMs, lastServerTimeMsRef, lastClientReceiveTimeMsRef]);
-
-    const size = 320;
-    const stroke = 12;
-    const r = (size - stroke) / 2;
-    const cx = size / 2;
-    const cy = size / 2;
-    const circumference = 2 * Math.PI * r;
-    const isUrgent = (roundPhase === "betting" && bettingCountdown <= 5);
-    const arcColor = roundPhase === "result"
-        ? (roundResult === "up" ? "#4ade80" : "#e74c3c")
-        : isUrgent
-            ? "#e74c3c"
-            : "#00d4ff";
-    const numberColor = isUrgent ? "#e74c3c" : "white";
-
-    return (
-        <>
-            <Box position="absolute" top={0} left={0} w="100%" h="100%">
-                <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }} preserveAspectRatio="xMidYMid meet">
-                    <circle cx={cx} cy={cy} r={r} fill="none" stroke="#3a3a3a" strokeWidth={stroke} />
-                    <circle
-                        cx={cx}
-                        cy={cy}
-                        r={r}
-                        fill="none"
-                        stroke={arcColor}
-                        strokeWidth={stroke}
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={circumference * (1 - progress)}
-                    />
-                </svg>
-            </Box>
-            <Box position="relative" zIndex={1} display="flex" alignItems="center" justifyContent="center" w="100%" h="100%">
-                {roundPhase === "result" ? (
-                    <VStack spacing="4px">
-                        <Text fontSize="3xl" fontWeight="bold" color={roundResult === "up" ? "#4ade80" : "#e74c3c"}>
-                            {roundResult === "up" ? "↑" : "↓"}
-                        </Text>
-                        <Text color="white" fontSize="lg">{resultCountdown}s</Text>
-                    </VStack>
-                ) : (
-                    <Text
-                        fontSize="3xl"
-                        fontWeight="bold"
-                        color={numberColor}
-                        animation={isUrgent ? "countdownPulse 0.6s ease-in-out infinite" : undefined}
-                    >
-                        {remainingSeconds}s
-                    </Text>
-                )}
-            </Box>
-        </>
-    );
-}
+const phaseColor = { betting: "green", viewing: "yellow", result: "red" };
 
 export default function GravityPage() {
-    const dispatch = useDispatch();
-    const user = useSelector((state) => state.user.userInfo) || {};
-    const balance = Number(user?.balance ?? 0);
-    const { isOpen: isHelpOpen, onOpen: onHelpOpen, onClose: onHelpClose } = useDisclosure();
+  const dispatch = useDispatch();
+  const toast = useToast();
+  const [state, setState] = useState(null);
+  const [amount, setAmount] = useState("1");
+  const [direction, setDirection] = useState("up");
+  const [liveRows, setLiveRows] = useState([]);
+  const [myHistory, setMyHistory] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [nowMs, setNowMs] = useState(Date.now());
 
-    const [amount, setAmount] = useState("50");
-    const [currentValue, setCurrentValue] = useState(INITIAL_VALUE);
-    const [roundHistory, setRoundHistory] = useState([]);
-    const [previousGraphData, setPreviousGraphData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [upBets, setUpBets] = useState([]);
-    const [downBets, setDownBets] = useState([]);
-    const [pendingBet, setPendingBet] = useState({ up: false, down: false });
-    // Use a ref for immediate synchronous guarding to prevent duplicate submits
-    const pendingBetRef = useRef({ up: false, down: false });
-    const [serverPhase, setServerPhase] = useState("preview");
-    const [serverPhaseEndAt, setServerPhaseEndAt] = useState(null);
-    const [serverRound, setServerRound] = useState(null);
-    // const [countdownTick, setCountdownTick] = useState(0);
-    // const [showStartOverlay, setShowStartOverlay] = useState(false);
-    // const prevPhaseRef = useRef(null);
-    // const startOverlayTimerRef = useRef(null);
-    const { liveGraphPoints, setLiveGraphPoints, cycleStartValue, setCycleStartValue } = useAblyUpDownLive(serverPhase);
-    const [serverGraphPoints, setServerGraphPoints] = useState([]);
-    const [graphTimeStart, setGraphTimeStart] = useState(null);
-    // const [serverGraphPoints, setServerGraphPoints] = useState([]);
-    const lastResultRoundIdRef = useRef(null);
-    const lastWinToastRoundIdRef = useRef(null);
-    const currentRoundIdRef = useRef(null);
-    const tradingStartMsRef = useRef(null);
-    const lastServerTimeMsRef = useRef(null);
-    const lastClientReceiveTimeMsRef = useRef(null);
-    const serverGraphDisplaySecRef = useRef(null);
-    const lastRoundGraphRef = useRef(null);
-    const lastFlowReceiveMsRef = useRef(0);
-    const prevFlowPointsLengthRef = useRef(0);
-    const fetchedRoundsRef = useRef(new Set());
-    const { upDownResults, setUpDownResults } = useAblyUpDownResult();
-    const results = useSelector((state) => state.user.userInfo?.updownHistory);
+  const graphHeight = useBreakpointValue({ base: 280, md: 340 }) ?? 280;
 
-    useEffect(() => {
-        onlineUser(5);
-        return () => {
-            offlineUser(5);
-        };
-    }, []);
-
-    useEffect(() => {
-        let cancelled = false;
-        async function fetchInitial() {
-            try {
-                const [historyRes] = await Promise.all([
-                    axiosInstance.get("/updown/history?limit=10")
-                ]);
-
-                if (cancelled) return;
-                if (historyRes.data?.success && historyRes.data?.data) {
-                    const list = historyRes.data.data.map((r) => ({
-                        roundId: r.roundId,
-                        result: r.result,
-                        startPrice: r.startValue,
-                        endPrice: r.endValue,
-                    }));
-                    setRoundHistory(list);
-                }
-            } catch (e) {
-                console.warn("UpDown fetch initial:", e);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-        fetchInitial();
-        return () => { cancelled = true; };
-    }, [setCycleStartValue, setLiveGraphPoints]);
-    useEffect(() => {
-        // Only show "You won" during result phase, and only once per round
-        if (serverPhase !== "result" || !upDownResults?.result) return;
-        const roundId = upDownResults?.roundId;
-        if (roundId == null || lastWinToastRoundIdRef.current === roundId) return;
-
-        const winners = upDownResults?.result?.winners;
-        const targetUserId = user?.userId;
-        const exists = winners?.find((w) => w.userId === targetUserId);
-
-        if (exists && serverRound?.roundId === roundId) {
-            console.log("exists===========>",exists)
-            lastWinToastRoundIdRef.current = roundId;
-            const winMsg = `You won $${exists.payout} in round ${roundId}!`;
-            toast.success(winMsg);
-        }
-    }, [serverPhase, upDownResults, serverRound?.roundId, user?.userId, toast]);
-    // Graph data comes from Ably (updown:live-point, updown:live-start); no polling of /live-state
-
-    // Track when we last received flow points (Ably or server seed) so we can extend the chart smoothly by real time
-    useEffect(() => {
-        const isFlowPhase = serverPhase === "preview" || serverPhase === "betting" || serverPhase === "countdown";
-        const flowLen = liveGraphPoints.length > 0 ? liveGraphPoints.length : serverGraphPoints.length;
-        if (isFlowPhase && flowLen > 0) {
-            if (flowLen !== prevFlowPointsLengthRef.current) {
-                lastFlowReceiveMsRef.current = Date.now();
-            }
-            prevFlowPointsLengthRef.current = flowLen;
-        }
-    }, [serverPhase, serverGraphPoints.length, liveGraphPoints.length]);
-
-    // Game state from Ably; initial /updown/current already set phase/round on first load
-    useAblyUpDownState(({ phase, phaseEndAt, round, serverTime, graphTimeStart: gts, graphDisplaySec: gds }) => {
-        setLoading(false);
-        if (phase != null) setServerPhase(phase);
-        setServerPhaseEndAt(phaseEndAt ?? null);
-        setServerRound(round ?? null);
-        if (typeof gts === "number") {
-            setGraphTimeStart(gts);
-        }
-        if (phase !== "trading" && phase !== "result") setGraphTimeStart(null);
-        if (typeof gds === "number") serverGraphDisplaySecRef.current = gds;
-        else if (phase !== "betting" && phase !== "trading") serverGraphDisplaySecRef.current = null;
-        if (typeof serverTime === "number") {
-            lastServerTimeMsRef.current = serverTime < 1e12 ? serverTime * 1000 : serverTime;
-            lastClientReceiveTimeMsRef.current = Date.now();
-        }
-        if (phase === "result" && round && round.roundId !== lastResultRoundIdRef.current) {
-            lastResultRoundIdRef.current = round.roundId;
-            setPreviousGraphData(round);
-            if (typeof gts === "number" && round.graphData?.length) {
-                lastRoundGraphRef.current = { graphTimeStart: gts, graphData: round.graphData };
-            }
-            setRoundHistory((prev) => {
-                if (prev.some((r) => r.roundId === round.roundId)) return prev;
-                return [
-                    { roundId: round.roundId, result: round.result, startPrice: round.startValue, endPrice: round.endValue },
-                    ...prev.slice(0, 19),
-                ];
-            });
-        }
-        // Only clear bets when a truly new round starts (not just when round object updates)
-        if (round && round.roundId && round.roundId !== currentRoundIdRef.current) {
-            currentRoundIdRef.current = round.roundId;
-            // Don't clear bets here - they will be fetched in the useEffect below
-            clearUpDownBets(dispatch);
-        }
-    });
-
-
-    // Fetch existing bets when round changes (only once per round)
-    useEffect(() => {
-        if (!serverRound || !serverRound.roundId) return;
-
-        // Skip if we already fetched this round
-        if (fetchedRoundsRef.current.has(serverRound.roundId)) return;
-
-        const fetchBets = async () => {
-            try {
-                const response = await axiosInstance.get(`/updown/bets/${serverRound.roundId}`);
-                if (response.data.success && response.data.data) {
-                    const { upBets, downBets } = response.data.data;
-                    setUpBets(upBets || []);
-                    setDownBets(downBets || []);
-                    // Mark this round as fetched
-                    fetchedRoundsRef.current.add(serverRound.roundId);
-                }
-            } catch (err) {
-                console.warn("Failed to fetch existing bets:", err);
-                setUpBets([]);
-                setDownBets([]);
-            }
-        };
-
-        fetchBets();
-    }, [serverRound?.roundId]);
-
-    // Handle new bets from Ably with memoization to prevent unnecessary re-subscriptions
-    const handleBetPlaced = useCallback((bet) => {
-        addBetToDisplay(bet, dispatch);
-        if (bet.direction === "up") {
-            setUpBets((prev) => {
-                // Avoid duplicates
-                if (prev.some((b) => b.userId === bet.userId && b.createdAt === bet.createdAt)) {
-                    return prev;
-                }
-                return [
-                    ...prev,
-                    {
-                        userId: bet.userId,
-                        userName: bet.userName,
-                        avatar: bet.avatar || null,
-                        amount: bet.amount,
-                        createdAt: bet.createdAt,
-                    },
-                ];
-            });
-        } else if (bet.direction === "down") {
-            setDownBets((prev) => {
-                // Avoid duplicates
-                if (prev.some((b) => b.userId === bet.userId && b.createdAt === bet.createdAt)) {
-                    return prev;
-                }
-                return [
-                    ...prev,
-                    {
-                        userId: bet.userId,
-                        userName: bet.userName,
-                        avatar: bet.avatar || null,
-                        amount: bet.amount,
-                        createdAt: bet.createdAt,
-                    },
-                ];
-            });
-        }
-    }, [dispatch]);
-
-    // Listen for real-time bets from other players via Ably
-    useAblyUpDownBets(handleBetPlaced);
-
-    const roundPhase = serverPhase;
-    const now = Date.now();
-    const phaseEndAtMs = serverPhaseEndAt ? serverPhaseEndAt.getTime() : 0;
-    const serverMs = lastServerTimeMsRef.current;
-    const clientReceiveMs = lastClientReceiveTimeMsRef.current;
-    const useServerTime = typeof serverMs === "number" && typeof clientReceiveMs === "number";
-    const remainingMs = useServerTime
-        ? (phaseEndAtMs - serverMs) - (now - clientReceiveMs)
-        : phaseEndAtMs - now;
-    const countdownSeconds = phaseEndAtMs > 0
-        ? Math.max(0, Math.ceil(remainingMs / 1000))
-        : (roundPhase === "preview" ? PREVIEW_SECONDS : roundPhase === "betting" ? BETTING_SECONDS : roundPhase === "trading" ? TRADING_SECONDS : roundPhase === "result" ? RESULT_SECONDS : 0);
-    // console.log("countdownseconds======>", countdownSeconds);
-    const previewCountdown = roundPhase === "preview" ? countdownSeconds : PREVIEW_SECONDS;
-    const bettingCountdown = roundPhase === "betting" ? countdownSeconds : BETTING_SECONDS;
-    const roundCountdown = roundPhase === "trading" ? countdownSeconds : TRADING_SECONDS;
-    const resultCountdown = roundPhase === "result" ? countdownSeconds : RESULT_SECONDS;
-    const startValue = serverRound?.startValue ?? INITIAL_VALUE;
-    const endValue = serverRound?.endValue ?? null;
-    const roundResult = serverRound?.result ?? null;
-
-    // Trading period start/end (like bc.game): from round createdAt when in trading/result, or upcoming when in countdown
-    const tradingStartTime = (() => {
-        if (serverRound?.createdAt) return new Date(serverRound.createdAt);
-        if (roundPhase === "countdown" && serverPhaseEndAt) return new Date(serverPhaseEndAt.getTime());
-        return null;
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [s, me, live] = await Promise.all([getGravityState(), getMyGravityHistory(), getLiveGravityHistory()]);
+        if (!mounted) return;
+        setState(s);
+        setTimeLeft(Math.ceil((s.timeLeftMs || 0) / 1000));
+        setLiveRows(s.liveUsers?.length ? s.liveUsers : live);
+        setMyHistory(me || []);
+      } catch {
+        toast({ title: "Failed to load Gravity", status: "error", isClosable: true });
+      }
     })();
-    const tradingEndTime = tradingStartTime
-        ? new Date(tradingStartTime.getTime() + (BETTING_SECONDS + TRADING_SECONDS) * 1000)
-        : null;
-    const formatTime = (d) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-    const handleBet = async (direction) => {
-        if (pendingBetRef.current[direction]) return; // synchronous guard
-        if (pendingBet[direction]) return;
-        // If user already has a bet on this side (from fetched bets), don't call API again
-        try {
-            const myId = user?.userId || user?._id;
-            if (direction === 'up') {
-                if (upBets.some((b) => String(b.userId) === String(myId))) return;
-            } else if (direction === 'down') {
-                if (downBets.some((b) => String(b.userId) === String(myId))) return;
-            }
-        } catch (e) {
-            // ignore matching errors and proceed
-        }
-        if (!amount || parseFloat(amount) < MIN_AMOUNT || balance < parseFloat(amount)) return;
-
-        // set ref immediately to block further clicks synchronously
-        pendingBetRef.current = { ...pendingBetRef.current, [direction]: true };
-        setPendingBet((p) => ({ ...p, [direction]: true }));
-        try {
-            await placeBetUpDown(
-                serverRound.roundId,
-                direction,
-                parseFloat(amount),
-                dispatch
-            );
-            setAmount("50");
-        } catch (err) {
-            // Error toast is already shown by the action
-        } finally {
-            // clear both ref and state
-            pendingBetRef.current = { ...pendingBetRef.current, [direction]: false };
-            setPendingBet((p) => ({ ...p, [direction]: false }));
-        }
+    const channel = ablyClient.channels.get("gravityGame");
+    const onState = (msg) => {
+      const data = msg?.data;
+      if (!data) return;
+      setState((prev) => ({ ...prev, ...data }));
+      if (typeof data.timeLeftMs === "number") setTimeLeft(Math.ceil(data.timeLeftMs / 1000));
+      if (Array.isArray(data.liveUsers)) setLiveRows(data.liveUsers);
     };
-
-    const handleAmountChange = (value) => {
-        const num = parseFloat(value) || 0;
-        if (num >= MIN_AMOUNT && num <= MAX_AMOUNT) setAmount(value);
+    const onBet = (msg) => {
+      const data = msg?.data;
+      if (!data) return;
+      setLiveRows((prev) => [data, ...prev].slice(0, 40));
+      setState((prev) => (prev ? { ...prev, upTotalBet: data.upTotalBet ?? prev.upTotalBet, downTotalBet: data.downTotalBet ?? prev.downTotalBet } : prev));
     };
-
-    const upTotal = upBets.reduce((s, b) => s + b.amount, 0);
-    const downTotal = downBets.reduce((s, b) => s + b.amount, 0);
-    const totalBets = upTotal + downTotal;
-    const upMultiplier = totalBets > 0 ? (totalBets / (upTotal || 1)) : 2;
-    const downMultiplier = totalBets > 0 ? (totalBets / (downTotal || 1)) : 2;
-
-    const getPhaseText = () => {
-        switch (roundPhase) {
-            case "preview":
-                return `Watching - ${previewCountdown}s`;
-            case "betting":
-                return `Place Bets - ${bettingCountdown}s`;
-            case "trading":
-                return `Trading - ${Math.ceil(roundCountdown)}s`;
-            case "result":
-                return roundResult === "up" ? "UP WINS!" : "DOWN WINS!";
-            default:
-                return "Waiting...";
-        }
+    const onResult = async () => {
+      try {
+        const me = await getMyGravityHistory();
+        if (mounted) setMyHistory(me || []);
+        // Refresh user so navbar notifications show immediately for winners.
+        getUserData(dispatch);
+      } catch {}
     };
-    const hasPreviousGraph = previousGraphData?.graphData?.length > 0;
-    const isFlowPhase = roundPhase === "preview" || roundPhase === "betting" || roundPhase === "countdown";
-    const graphStepSec = GRAPH_FLOW_STEP_SEC;
-    // Same graph for everyone after refresh: use server canonical segment (anchored to flow cycle), then append Ably points newer than last server point
-    const flowPoints = (() => {
-        if (serverGraphPoints.length > 0) {
-            const lastServerTime = serverGraphPoints[serverGraphPoints.length - 1].time;
-            const newerFromAbly = liveGraphPoints.filter((p) => p.time > lastServerTime);
-            const combined = [...serverGraphPoints, ...newerFromAbly];
-            const byTime = new Map(combined.map((p) => [p.time, p]));
-            return [...byTime.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p);
-        }
-        return liveGraphPoints;
-    })();
-    const hasFlowPoints = flowPoints.length > 0;
-    const hasCycleStart = cycleStartValue != null;
+    channel.subscribe("GRAVITY_STATE", onState);
+    channel.subscribe("GRAVITY_NEW_BET", onBet);
+    channel.subscribe("GRAVITY_RESULT", onResult);
+    return () => {
+      mounted = false;
+      channel.unsubscribe("GRAVITY_STATE", onState);
+      channel.unsubscribe("GRAVITY_NEW_BET", onBet);
+      channel.unsubscribe("GRAVITY_RESULT", onResult);
+    };
+  }, [toast]);
 
-    function getServerNow() {
-        return Date.now(); // replace with synced server time if you have it
+  useEffect(() => {
+    const id = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Needed so the circular "timeline charge" can smoothly increase 0% -> 100%.
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 200);
+    return () => clearInterval(id);
+  }, []);
+
+  const canBet = state?.phase === "betting";
+  const myRoundBets = useMemo(() => {
+    const rid = state?.roundId;
+    if (!rid) return [];
+    return (myHistory || []).filter((h) => String(h?.roundId) === String(rid));
+  }, [myHistory, state?.roundId]);
+
+  const myPlacedUp = myRoundBets.some((b) => String(b?.direction).toLowerCase() === "up");
+  const myPlacedDown = myRoundBets.some((b) => String(b?.direction).toLowerCase() === "down");
+
+  const upTotal = Number(state?.upTotalBet || 0);
+  const downTotal = Number(state?.downTotalBet || 0);
+  const upRate = upTotal > 0 ? ((upTotal + downTotal) / upTotal) * 100 : 100;
+  const downRate = downTotal > 0 ? ((upTotal + downTotal) / downTotal) * 100 : 100;
+  const elapsedMs = typeof state?.roundStartAtMs === "number" ? Math.max(0, nowMs - state.roundStartAtMs) : 0;
+  const BETTING_MS = 10000;
+  const VIEWING_MS = 5000;
+  const RESULT_MS = 3000;
+
+  const bettingElapsed = Math.max(0, Math.min(BETTING_MS, elapsedMs));
+  const viewingElapsed = Math.max(0, Math.min(VIEWING_MS, elapsedMs - BETTING_MS));
+  const resultElapsed = Math.max(0, Math.min(RESULT_MS, elapsedMs - (BETTING_MS + VIEWING_MS)));
+
+  // Local deterministic phase for the timeline ring (not dependent on Ably update exact second).
+  const phaseLocal =
+    elapsedMs < BETTING_MS
+      ? "betting"
+      : elapsedMs < BETTING_MS + VIEWING_MS
+      ? "viewing"
+      : elapsedMs < BETTING_MS + VIEWING_MS + RESULT_MS
+      ? "result"
+      : "closed";
+
+  const timelineCharge =
+    phaseLocal === "betting"
+      ? (bettingElapsed / BETTING_MS) * 100
+      : phaseLocal === "viewing"
+      ? (viewingElapsed / VIEWING_MS) * 100
+      : phaseLocal === "result"
+      ? (resultElapsed / RESULT_MS) * 100
+      : 100;
+  const timelineColor =
+    phaseLocal === "betting" ? "#63e486" : phaseLocal === "viewing" ? "#f6ad55" : "#ff6b6b";
+
+  const timeLeftLocal =
+    phaseLocal === "betting"
+      ? Math.ceil((BETTING_MS - bettingElapsed) / 1000)
+      : phaseLocal === "viewing"
+      ? Math.ceil((VIEWING_MS - viewingElapsed) / 1000)
+      : phaseLocal === "result"
+      ? Math.ceil((RESULT_MS - resultElapsed) / 1000)
+      : 0;
+  const chartData = useMemo(() => {
+    const raw = (state?.points || [])
+      .map((p) => ({
+        t: Number(p.t),
+        price: Number(p.value),
+      }))
+      .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.price))
+      .sort((a, b) => a.t - b.t);
+
+    if (!raw.length) return [];
+
+    // If the backend already returned the full dense set, use it directly.
+    // Backend generates: 151 points (0.0s -> 15.0s step 0.1s).
+    if (raw.length === 151) {
+      const STEP = 0.1;
+      const isDense =
+        Math.abs(raw[0].t - 0) < 1e-6 &&
+        Math.abs(raw[raw.length - 1].t - 15) < 1e-6 &&
+        raw.every((p, i) => Math.abs(p.t - Number((i * STEP).toFixed(1))) < 0.01);
+
+      if (isDense) {
+        return raw.map((p) => ({ time: p.t, price: p.price }));
+      }
     }
 
-    const globalPoints = flowPoints.map((p) => ({ time: p.time, price: p.value }));
-    let roundSegment = [];
-    // Re-render periodically so countdown (remainingMs) and phase display update
-    // const _ = countdownTick;
-    if (roundPhase === "result" && serverRound?.graphData?.length && typeof graphTimeStart === "number") {
-        if (roundPhase === "result") {
-            roundSegment = serverRound.graphData.map((p) => ({ time: graphTimeStart + p.time, price: p.value }));
-        } 
-    } else if (isFlowPhase && lastRoundGraphRef.current?.graphData?.length) {
-        const { graphTimeStart: gts, graphData } = lastRoundGraphRef.current;
-        roundSegment = graphData.map((p) => ({ time: gts + p.time, price: p.value }));
-    }
-    let fullData;
-    if (roundPhase === "result" && roundSegment.length > 0) {
-        fullData = roundSegment;
-    } else if (isFlowPhase && !hasCycleStart && !hasFlowPoints && hasPreviousGraph) {
-        fullData = previousGraphData.graphData.map((p) => ({ time: p.time, price: p.value }));
-    } else {
-        const merged = [...globalPoints, ...roundSegment];
-        const byTime = new Map(merged.map((p) => [p.time, p]));
-        fullData = [...byTime.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p);
-    }
-    fullData = interpolateBetweenPoints(fullData);
-    // Show data from the previous CHART_WINDOW_SECONDS (10s): filter by time window, x-axis 0 to 10 seconds
-    let chartDataDisplay = [];
+    // Guarantee exactly 151 points (0.0s -> 15.0s step 0.1s) for the canvas.
+    // This also fixes cases where an already-running round still has older 16-point data.
+    const STEP = 0.1;
+    const TOTAL = 15;
+    const dense = [];
 
-    const hasFullBettingData = serverRound?.graphData && serverRound.graphData.length >= EXPECTED_BETTING_POINTS;
-    if (roundPhase === "result" && hasFullBettingData && serverRound?.graphData) {
-        const gd = serverRound.graphData;
-        chartDataDisplay = [];
-        for (let t = 0; t <= COMBINED_GRAPH_SECONDS; t += PLACE_BETS_DISPLAY_STEP_SEC) {
-            const pt = interpolateAtTimeForGraph(gd, t);
-            if (pt) chartDataDisplay.push({ time: pt.time, price: pt.price });
-        }
-    }
-    const showPreviousGraph = isFlowPhase && !hasCycleStart && !hasFlowPoints && hasPreviousGraph;
+    let idx = 0;
+    for (let k = 0; k <= TOTAL / STEP; k += 1) {
+      const t = Number((k * STEP).toFixed(1));
 
-    const chartThreshold = (roundPhase === "trading" || roundPhase === "result" || roundPhase === "betting")
-        ? (serverRound?.startValue ?? startValue)
-        : (isFlowPhase && hasCycleStart) ? cycleStartValue : (chartDataDisplay.length ? chartDataDisplay[0].price : startValue);
-        let chartMin = chartDataDisplay.length ? Math.min(...chartDataDisplay.map((d) => d.price)) : chartThreshold - 5;
-        let chartMax = chartDataDisplay.length ? Math.max(...chartDataDisplay.map((d) => d.price)) : chartThreshold + 5;
-        // Result phase: use same Y domain as place-bets/trading (betting segment 0–10s only) so graph shape doesn't change at the end
-        if (roundPhase === "result" && serverRound?.graphData?.length) {
-            const gd = serverRound.graphData;
-            const bettingEndIndex = gd.findIndex((p) => (p.time ?? 0) > BETTING_GRAPH_SECONDS);
-            const segment = bettingEndIndex <= 0 ? gd : gd.slice(0, bettingEndIndex);
-            if (segment.length > 0) {
-                const fullMin = Math.min(...segment.map((p) => p.value));
-                const fullMax = Math.max(...segment.map((p) => p.value));
-                const pad = Math.max((fullMax - fullMin) * 0.1, 0.5);
-                chartMin = fullMin - pad;
-                chartMax = fullMax + pad;
-            }
-        }
-        const lastPrice = chartDataDisplay.length ? chartDataDisplay[chartDataDisplay.length - 1].price : currentValue;
+      while (idx + 1 < raw.length && raw[idx + 1].t < t) idx += 1;
 
-    // Value at start of trading (time 10s) for standard line in result view
-    let tradingStartPrice = null;
-    if (roundPhase === "result" && serverRound?.graphData?.length >= 2) {
-        const gd = serverRound.graphData;
-        const tTarget = BETTING_GRAPH_SECONDS;
-        const idx = gd.findIndex((p) => (p.time ?? 0) >= tTarget);
-        if (idx === 0) tradingStartPrice = gd[0].value;
-        else if (idx === -1) tradingStartPrice = gd[gd.length - 1].value;
-        else {
-            const p0 = gd[idx - 1], p1 = gd[idx];
-            const t0 = p0.time ?? 0, t1 = p1.time ?? tTarget;
-            const frac = t1 > t0 ? (tTarget - t0) / (t1 - t0) : 1;
-            tradingStartPrice = p0.value + frac * (p1.value - p0.value);
-        }
+      if (t <= raw[0].t) {
+        dense.push({ time: t, price: raw[0].price });
+        continue;
+      }
+      if (t >= raw[raw.length - 1].t) {
+        dense.push({ time: t, price: raw[raw.length - 1].price });
+        continue;
+      }
+
+      const a = raw[idx];
+      const b = raw[idx + 1] ?? raw[idx];
+      const dt = (b.t - a.t) || 1;
+      const frac = (t - a.t) / dt;
+      const price = a.price + (b.price - a.price) * frac;
+      dense.push({ time: t, price });
     }
 
-    if (loading) {
-        return <Loading />;
+    return dense;
+  }, [state]);
+  const chartMin = useMemo(() => {
+    if (!chartData.length) return 0;
+    return Math.min(...chartData.map((d) => d.price)) - 2;
+  }, [chartData]);
+  const chartMax = useMemo(() => {
+    if (!chartData.length) return 100;
+    return Math.max(...chartData.map((d) => d.price)) + 2;
+  }, [chartData]);
+  const chartThreshold = useMemo(() => {
+    if (!chartData.length) return 50;
+    return chartData[0].price;
+  }, [chartData]);
+  const upUsers = useMemo(() => liveRows.filter((r) => String(r.direction).toLowerCase() === "up").slice(0, 7), [liveRows]);
+  const downUsers = useMemo(() => liveRows.filter((r) => String(r.direction).toLowerCase() === "down").slice(0, 7), [liveRows]);
+  const potentialReturn = (Number(amount || 0) * 1.95).toFixed(2);
+
+  const handleBet = async (dir = direction) => {
+    try {
+      await placeGravityBet({ amount: Number(amount), direction: dir }, dispatch);
+      setDirection(dir);
+    } catch (e) {
+      toast({ title: e?.response?.data?.message || "Failed to place bet", status: "error", isClosable: true });
     }
+  };
 
-    return (
-        <Box pt={{ base: "120px", md: "75px" }} px={{ base: "16px", md: "24px" }} pb="24px" minH="100vh">
-            <Modal isOpen={isHelpOpen} onClose={onHelpClose} size="lg" isCentered>
-                <ModalOverlay bg="blackAlpha.700" />
-                <ModalContent bg="#2a2a2a" color="white" borderRadius="12px">
-                    <ModalHeader borderBottomWidth="1px" borderColor="whiteAlpha.200">How to play Gravity (Up/Down)</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody py={6}>
-                        <VStack align="stretch" spacing={4}>
-                            <Text><strong>1. Phases:</strong> Watch the preview graph, then place bets when "Place Bets" is active. After countdown, the round runs for 5 seconds (trading). </Text>
-                            <Text><strong>2. Betting:</strong> Choose <strong>Up</strong> (graph ends above start) or <strong>Down</strong> (graph ends below start). Enter your amount and click Up or Down. You can only bet during the "Place Bets" phase.</Text>
-                            <Text><strong>3. Payout:</strong> If your side wins, you get <strong>2×</strong> your bet. If your side loses, you lose your bet.</Text>
-                            <Text><strong>4. Graph:</strong> The line shows the price over time. The result is decided by which side had more total money bet (the bigger side loses). The graph you see matches the outcome.</Text>
-                        </VStack>
-                    </ModalBody>
-                </ModalContent>
-            </Modal>
-            <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap="24px">
-                <VStack spacing="16px" align="stretch">
-                    <Grid templateColumns="1fr 1fr" gap="16px">
-
-                        <Card bg="#2a2a2a" p="15px 20px" borderRadius="12px" minH="120px" w="100%">
-                            <style>
-                                {`
-                                @keyframes countdownPulse {
-                                    0%, 100% { transform: scale(1); opacity: 1; }
-                                    50% { transform: scale(1.15); opacity: 0.9; }
-                                }
-                                `}
-                            </style>
-                            <Flex direction="column" align="center" justify="center" minH="120px" w="100%">
-                                <Text color="gray.400" fontSize="sm" mb="8px">{getPhaseText()}</Text>
-                                <Box
-                                    position="relative"
-                                    w="150px"
-                                    h="120px"
-                                    maxW="380px"
-                                    maxH="380px"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                >
-                                    <CountdownCircle
-                                        phaseEndAtMs={phaseEndAtMs}
-                                        phaseTotalMs={
-                                            roundPhase === "preview" ? PREVIEW_SECONDS * 1000
-                                                : roundPhase === "betting" ? BETTING_SECONDS * 1000
-                                                    : roundPhase === "countdown" ? COUNTDOWN_SECONDS * 1000
-                                                        : roundPhase === "trading" ? TRADING_SECONDS * 1000
-                                                            : RESULT_SECONDS * 1000
-                                        }
-                                        lastServerTimeMsRef={lastServerTimeMsRef}
-                                        lastClientReceiveTimeMsRef={lastClientReceiveTimeMsRef}
-                                        roundPhase={roundPhase}
-                                        roundResult={roundResult}
-                                        bettingCountdown={bettingCountdown}
-                                        previewCountdown={previewCountdown}
-                                        roundCountdown={roundCountdown}
-                                        resultCountdown={resultCountdown}
-                                    />
-                                </Box>
-                            </Flex>
-                        </Card>
-
-                        <Card bg="#2a2a2a" p="15px 20px" borderRadius="12px">
-                            <VStack align="stretch" spacing="12px" textAlign="center">
-                                <Text color="gray.400" fontSize="sm">Your investment</Text>
-                                <Text color="white" fontSize="2xl" fontWeight="bold">
-                                    ${truncateToTwo(parseFloat(amount) || 0)}
-                                </Text>
-                                <Text color="gray.400" fontSize="sm" mt="8px">Potential Return (Down)</Text>
-                                <Text color="#e74c3c" fontSize="2xl" fontWeight="bold">
-                                    ${truncateToTwo((parseFloat(amount) || 0) * 2)}
-                                </Text>
-                            </VStack>
-                        </Card>
-                    </Grid>
-
-                    {/* Single graph instance: one source of truth so shape/data stay identical everywhere */}
-                    <Card bg="#2a2a2a" p="15px 24px" borderRadius="12px">
-                        <style>
-                            {`
-                            @keyframes startOverlayFadeIn {
-                                0% { opacity: 0; }
-                                100% { opacity: 1; }
-                            }
-                            @keyframes startLettersEffect {
-                                0% { opacity: 0; transform: scale(0.6); }
-                                70% { opacity: 1; transform: scale(1.08); }
-                                100% { opacity: 1; transform: scale(1); }
-                            }
-                            `}
-                        </style>
-                        <Flex justify="space-between" align="center" mb="16px">
-                            <HStack spacing="16px">
-                                <Text color="white" fontSize="lg" fontWeight="bold">
-                                    {showPreviousGraph ? "Previous Round" : "Live Graph"}
-                                </Text>
-                            </HStack>
-                            <HStack spacing="8px">
-                                <IconButton
-                                    aria-label="How to play"
-                                    icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
-                                    size="md"
-                                    bg="transparent"
-                                    color="#00d4ff"
-                                    borderRadius="50%"
-                                    _hover={{ bg: "rgba(255,255,255,0.1)", color: "#00D4FF" }}
-                                    onClick={onHelpOpen}
-                                />
-                            </HStack>
-                        </Flex>
-                        <Box position="relative" bg="#1a1a1a" borderRadius="8px" overflow="hidden" minH="320px">
-                            {roundPhase === "preview" ? (
-                                <Flex h="320px" align="center" justify="center" color="gray.500" fontSize="md">
-                                    <Text>Graph will appear when place bets starts</Text>
-                                </Flex>
-                                ) : (
-                                <GravityChartFlowContainer
-                                    serverRound={serverRound}
-                                    roundPhase={roundPhase}
-                                    phaseEndAtMs={phaseEndAtMs}
-                                    lastServerTimeMsRef={lastServerTimeMsRef}
-                                    lastClientReceiveTimeMsRef={lastClientReceiveTimeMsRef}
-                                    serverGraphDisplaySecRef={serverGraphDisplaySecRef}
-                                    startValue={startValue}
-                                    formatTime={formatTime}
-                                    tradingStartTime={tradingStartTime}
-                                    tradingEndTime={tradingEndTime}
-                                    roundResult={roundResult}
-                                    endValue={endValue}
-                                    showPreviousGraph={showPreviousGraph}
-                                    hasCycleStart={hasCycleStart}
-                                    isFlowPhase={isFlowPhase}
-                                    currentRoundId={roundHistory.roundId}
-                                />
-                            )}
-                            {roundPhase === "result" && roundResult && (
-                                <Box
-                                    position="absolute"
-                                    top={0}
-                                    left={0}
-                                    right={0}
-                                    bottom={0}
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                    pointerEvents="none"
-                                    bg="rgba(26, 26, 26, 0.5)"
-                                    animation="startOverlayFadeIn 0.3s ease-out forwards"
-                                >
-                                    <Text
-                                        fontSize={{ base: "4xl", md: "5xl" }}
-                                        fontWeight="bold"
-                                        color={roundResult === "up" ? "#4ade80" : "#e74c3c"}
-                                        letterSpacing="0.15em"
-                                        textShadow={roundResult === "up"
-                                            ? "0 0 20px rgba(74, 222, 128, 0.6)"
-                                            : "0 0 20px rgba(231, 76, 60, 0.6)"}
-                                        animation="startLettersEffect 0.5s ease-out 0.1s both"
-                                    >
-                                        {roundResult === "up" ? "Up Wins!" : "Down Wins!"}
-                                    </Text>
-                                </Box>
-                            )}
-                        </Box>
-                    </Card>
-
-                    <Card bg="#2a2a2a" p="15px 24px" borderRadius="12px">
-                        <VStack spacing="16px" align="stretch">
-                            <HStack spacing="8px" justify="space-between">
-                                <Text color="white" fontSize="sm">
-                                    Amount ≈ ${truncateToTwo(parseFloat(amount) || 0)}
-                                </Text>
-                                <HStack spacing="6px">
-                                    {roundHistory.slice(0, 10).map((r) => (
-                                        <Box
-                                            key={r.roundId}
-                                            w="25px"
-                                            h="25px"
-                                            borderRadius="50%"
-                                            bg="#323738"
-                                            display="flex"
-                                            alignItems="center"
-                                            justifyContent="center"
-                                            color={r.result === "up" ? "#4ade80" : "#e74c3c"}
-                                        >
-                                            {r.result === "up" ? <ArrowUpward fontSize="14px" /> : <ArrowDownward fontSize="14px" />}
-                                        </Box>
-                                    ))}
-                                </HStack>
-                            </HStack>
-                            <HStack spacing="12px">
-                                <Input
-                                    value={amount}
-                                    onChange={(e) => handleAmountChange(e.target.value)}
-                                    bg="#1a1a1a"
-                                    color="white"
-                                    borderColor="#3a3a3a"
-                                    placeholder="Amount"
-                                    flex="1"
-                                    isDisabled={roundPhase !== "betting"}
-                                />
-                                <Button
-                                    _hover={{ bg: "#00D4FF" }}
-                                    bg={amount === "50" ? "#00D4FF" : "#3a3a3a"}
-                                    color="white"
-                                    onClick={() => setAmount("50")}
-                                    isDisabled={roundPhase !== "betting"}
-                                >
-                                    $50
-                                </Button>
-                                <Button
-                                    _hover={{ bg: "#00D4FF" }}
-                                    bg={amount === "100" ? "#00D4FF" : "#3a3a3a"}
-                                    color="white"
-                                    onClick={() => setAmount("100")}
-                                    isDisabled={roundPhase !== "betting"}
-                                >
-                                    $100
-                                </Button>
-                                <Button
-                                    _hover={{ bg: "#00D4FF" }}
-                                    bg="#3a3a3a"
-                                    color="white"
-                                    onClick={() => setAmount(String(Math.max(MIN_AMOUNT, (parseFloat(amount) || 0) / 2)))}
-                                    isDisabled={roundPhase !== "betting"}
-                                >
-                                    1/2
-                                </Button>
-                                <Button
-                                    _hover={{ bg: "#00D4FF" }}
-                                    bg="#3a3a3a"
-                                    color="white"
-                                    onClick={() => setAmount(String(Math.min(MAX_AMOUNT, (parseFloat(amount) || 0) * 2)))}
-                                    isDisabled={roundPhase !== "betting"}
-                                >
-                                    2x
-                                </Button>
-                            </HStack>
-                            <Grid templateColumns="1fr 1fr" gap="16px">
-                                <Button
-                                    bg="#4ade80"
-                                    color="white"
-                                    h="60px"
-                                    fontSize="xl"
-                                    fontWeight="bold"
-                                    leftIcon={<ArrowUpward />}
-                                    onClick={() => handleBet("up")}
-                                    disabled={
-                                        roundPhase !== "betting" ||
-                                        !amount ||
-                                        parseFloat(amount) < MIN_AMOUNT ||
-                                        balance < parseFloat(amount) ||
-                                        pendingBet.up
-                                    }
-                                    _hover={{ bg: "#3acd70" }}
-                                >
-                                    Up
-                                </Button>
-                                <Button
-                                    bg="#e74c3c"
-                                    color="white"
-                                    h="60px"
-                                    fontSize="xl"
-                                    fontWeight="bold"
-                                    leftIcon={<ArrowDownward />}
-                                    onClick={() => handleBet("down")}
-                                    disabled={
-                                        roundPhase !== "betting" ||
-                                        !amount ||
-                                        parseFloat(amount) < MIN_AMOUNT ||
-                                        balance < parseFloat(amount) ||
-                                        pendingBet.down
-                                    }
-                                    _hover={{ bg: "#d63c2c" }}
-                                >
-                                    Down
-                                </Button>
-                            </Grid>
-                        </VStack>
-                    </Card>
+  return (
+    <Box px={{ base: "8px", md: "16px" }} minH="100vh" mt="90px" w="100%">
+      <Grid templateAreas={{ base: `"board" "side" "history"`, xl: `"board side" "history history"` }} templateColumns={{ base: "1fr", xl: "5fr 1.35fr" }} gap="10px">
+        <GridItem area="board">
+        <Card
+          p="10px"
+          bg="rgba(20, 25, 30, 0.75)"
+          backdropFilter="blur(12px)"
+          border="1px solid rgba(255,255,255,0.06)"
+          boxShadow="0 0 30px rgba(0,0,0,0.6)"
+        >
+            <CardBody flexDirection="column" alignItems="stretch">
+              <Grid templateColumns="1fr auto 1fr" alignItems="center" mb="8px" px={{ base: "2px", md: "6px" }}>
+                <VStack spacing="0" gridColumn="1 / -1" w="100%">
+                  <HStack spacing="12px" align="center" w="100%" justifyContent="center">
+                    <Text color="#61d879" fontSize={{ base: "34px", md: "48px" }} lineHeight="1" fontWeight="800">{upRate.toFixed(0)}%</Text>
+                    <Box borderRadius="999px" overflow="hidden">
+                      <CircularProgress
+                        value={timelineCharge}
+                        color={timelineColor}
+                        trackColor="rgba(255,255,255,0.16)"
+                        thickness="8px"
+                        size={{ base: "98px", md: "120px" }}
+                      >
+                        <CircularProgressLabel
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          textAlign="center"
+                        >
+                          <VStack spacing="0" lineHeight="1" alignItems="center" justifyContent="center">
+                            <Text color={timelineColor} fontWeight="800" fontSize={{ base: "2xl", md: "3xl" }}>{timeLeftLocal}</Text>
+                            <Text color={timelineColor} fontWeight="700" fontSize={{ base: "10px", md: "11px" }}>Sec</Text>
+                          </VStack>
+                        </CircularProgressLabel>
+                      </CircularProgress>
+                    </Box>
+                    <Text color="#ff6b6b" fontSize={{ base: "34px", md: "48px" }} lineHeight="1" fontWeight="800">{downRate.toFixed(0)}%</Text>
+                  </HStack>
                 </VStack>
 
-                <Grid templateColumns="1fr 1fr" gap="16px">
-                    <Card bg="#2a2a2a" p="24px" borderRadius="12px">
-                        <Flex align="center" justify="space-between" bg="#323738" p="12px" borderRadius="8px" mb="12px">
-                            <HStack spacing="8px">
-                                <Box
-                                    w="40px"
-                                    h="40px"
-                                    borderRadius="50%"
-                                    bg="rgba(255,255,255,0.2)"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                >
-                                    <ArrowUpward style={{ color: "white" }} />
-                                </Box>
-                                <Text color="white" fontWeight="bold">Up</Text>
-                            </HStack>
-                        </Flex>
-                        <Flex justify="space-between" mb="12px">
-                            <Text color="gray.400" fontSize="sm">Players {upBets.length}</Text>
-                            <Text color="white" fontWeight="bold">${truncateToTwo(upTotal)}</Text>
-                        </Flex>
-                        <VStack spacing="8px" align="stretch">
-                            {upBets.map((bet, idx) => (
-                                <Flex key={idx} justify="space-between" align="center">
-                                    <HStack spacing="8px">
-                                        {bet.avatar ? (
-                                            <Box
-                                                w="24px"
-                                                h="24px"
-                                                borderRadius="50%"
-                                                backgroundImage={`url(${bet.avatar})`}
-                                                backgroundSize="cover"
-                                                backgroundPosition="center"
-                                            />
-                                        ) : (
-                                            <Box
-                                                w="24px"
-                                                h="24px"
-                                                borderRadius="50%"
-                                                bg="rgba(74, 222, 128, 0.3)"
-                                            />
-                                        )}
-                                        <Text color="#4ade80" fontSize="sm" fontWeight="bold">{bet.userName}</Text>
-                                    </HStack>
-                                    <Text color="#4ade80" fontSize="sm" fontWeight="bold">${truncateToTwo(bet.amount)}</Text>
-                                </Flex>
-                            ))}
-                        </VStack>
-                    </Card>
-                    <Card bg="#2a2a2a" p="24px" borderRadius="12px">
-                        <Flex align="center" justify="space-between" bg="#323738" p="12px" borderRadius="8px" mb="12px">
-                            <HStack spacing="8px">
-                                <Box
-                                    w="40px"
-                                    h="40px"
-                                    borderRadius="50%"
-                                    bg="rgba(255,255,255,0.2)"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                >
-                                    <ArrowDownward style={{ color: "white" }} />
-                                </Box>
-                                <Text color="white" fontWeight="bold">Down</Text>
-                            </HStack>
-                        </Flex>
-                        <Flex justify="space-between" mb="12px">
-                            <Text color="gray.400" fontSize="sm">Players {downBets.length}</Text>
-                            <Text color="white" fontWeight="bold">${truncateToTwo(downTotal)}</Text>
-                        </Flex>
-                        <VStack spacing="8px" align="stretch">
-                            {downBets.map((bet, idx) => (
-                                <Flex key={idx} justify="space-between" align="center">
-                                    <HStack spacing="8px">
-                                        {bet.avatar ? (
-                                            <Box
-                                                w="24px"
-                                                h="24px"
-                                                borderRadius="50%"
-                                                backgroundImage={`url(${bet.avatar})`}
-                                                backgroundSize="cover"
-                                                backgroundPosition="center"
-                                            />
-                                        ) : (
-                                            <Box
-                                                w="24px"
-                                                h="24px"
-                                                borderRadius="50%"
-                                                bg="rgba(231, 76, 60, 0.3)"
-                                            />
-                                        )}
-                                        <Text color="#e74c3c" fontSize="sm" fontWeight="bold">{bet.userName}</Text>
-                                    </HStack>
-                                    <Text color="#e74c3c" fontSize="sm" fontWeight="bold">${truncateToTwo(bet.amount)}</Text>
-                                </Flex>
-                            ))}
-                        </VStack>
-                        </Card>
-                </Grid>
-            </Grid>
-            <History results={results} />
-        </Box>
-    );
+              </Grid>
+
+              <Box
+                h={{ base: `400px`, md: `400px` }}
+                borderRadius="16px"
+                overflow="hidden"
+                border="1px solid rgba(0,255,150,0.2)"
+                bg="radial-gradient(circle at 50% 0%, rgba(0,255,150,0.25), transparent 55%), 
+                radial-gradient(circle at 50% 100%, rgba(255,80,80,0.15), transparent 60%), 
+                #05070a"
+                boxShadow="0 0 80px rgba(0,255,150,0.15), inset 0 0 60px rgba(0,0,0,0.9)"
+                position="relative"
+              >
+                <Box position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center">
+                  <Box w="96%" h="100%">
+                    <GravityCanvasChart
+                      chartDataDisplay={chartData}
+                      previousGraphData={[]}
+                      chartMin={chartMin}
+                      chartMax={chartMax}
+                      chartThreshold={chartThreshold}
+                      roundPhase={state?.phase === "betting" ? "trading" : state?.phase}
+                      tradingStartSec={10}
+                      roundStartAtMs={state?.roundStartAtMs}
+                      roundId={state?.roundId}
+                      height={350}
+                    />
+                  </Box>
+                </Box>
+                {!canBet && (
+                  <Box position="absolute" left="14px" top="12px">
+                    <Text color="white" fontSize="2xl" fontWeight="800">No More Orders!</Text>
+                    <Text color="white" fontSize="xl" fontWeight="700">Wait For Next Round</Text>
+                  </Box>
+                )}
+              </Box>
+
+              <Box mt="10px">
+                <Flex justify="space-between">
+                  <Text color="rgba(255,255,255,0.7)" fontSize="xs">Graph flows 15s, then freezes to result</Text>
+                  <Text color="rgba(255,255,255,0.7)" fontSize="xs">Round: 18s</Text>
+                </Flex>
+              </Box>
+
+              <Text mt="10px" color="rgba(255,255,255,0.8)" fontSize="sm">Amount(USDT): ${Number(amount || 0).toFixed(2)}</Text>
+              <HStack mt="6px">
+                <Input value={amount} onChange={(e) => setAmount(e.target.value)} bg="#1b2025" border="1px solid rgba(255,255,255,0.14)" h="36px" />
+              </HStack>
+              <Grid mt="8px" templateColumns="repeat(4, 1fr)" gap="8px">
+                {[5, 10, 20, 50].map((preset) => (
+                  <Button key={preset} h="36px" bg="#2b3138" color="white" border="1px solid rgba(255,255,255,0.12)" _hover={{ bg: "#363d46" }} onClick={() => setAmount(String(preset))}>
+                    ${preset}
+                  </Button>
+                ))}
+              </Grid>
+              <Grid mt="8px" templateColumns="1fr 1fr" gap="8px">
+              <Button
+                h="56px"
+                fontSize="xl"
+                fontWeight="900"
+                borderRadius="14px"
+                bg="linear-gradient(135deg, #00ff99, #00cc66)"
+                position="relative"
+                overflow="hidden"
+                onClick={() => handleBet("up")}
+                _before={{
+                  content: '""',
+                  position: "absolute",
+                  top: 0,
+                  left: "-100%",
+                  width: "100%",
+                  height: "100%",
+                  background: "linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent)",
+                  transition: "0.6s"
+                }}
+                _hover={{
+                  transform: "translateY(-3px) scale(1.03)",
+                  boxShadow: "0 0 40px rgba(0,255,150,0.8)"
+                }}
+                _active={{ transform: "scale(0.97)" }}
+                isDisabled={!canBet || myPlacedUp}
+              >
+                🚀 UP
+              </Button>
+                <Button h="46px" bg="linear-gradient(90deg, #ef5d53 0%, #ea564c 100%)" color="white" fontWeight="800" onClick={() => handleBet("down")} isDisabled={!canBet || myPlacedDown}>Down</Button>
+              </Grid>
+            </CardBody>
+          </Card>
+        </GridItem>
+
+        <GridItem area="side">
+          <Card p="8px" bg="#2a2d2e" border="1px solid rgba(255,255,255,0.08)" h="100%">
+            <CardBody flexDirection="column" alignItems="stretch">
+              <Grid templateColumns="1fr 1fr" gap="8px">
+                <Box>
+                  <Box
+                    borderRadius="10px"
+                    border="1px solid rgba(98,214,123,0.25)"
+                    bg="linear-gradient(180deg, rgba(98,214,123,0.16) 0%, rgba(25,35,30,0.55) 100%)"
+                    p="8px"
+                  >
+                    <Text color="#61d879" textAlign="center" fontWeight="800">Up</Text>
+                    <Text color="#61d879" textAlign="center" fontSize="sm">{upUsers.length} Players</Text>
+                  </Box>
+                  <Box mt="8px" maxH="340px" overflowY="auto">
+                    {upUsers.map((u, i) => (
+                      <Flex
+                        key={`${u.userId || u.userName}-up-${i}`}
+                        justify="space-between"
+                        py="6px"
+                        borderBottom="1px solid rgba(255,255,255,0.08)"
+                      >
+                        <Text color="white" fontSize="sm">{u.userName || "Unknown"}</Text>
+                        <Text color="#61d879" fontSize="sm" fontWeight="700">${Number(u.amount || u.betAmount || 0).toFixed(2)}</Text>
+                      </Flex>
+                    ))}
+                  </Box>
+                </Box>
+                <Box>
+                  <Box
+                    borderRadius="10px"
+                    border="1px solid rgba(231,94,92,0.25)"
+                    bg="linear-gradient(180deg, rgba(231,94,92,0.16) 0%, rgba(36,25,26,0.55) 100%)"
+                    p="8px"
+                  >
+                    <Text color="#ff6b6b" textAlign="center" fontWeight="800">Down</Text>
+                    <Text color="#ff6b6b" textAlign="center" fontSize="sm">{downUsers.length} Players</Text>
+                  </Box>
+                  <Box mt="8px" maxH="340px" overflowY="auto">
+                    {downUsers.map((u, i) => (
+                      <Flex
+                        key={`${u.userId || u.userName}-down-${i}`}
+                        justify="space-between"
+                        py="6px"
+                        borderBottom="1px solid rgba(255,255,255,0.08)"
+                      >
+                        <Text color="white" fontSize="sm">{u.userName || "Unknown"}</Text>
+                        <Text color="#ff6b6b" fontSize="sm" fontWeight="700">${Number(u.amount || u.betAmount || 0).toFixed(2)}</Text>
+                      </Flex>
+                    ))}
+                  </Box>
+                </Box>
+              </Grid>
+            </CardBody>
+          </Card>
+        </GridItem>
+
+        <GridItem area="history">
+          <GravityBetHistory results={myHistory} />
+        </GridItem>
+      </Grid>
+    </Box>
+  );
 }
+

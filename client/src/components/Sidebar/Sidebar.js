@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, Fishing, Gravity, DoveGame, CocoGame } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -49,6 +49,27 @@ function Sidebar(props) {
                 <SidebarButtonLink value={TierA} />
                 <SidebarButtonLink value={TierB} />
                 <SidebarButtonLink value={TierC} />
+              </Collapse>
+          </Box>
+          )
+      }
+      if (prop.name === "GAMES") {
+        return( 
+          <Box key={key}>
+            <SideBarToggle
+            value={prop}
+            isExpanded={activeMenu === "games"}
+            onClick={() => toggleMenu("games")} />
+              <Collapse in={activeMenu === "games"} animateOpacity>
+                <SidebarButtonLink value={Rubic} />
+                <SidebarButtonLink value={Pumping} />
+                <SidebarButtonLink value={Fishing} />
+                <SidebarButtonLink value={Gravity} />
+                <SidebarButtonLink value={Rocket} />
+                <SidebarButtonLink value={Jackal} />
+                <SidebarButtonLink value={Mines} />
+                <SidebarButtonLink value={DoveGame} />
+                <SidebarButtonLink value={CocoGame} />
               </Collapse>
           </Box>
           )

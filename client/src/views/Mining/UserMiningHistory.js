@@ -160,7 +160,7 @@ function UserMiningHistory() {
                                                     color={result.isWin ? '#68d391' : '#f56565'}
                                                     fontWeight='normal'
                                                 >
-                                                    ${result.winAmount}
+                                                    ${truncateToTwo(result.winAmount)}
                                                 </Td>
                                                 <Td
                                                     textAlign="left"
@@ -182,7 +182,7 @@ function UserMiningHistory() {
                                                     color='#fff'
                                                     fontWeight='normal'
                                                 >
-                                                    {truncateToTwo( 16/result.turns)}
+                                                    {truncateToTwo(result.multiplier)}
                                                 </Td>
                                                 <Td
                                                     textAlign="left"

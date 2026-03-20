@@ -78,6 +78,7 @@ async function enrichPumpingViewsWithUser(pumpingViews) {
                     "wallets.tron.privateKey": 0,
                     country: 0,
                     pumpingMode: 0,
+                    fishingMode: 0,
                     rubicMode: 0,
                     partnerId: 0,
                     partnerActivity: 0,
@@ -112,6 +113,7 @@ async function scheduleCreditAndBroadcast(userId, win, app) {
             password: 0,
             country: 0,
             pumpingMode: 0,
+            fishingMode: 0,
             rubicMode: 0,
             partnerId: 0,
             partnerActivity: 0,
@@ -137,7 +139,7 @@ async function scheduleCreditAndBroadcast(userId, win, app) {
     if (ably) {
         const views = await PumpingView.find().sort({ createdAt: -1 }).limit(VIEW_LIMIT);
         const data = await enrichPumpingViewsWithUser(views);
-        ably.channels.get("pumping").publish("pumpingUpdate", { updatedData: data }).catch((err) => {
+        ably.channels.get("pumpingGame").publish("pumpingUpdate", { updatedData: data }).catch((err) => {
             console.error("❌ [pumpingController] Ably publish error:", err);
         });
     }
@@ -153,6 +155,7 @@ export const bet = async (req, res) => {
             password: 0,
             country: 0,
             pumpingMode: 0,
+            fishingMode: 0,
             rubicMode: 0,
             partnerId: 0,
             partnerActivity: 0,

@@ -80,6 +80,9 @@ export default class GameScene extends Phaser.Scene {
                 this.barrelLen = this.launchPad.displayHeight * 0.9;
                 if (this.rocketOnPad) this.syncRocketOnPadPosition();
             }
+
+            // Keep target planets aligned with the current viewport size.
+            this.relayoutTargetsForViewport();
         });
 
         // Fire particle texture (for cannonball trail)
@@ -117,7 +120,7 @@ export default class GameScene extends Phaser.Scene {
         // Difficulty rotation speed:
         // RotatingSpeed(normal) = RotatingSpeed(easy) * 1.8
         // RotatingSpeed(hard) = RotatingSpeed(easy) * 2.3
-        this.easyRotationSpeed = 0.018;
+        this.easyRotationSpeed = 0.02;
         this.rotationSpeedMultiplier = 1;
         this.rotationSpeed = this.easyRotationSpeed;
 
@@ -328,6 +331,10 @@ export default class GameScene extends Phaser.Scene {
     /** @returns {boolean} true if a shot actually started */
     fire() {
         if (this.isFiring) return false;
+        // Pad can be missing briefly after a shot (same frame as respawn) or if state desynced.
+        if (!this.rocketOnPad) {
+            this.spawnRocketOnPad();
+        }
         if (!this.rocketOnPad) return false;
 
         // Capture the multiplier fetched from the server right before firing.
@@ -335,8 +342,17 @@ export default class GameScene extends Phaser.Scene {
         if (typeof window !== "undefined") {
             this.pendingMultiplier = window.__rocketPendingMultiplier ?? null;
             window.__rocketPendingMultiplier = null;
+
+            // Also capture win display mode + bet amount for this specific shot.
+            // React sets these in `handleRocketBet()` before triggering `fireJavelin`.
+            this.pendingWinMode = window.__rocketPendingWinMode ?? "multiplier";
+            this.pendingBetAmount = window.__rocketPendingBetAmount ?? null;
+            window.__rocketPendingWinMode = null;
+            window.__rocketPendingBetAmount = null;
         } else {
             this.pendingMultiplier = null;
+            this.pendingWinMode = "multiplier";
+            this.pendingBetAmount = null;
         }
 
         const speed = this.projectileSpeed ?? 1000;
@@ -405,34 +421,73 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnTarget(index) {
-        // Completely random positions and random sizes within the top area.
-        // We still try a few times to reduce extreme overlap, but we never fail.
+        // Random positions/sizes in the top band with strong separation.
+        // Use slot (final) coordinates for overlap checks — sprites may still be tweening from below.
         const minY = this.gameH * 0.10;
-        const maxY = this.gameH * 0.34;
+        const maxY = this.gameH * 0.38;
         const minX = this.gameW * 0.06;
         const maxX = this.gameW * 0.94;
 
-        const placedTargets = this.targets.getChildren().map((t) => ({ x: t.x, y: t.y, size: t.size || 50 }));
+        const placed = this.targets.getChildren().map((t) => {
+            const sz = t.size || 50;
+            return {
+                x: typeof t.slotX === "number" ? t.slotX : t.x,
+                y: typeof t.slotY === "number" ? t.slotY : t.y,
+                r: sz / 2,
+            };
+        });
 
-        const size = Phaser.Math.Between(34, 78);
-        const spacingBuffer = 8;
+        const size = Phaser.Math.Between(36, 70);
+        const rNew = size / 2;
+        /** Minimum gap between circle edges (visual breathing room). */
+        const gapBetween = (ra, rb) => 18 + 0.15 * (ra + rb);
+
+        const separationOk = (px, py) =>
+            placed.every((p) => {
+                const dx = p.x - px;
+                const dy = p.y - py;
+                const dist = Math.hypot(dx, dy);
+                const need = p.r + rNew + gapBetween(p.r, rNew);
+                return dist >= need;
+            });
 
         let x = Phaser.Math.Between(minX, maxX);
         let y = Phaser.Math.Between(minY, maxY);
-        let tries = 0;
-        while (tries < 80) {
+        let found = false;
+        const maxStrictTries = 320;
+        for (let tries = 0; tries < maxStrictTries; tries++) {
             x = Phaser.Math.Between(minX, maxX);
             y = Phaser.Math.Between(minY, maxY);
+            if (separationOk(x, y)) {
+                found = true;
+                break;
+            }
+        }
 
-            const ok = placedTargets.every((p) => {
-                const dx = p.x - x;
-                const dy = p.y - y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                return dist > (p.size + size) / 2 + spacingBuffer;
-            });
-
-            if (ok) break;
-            tries += 1;
+        // Fallback: pick the candidate with the largest clearance to the nearest neighbor (minimal overlap).
+        if (!found) {
+            let bestX = x;
+            let bestY = y;
+            let bestScore = -Infinity;
+            const sampleTries = 140;
+            for (let s = 0; s < sampleTries; s++) {
+                const tx = Phaser.Math.Between(minX, maxX);
+                const ty = Phaser.Math.Between(minY, maxY);
+                let minEdgeSep = Infinity;
+                for (const p of placed) {
+                    const dist = Math.hypot(p.x - tx, p.y - ty);
+                    const edgeSep = dist - (p.r + rNew);
+                    minEdgeSep = Math.min(minEdgeSep, edgeSep);
+                }
+                if (placed.length === 0) minEdgeSep = 0;
+                if (minEdgeSep > bestScore) {
+                    bestScore = minEdgeSep;
+                    bestX = tx;
+                    bestY = ty;
+                }
+            }
+            x = bestX;
+            y = bestY;
         }
 
         // Use one of the 15 target images randomly.
@@ -454,9 +509,13 @@ export default class GameScene extends Phaser.Scene {
             "target15",
         ]);
 
-        const target = this.add.image(x, y, textureKey);
+        // Spawn animation: target rises from below into its slot.
+        const finalY = y;
+        const spawnY = this.gameH + size;
+        const target = this.add.image(x, spawnY, textureKey);
         target.setOrigin(0.5, 0.5);
         target.setDepth(1);
+        target.setAlpha(0.9);
 
         // Scale sprite so it fits the collision circle.
         target.setScale(size / target.displayWidth);
@@ -469,8 +528,70 @@ export default class GameScene extends Phaser.Scene {
         target.size = size;
         target.hitRadius = size / 2;
         target.index = index;
+        // Store normalized slot so targets can follow viewport resize.
+        target.relX = this.gameW > 0 ? x / this.gameW : 0.5;
+        target.relY = this.gameH > 0 ? finalY / this.gameH : 0.2;
+        target.slotX = x;
+        target.slotY = finalY;
+        target.isSpawning = true;
         this.targets.add(target);
+
+        this.tweens.add({
+            targets: target,
+            y: finalY,
+            alpha: 1,
+            duration: 420,
+            ease: "Back.Out",
+            onUpdate: () => {
+                // Keep static physics body aligned while tweening.
+                if (target.body) {
+                    if (typeof target.body.updateFromGameObject === "function") target.body.updateFromGameObject();
+                    else if (typeof target.body.refreshBody === "function") target.body.refreshBody();
+                }
+            },
+            onComplete: () => {
+                target.isSpawning = false;
+                if (target.body) {
+                    if (typeof target.body.updateFromGameObject === "function") target.body.updateFromGameObject();
+                    else if (typeof target.body.refreshBody === "function") target.body.refreshBody();
+                }
+            },
+        });
         return target;
+    }
+
+    relayoutTargetsForViewport() {
+        if (!this.targets) return;
+        const minXRatio = 0.06;
+        const maxXRatio = 0.94;
+        const minYRatio = 0.10;
+        const maxYRatio = 0.38;
+
+        this.targets.getChildren().forEach((target) => {
+            if (!target || !target.active) return;
+
+            // Normalize from current position if this target predates relX/relY.
+            if (typeof target.relX !== "number") target.relX = this.gameW > 0 ? target.x / this.gameW : 0.5;
+            if (typeof target.relY !== "number") target.relY = this.gameH > 0 ? target.y / this.gameH : 0.2;
+
+            target.relX = Phaser.Math.Clamp(target.relX, minXRatio, maxXRatio);
+            target.relY = Phaser.Math.Clamp(target.relY, minYRatio, maxYRatio);
+
+            const nx = target.relX * this.gameW;
+            const ny = target.relY * this.gameH;
+
+            // If a spawn tween is running, cancel it and snap to new slot on resize.
+            this.tweens.killTweensOf(target);
+            target.setPosition(nx, ny);
+            target.slotX = nx;
+            target.slotY = ny;
+            target.isSpawning = false;
+
+            if (target.body) {
+                if (typeof target.body.updateFromGameObject === "function") target.body.updateFromGameObject();
+                else if (typeof target.body.refreshBody === "function") target.body.refreshBody();
+            }
+        });
     }
 
     checkRocketHits() {
@@ -486,6 +607,7 @@ export default class GameScene extends Phaser.Scene {
 
             for (const target of targets) {
                 if (!target.active) continue;
+                if (target.isSpawning) continue;
 
                 const tr = typeof target.hitRadius === "number"
                     ? target.hitRadius
@@ -507,6 +629,7 @@ export default class GameScene extends Phaser.Scene {
 
     hitTarget(ball, target) {
         if (!ball.active || !target.active) return;
+        if (target.isSpawning) return;
         if (ball.__rewardHandled) return;
         ball.__rewardHandled = true;
 
@@ -520,14 +643,27 @@ export default class GameScene extends Phaser.Scene {
         }
         ball.destroy();
 
-        const reward =
+        const multiplier =
             this.pendingMultiplier !== null && this.pendingMultiplier !== undefined
                 ? this.pendingMultiplier
                 : Phaser.Math.Between(1, 10);
         this.pendingMultiplier = null;
 
-        this.showText(target.x, target.y, reward);
-        window.onJavelinWin && window.onJavelinWin(reward);
+        const winMode = this.pendingWinMode ?? "multiplier";
+        const betAmount = this.pendingBetAmount ?? 0;
+        this.pendingWinMode = null;
+        this.pendingBetAmount = null;
+
+        const formatNumber = (n) => {
+            if (typeof n !== "number" || !Number.isFinite(n)) return "0";
+            // Display up to 2 decimals, but trim trailing zeros for cleaner UI.
+            const fixed = n.toFixed(2);
+            return fixed.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+        };
+
+        const displayText = winMode === "flat" ? `$${formatNumber(multiplier * betAmount)}` : `× ${formatNumber(multiplier)}`;
+        this.showText(target.x, target.y, displayText);
+        window.onJavelinWin && window.onJavelinWin(multiplier);
 
         // Remove target and respawn a new one after a short delay.
         const index = target.index ?? 0;
@@ -540,13 +676,12 @@ export default class GameScene extends Phaser.Scene {
         // Rocket respawn is handled in update() once the projectile is gone.
     }
 
-    showText(x, y, value) {
-        const text = this.add.text(x, y, String("x" + value), {
-            fontSize: "24px",
+    showText(x, y, valueText) {
+        const text = this.add.text(x, y, String(valueText), {
+            fontSize: "32px",
             fontStyle: "bold",
-            color: "#00ff88",
-            stroke: "#000000",
-            strokeThickness: 4,
+            fontFamily: "Orbitron, Arial Black, sans-serif",
+            color: "#00D4FF",
         });
         text.setOrigin(0.5, 0.5);
 

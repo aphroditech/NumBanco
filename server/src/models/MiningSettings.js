@@ -26,7 +26,7 @@ const MiningSettingsSchema = new mongoose.Schema({
                 canWinNumber: Number,
             }
         ],
-        default: [{ max: 1.2, min: 0.5, totalNumber: 10, canWinNumber: 1 }]
+        default: [{ max: 20, min: 0.5, totalNumber: 10, canWinNumber: 1 }]
     },
     Turns7: {
         type: [

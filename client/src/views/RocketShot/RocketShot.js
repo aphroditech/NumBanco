@@ -17,6 +17,7 @@ import {
     ModalBody,
     ModalCloseButton,
     Select,
+    useMediaQuery,
 } from '@chakra-ui/react';
 import Card from 'components/Card/Card.js';
 import CardHeader from 'components/Card/CardHeader.js';
@@ -35,33 +36,37 @@ import { useHistory } from 'react-router-dom';
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 /** Match Dove Cross step increments for +/- controls */
-const AMOUNT_STEP = 0.1;
+const AMOUNT_STEP = 1;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
-const BET_EPS = 1e-6;
+
+/**
+ * Phaser may not be ready on the same tick the bet API returns (scene boot, pad respawn, etc.).
+ * Retry fire across a few animation frames so the rocket actually launches reliably.
+ */
+async function fireJavelinWhenReady(maxFrames = 40) {
+    for (let i = 0; i < maxFrames; i += 1) {
+        if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
+            try {
+                if (window.fireJavelin() === true) return true;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    return false;
+}
 
 /**
  * Redux `user.balance` may be missing while the navbar still shows stale digits, or come back as a string.
  * When unknown, don't coerce to 0 (that makes `balance >= bet` false and locks Fire forever).
  */
-function getWalletBalanceInfo(user) {
-    const raw = user?.balance;
-    if (typeof raw === "number" && Number.isFinite(raw)) {
-        return { balance: raw, known: true };
-    }
-    if (typeof raw === "string") {
-        const cleaned = raw.replace(/,/g, "").trim();
-        if (cleaned === "") return { balance: 0, known: false };
-        const n = parseFloat(cleaned);
-        if (Number.isFinite(n)) return { balance: n, known: true };
-    }
-    return { balance: 0, known: false };
-}
 
 export default function RocketShotPage() {
     const dispatch = useDispatch();
     const history = useHistory();
 
-    const [amount, setAmount] = useState('0.5');
+    const [amount, setAmount] = useState(MIN_AMOUNT);
     const [isFiring, setIsFiring] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [mode, setMode] = useState("easy");
@@ -70,45 +75,28 @@ export default function RocketShotPage() {
     const firingLockRef = useRef(false);
 
     const user = useSelector((state) => state.user.userInfo) || {};
-    const { balance: walletBalance, known: balanceKnown } = getWalletBalanceInfo(user);
-    const maxAmount = balanceKnown
-        ? Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalance))
-        : MAX_AMOUNT;
-    const betNum = parseFloat(String(amount ?? "").trim());
-    const betValid =
-        Number.isFinite(betNum) &&
-        betNum + BET_EPS >= MIN_AMOUNT &&
-        betNum <= maxAmount + BET_EPS &&
-        (!balanceKnown || walletBalance + BET_EPS >= betNum);
-
-    const currentAmount = Number.isFinite(parseFloat(String(amount))) ? parseFloat(String(amount)) : MIN_AMOUNT;
-
-    const setClampedAmount = (val) => {
-        const v = Math.max(MIN_AMOUNT, Math.min(maxAmount, val));
-        setAmount(v.toFixed(1));
-    };
+    const walletBalance = user.balance;
+    const maxAmount = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalance));
+    const [isNarrowLayout] = useMediaQuery("(max-width: 1799px)");
 
     const handleAmountChange = (e) => {
         const raw = e.target.value;
         const v = parseFloat(raw);
-        if (!Number.isNaN(v)) {
-            setClampedAmount(v);
-        } else {
-            setAmount(raw);
+        if(v >= MIN_AMOUNT && v <= maxAmount) {
+            setAmount(v);
         }
     };
 
-    const handleAmountBlur = () => {
-        const n = parseFloat(String(amount));
-        if (Number.isNaN(n) || n < MIN_AMOUNT) setAmount(MIN_AMOUNT.toFixed(1));
-        else if (n > maxAmount) setAmount(maxAmount.toFixed(1));
-        else setAmount(n.toFixed(1));
-    };
-
-    const handleRocketBet = async (amount, mode) => {
+    const handleRocketBet = async (amount, mode, selectedWinMode) => {
         if (firingLockRef.current) return;
         firingLockRef.current = true;
         setIsFiring(true);
+
+        // Used by Phaser scene to display the correct win label for this specific shot.
+        if (typeof window !== 'undefined') {
+            window.__rocketPendingBetAmount = parseFloat(amount);
+            window.__rocketPendingWinMode = selectedWinMode;
+        }
         try {
             const multiplier = await rocketBet({ bet: parseFloat(amount), level: mode }, dispatch, history);
             // Store multiplier for the current shot.
@@ -117,21 +105,27 @@ export default function RocketShotPage() {
                 window.__rocketPendingMultiplier = multiplier;
             }
             if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
-                const fired = window.fireJavelin();
+                const fired = await fireJavelinWhenReady();
                 // If Phaser didn't start a shot, unlock immediately (avoids Fire stuck disabled).
                 if (!fired) {
                     window.__rocketPendingMultiplier = null;
+                    window.__rocketPendingWinMode = null;
+                    window.__rocketPendingBetAmount = null;
                     setIsFiring(false);
                     firingLockRef.current = false;
                 }
             } else {
                 if (typeof window !== 'undefined') window.__rocketPendingMultiplier = null;
+                if (typeof window !== 'undefined') window.__rocketPendingWinMode = null;
+                if (typeof window !== 'undefined') window.__rocketPendingBetAmount = null;
                 setIsFiring(false);
                 firingLockRef.current = false;
             }
         } catch (error) {
             console.error(error);
             if (typeof window !== 'undefined') window.__rocketPendingMultiplier = null;
+            if (typeof window !== 'undefined') window.__rocketPendingWinMode = null;
+            if (typeof window !== 'undefined') window.__rocketPendingBetAmount = null;
             setIsFiring(false);
             firingLockRef.current = false;
         }
@@ -176,15 +170,15 @@ export default function RocketShotPage() {
             const bet = parseFloat(amount);
             if (Number.isNaN(bet) || bet < MIN_AMOUNT) return;
             if (bet > maxAmount) return;
-            if (balanceKnown && walletBalance < bet) return;
-            handleRocketBet(bet, mode);
+            if (walletBalance < bet) return;
+            handleRocketBet(bet, mode, winMode);
         };
 
         window.onRocketShotBet = tryFireFromCanvas;
         return () => {
             if (window.onRocketShotBet === tryFireFromCanvas) window.onRocketShotBet = undefined;
         };
-    }, [amount, mode, maxAmount, walletBalance, balanceKnown]);
+    }, [amount, mode, winMode, maxAmount, walletBalance]);
 
     // Handle rocket shot miss
     window.onRocketShotMiss = () => {
@@ -210,43 +204,24 @@ export default function RocketShotPage() {
     return (
         <Box px={{ base: '16px', md: '24px' }} minH="90vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
             <Grid
-                templateAreas={{
-                    sm: '"game" "empty"',
-                    md: '"game empty"',
-                    '1550px': '"game empty"'
-                }}
-                templateColumns={{
-                    sm: '1fr',
-                    md: '6fr 2fr',
-                    '1550px': '6fr 2fr'
-                }}
-                templateRows={{
-                    base: 'auto auto',
-                    md: 'auto',
-                    '1550px': 'auto'
-                }}
+                templateAreas={isNarrowLayout ? '"game" "empty"' : '"game empty"'}
+                templateColumns={isNarrowLayout ? '1fr' : '6fr 2fr'}
+                templateRows={isNarrowLayout ? 'auto auto' : 'auto'}
                 gap={{ base: '16px', md: '24px' }}
                 w="100%"
             >
                 {/* Center - Main Javelin Game */}
-                <GridItem area="game" minH={'450px'}>
+                <GridItem area="game" minH={{ base: "auto", md: "auto" }}>
                     <Card  minH="100%" alignItems="center"  w="100%">
-                        <CardHeader>
-                            <Box position="absolute" top="13px" right="13px" zIndex={2}>
-                                <IconButton
-                                    aria-label="Help"
-                                    icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
-                                    size="md"
-                                    bg="transparent"
-                                    color="#00d4ff"
-                                    borderRadius="50%"
-                                    _hover={{ bg: 'rgba(255,255,255,0.1)', color: '#00D4FF' }}
-                                    onClick={() => setIsHelpModalOpen(true)}
-                                />
-                            </Box>
-                        </CardHeader>
                         <CardBody w="100%" p="0" display="flex" flexDirection="column" >    
-                            <Box  w="100%" minH="600px">
+                            <Box
+                                w="100%"
+                                minW={0}
+                                minH={{ base: "260px", sm: "320px", md: "380px" }}
+                                maxH={{ base: "52vh", md: "66vh" }}
+                                h="auto"
+                                style={{ aspectRatio: "16 / 9" }}
+                            >
                                 <JavelinGame mode={mode}/>
                             </Box>
 
@@ -273,7 +248,7 @@ export default function RocketShotPage() {
                                             border="1px solid rgba(0, 212, 255, 0.5)"
                                             borderRadius="8px"
                                             _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
-                                            onClick={() => setClampedAmount(MIN_AMOUNT)}
+                                            onClick={() => setAmount(MIN_AMOUNT)}
                                         >
                                             Min
                                         </Button>
@@ -296,14 +271,13 @@ export default function RocketShotPage() {
                                                 color="#fff"
                                                 borderRadius="6px"
                                                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                onClick={() => setClampedAmount(currentAmount - AMOUNT_STEP)}
-                                                isDisabled={currentAmount <= MIN_AMOUNT + BET_EPS}
+                                                onClick={() => setAmount(amount - AMOUNT_STEP)}
+                                                isDisabled={amount - AMOUNT_STEP < MIN_AMOUNT}
                                             />
                                             <Input
                                                 type="number"
                                                 value={amount}
                                                 onChange={handleAmountChange}
-                                                onBlur={handleAmountBlur}
                                                 min={MIN_AMOUNT}
                                                 max={maxAmount}
                                                 step={AMOUNT_STEP}
@@ -340,8 +314,8 @@ export default function RocketShotPage() {
                                                 color="#fff"
                                                 borderRadius="6px"
                                                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                onClick={() => setClampedAmount(currentAmount + AMOUNT_STEP)}
-                                                isDisabled={currentAmount >= maxAmount - BET_EPS}
+                                                onClick={() => setAmount(amount + AMOUNT_STEP)}
+                                                isDisabled={amount + AMOUNT_STEP > maxAmount}
                                             />
                                         </HStack>
                                         <Button
@@ -356,7 +330,7 @@ export default function RocketShotPage() {
                                             border="1px solid rgba(0, 212, 255, 0.5)"
                                             borderRadius="8px"
                                             _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
-                                            onClick={() => setClampedAmount(maxAmount)}
+                                            onClick={() => setAmount(maxAmount)}
                                         >
                                             Max
                                         </Button>
@@ -445,20 +419,16 @@ export default function RocketShotPage() {
                                             boxShadow: '0 4px 12px rgba(0, 212, 255, 0.3)',
                                         }}
                                         _active={{ transform: 'translateY(0)' }}
-                                        isDisabled={!betValid || isFiring}
+                                        isDisabled={isFiring || amount < MIN_AMOUNT || amount > maxAmount }
                                         title={
-                                            !betValid && !isFiring
-                                                ? !Number.isFinite(betNum) || betNum + BET_EPS < MIN_AMOUNT
-                                                    ? `Enter at least ${MIN_AMOUNT}`
-                                                    : balanceKnown && walletBalance + BET_EPS < betNum
-                                                      ? 'Insufficient balance for this bet'
-                                                      : betNum > maxAmount + BET_EPS
-                                                        ? `Max bet is ${maxAmount.toFixed(2)}`
-                                                        : ''
-                                                : undefined
+                                            amount < MIN_AMOUNT
+                                                ? `Enter at least ${MIN_AMOUNT}`
+                                                : amount > maxAmount
+                                                  ? `Max bet is ${maxAmount}`
+                                                  : ''
                                         }
                                         onClick={() => {
-                                            handleRocketBet(parseFloat(amount), mode);
+                                            handleRocketBet(parseFloat(amount), mode, winMode);
                                         }}
                                     >
                                         Fire
@@ -466,7 +436,18 @@ export default function RocketShotPage() {
                                 </VStack>
                             </Box>
                         </CardBody>
-                        
+                        <Box position="absolute" bottom="20px" right="20px" zIndex={2}>
+                            <IconButton
+                                aria-label="Help"
+                                icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
+                                size="md"
+                                bg="transparent"
+                                color="#00d4ff"
+                                borderRadius="50%"
+                                _hover={{ bg: 'rgba(255,255,255,0.1)', color: '#00D4FF' }}
+                                onClick={() => setIsHelpModalOpen(true)}
+                            />
+                        </Box>
                     </Card>
                 </GridItem>
                 {/* Right Side - History */}
@@ -494,23 +475,25 @@ export default function RocketShotPage() {
                                 <Text fontWeight="bold" color="#00D4FF" mb={2}>
                                      Step into the action and test your timing in Rocket Shot!
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                      -The rocket swings back and forth in a smooth semicircle.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                      -Watch closely and time your move carefully.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                      -Press the FIRE button to launch the rocket into space.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                      - Aim to hit one of the targets above the rocket.
                                 </Text>
                                 
-                                <Text>
+                                <Text mb={1}>
                                      - The faster the rocket moves, the harder it is to hit high multipliers — but that’s where the big rewards are.
                                 </Text>
-                                
+                                <Text mb={1}>
+                                    - In normal mode winingAmount is 110% of easy mode. In hard mode it is 120% of easy mode. But the speed is more fast.
+                                </Text>
                             </Box>
                         </VStack>
                     </ModalBody>
