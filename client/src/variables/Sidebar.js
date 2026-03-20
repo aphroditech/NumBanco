@@ -15,11 +15,13 @@ import FishingPage from "views/Fishing/FishingPage";
 import GravityPage from "views/Gravity/GravityPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
+import MinesPage from "views/Mines/MinesPage";
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import CasinoIcon from '@mui/icons-material/Casino';
 import GavelIcon from '@mui/icons-material/Gavel';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TwitterIcon from '@mui/icons-material/Twitter';
+import DiamondIcon from '@mui/icons-material/Diamond';
 
 export const TierA = {
     path: "/tierA",
@@ -70,6 +72,14 @@ export const Jackal = {
     name: "JACKAL",
     icon: <ImageSearchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Mining,
+    layout: "/game",
+}
+
+export const Mines = {
+    path: "/mine",
+    name: "MINES",
+    icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: MinesPage,
     layout: "/game",
 }
 

@@ -11,6 +11,7 @@ import { initMiningSetting } from './initMiningSetting.js';
 import { initRocketSetting } from './initRocket.js';
 import { initializeFishingPercentages } from './FishingPercentages.js';
 import { initializeFishingLimits } from './fishingLimits.js';
+
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
 

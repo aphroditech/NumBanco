@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Rocket, Rubic, Pumping, Fishing, Gravity, DoveGame, CocoGame } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, Fishing, Gravity, DoveGame, CocoGame } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -67,6 +67,7 @@ function Sidebar(props) {
                 <SidebarButtonLink value={Gravity} />
                 <SidebarButtonLink value={Rocket} />
                 <SidebarButtonLink value={Jackal} />
+                <SidebarButtonLink value={Mines} />
                 <SidebarButtonLink value={DoveGame} />
                 <SidebarButtonLink value={CocoGame} />
               </Collapse>

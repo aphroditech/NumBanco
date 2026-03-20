@@ -3,6 +3,7 @@ import https from "https";
 import http from "http";
 import fs from "fs";
 import app from "./app.js";
+import { createAblyClient } from "./config/ably.js";
 import { connectDB } from "./config/db.js";
 import { getUserStatusChannel } from "./services/ably.service.js";
 import { startBetEngine } from "./services/bet/betEngine.service.js";
@@ -17,7 +18,7 @@ import { getWithdrawWallet, startWithdrawApprovalCron } from "./controllers/with
 import { initializeDatabase } from "./database/index.js";
 import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
-import { startUpDownGameLoop, startUpDownLiveFeed, setAblyClient, advancePhase } from "./services/updown/updownGame.service.js";
+import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
@@ -57,7 +58,6 @@ connectDB().then(async () => {
 
     ably.connection.once("connected", () => {
         console.log("✅ Ably connected");
-        // setAblyClient(ably);
         // confirmDepositEngine(ably);
         // tronEngine(ably);
         // startPartnerDepositCron(ably);
@@ -65,14 +65,12 @@ connectDB().then(async () => {
         // getUserStatusChannel(ably);
 
         // pumpingBot(ably);
-        // startUpDownLiveFeed(ably);
-        // startUpDownGameLoop(ably);
-        // advancePhase(ably);
         // rubicBot(ably);
         // pumpingBot(ably);
         // miningBot(ably);
         // rocketBot(ably);
-        fishingBot(ably);
+        // fishingBot(ably);
+        startGravityGameLoop(ably);
         // cocoBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();

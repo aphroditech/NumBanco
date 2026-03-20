@@ -15,6 +15,15 @@ const GravityHistorySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  avatar: {
+    type: String,
+    default: "",
+  },
+  direction: {
+    type: String,
+    enum: ["up", "down"],
+    required: true,
+  },
   betAmount: {
     type: Number,
     required: true,
@@ -25,6 +34,8 @@ const GravityHistorySchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-GravityHistorySchema.index({ roundId: 1, userId: 1 }, { unique: true });
+// Allow a user to place both an "up" and "down" bet within the same round,
+// but still prevent duplicate bets for the same side.
+GravityHistorySchema.index({ roundId: 1, userId: 1, direction: 1 }, { unique: true });
 
 export default mongoose.model("GravityHistory", GravityHistorySchema);    

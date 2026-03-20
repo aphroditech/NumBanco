@@ -33,6 +33,7 @@ import TwitterIcon from '@mui/icons-material/Twitter';
 import PlinkoPage from "views/Plinko/Plinko";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
+import DiamondIcon from '@mui/icons-material/Diamond';
 
 import SupportPage from "views/Support/Support";
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -43,6 +44,7 @@ import GravityPage from "views/Gravity/GravityPage"
 import FishingPage from "views/Fishing/FishingPage";
 import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
+import MinesPage from "views/Mines/MinesPage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -133,6 +135,14 @@ var dashRoutes = [
     name: "JACKAL",
     icon: <ImageSearchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Mining,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/mine",
+    name: "MINE",
+    icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: MinesPage,
     layout: "/game",
   },
   {
