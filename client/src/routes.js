@@ -45,6 +45,9 @@ import Dove from "views/DovePage/Dove";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
+import Coco from "views/Coco/CocoPage";
+import { GiChicken } from "react-icons/gi";
+
 
 import {
   DocumentIcon,
@@ -105,6 +108,14 @@ var dashRoutes = [
     name: "DOVE CROSS",
     icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
+    layout: "/game",
+  },
+  {
+    // redirect: true,
+    path: "/coco",
+    name: "COCO TAP CRASH",
+    icon: <GiChicken style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Coco,
     layout: "/game",
   },
   {

@@ -8,6 +8,7 @@ const initialState = {
         pumpingUsers: 0,
         gravityUsers: 0,
         doveUsers: 0,
+        cocoUsers: 0,
         onlineUsers: 0
     },
     lootAvailable: false,

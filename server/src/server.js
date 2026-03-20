@@ -22,7 +22,7 @@ import { startUpDownGameLoop, startUpDownLiveFeed, setAblyClient, advancePhase }
 
 import {miningBot} from "./services/mining/miningBotService.js";
 import {rocketBot} from "./services/rocket/rocketBot.service.js";
-
+import { cocoBot } from "./services/coco/cocoBot.service.js";
 dotenv.config();
 
 const PORT = process.env.API_PORT || 5000;
@@ -70,8 +70,9 @@ connectDB().then(async () => {
         // advancePhase(ably);
         // rubicBot(ably);
         // pumpingBot(ably);
-        miningBot(ably);
-        rocketBot(ably);
+        // miningBot(ably);
+        // rocketBot(ably);
+        // cocoBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();
         // getWithdrawWallet();
