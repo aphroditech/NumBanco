@@ -317,6 +317,12 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 1 // normal mode by default
   },
+  cocoMode: {
+    type: Number,
+    default: 0, // 0=easy, 1=normal, 2=hard
+    min: 0,
+    max: 2
+  },
   doveAmount: {
     type: Number,
     default: 0
@@ -437,6 +443,38 @@ const userSchema = new mongoose.Schema({
         isWin: {
           type: Boolean,
           default: false
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
+  cocoHistory: {
+    type: [
+      {
+        betAmount: {
+          type: Number,
+          required: true
+        },
+        profit: {
+          type: Number,
+          default: 0
+        },
+        multiplier: {
+          type: Number,
+          default: 0
+        },
+        successCount: {
+          type: Number,
+          default: 0
+        },
+        totalSum: {
+          type: Number,
+          default: 0
         },
         createAt: {
           type: Date,
