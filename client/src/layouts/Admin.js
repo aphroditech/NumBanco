@@ -27,27 +27,7 @@ export default function Dashboard(props) {
     const { setIsAuth } = props;
     const user = useSelector((state) => state.user.userInfo);
 
-
     useDailyLootTimer(user);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const fetchUserData = async () => {
-            try {
-                await getUserData(dispatch);
-            } catch (error) {
-                console.error("Failed to fetch user data:", error);
-            }
-        };
-
-        fetchUserData();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [dispatch]);
-
     // Keep betStartTime in sessionStorage updated on all admin pages (dashboard, Tier A/B/C, etc.)
     useAblyBetStart(null, false, null);
     // const { ...rest } = props;

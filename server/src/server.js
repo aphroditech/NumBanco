@@ -71,7 +71,7 @@ connectDB().then(async () => {
         // rubicBot(ably);
         // pumpingBot(ably);
         // miningBot(ably);
-        // rocketBot(ably);
+        rocketBot(ably);
         // cocoBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();

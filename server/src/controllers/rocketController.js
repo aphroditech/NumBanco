@@ -147,7 +147,7 @@ export const shotResult = async (req, res) => {
 
 export const getRocketResults = async (req, res) => {
     try {
-        const rocketResults = await RocketResult.find({}).sort({ createAt: -1 }).limit(23);
+        const rocketResults = await RocketResult.find({}).sort({ date: -1 }).limit(23);
         return res.json(rocketResults);
     } catch (error) {
         console.error(error);
