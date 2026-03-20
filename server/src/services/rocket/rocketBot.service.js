@@ -2,7 +2,6 @@ import cron from "node-cron";
 import User from "../../models/User.js";
 import RocketSettings from "../../models/RocketSettings.js";
 import RocketResult from "../../models/RocketResult.js";
-import RocketHistory from "../../models/RocketHistory.js";
 
 const LEVELS = ["easy", "normal", "hard"];
 
@@ -98,25 +97,6 @@ export const rocketBot = async (ably) => {
                 user.totalEarn = Math.round((user.totalEarn + winAmount) * 1000) / 1000;
             }
             await user.save();
-
-            const historyEntry = {
-                isWin,
-                level,
-                betAmount,
-                winAmount,
-                date: new Date(),
-            };
-
-            let rocketHistory = await RocketHistory.findOne({ user: user._id });
-            if (!rocketHistory) {
-                rocketHistory = new RocketHistory({
-                    user: user._id,
-                    history: [historyEntry],
-                });
-            } else {
-                rocketHistory.history.push(historyEntry);
-            }
-            await rocketHistory.save();
 
             const data = {
                 userName: user.altas,
