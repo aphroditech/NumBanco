@@ -30,6 +30,18 @@ export const pumpingBot = async (ably) => {
                     isUser: 0,
                 })
                 await pumpingView.save();
+                
+                const oldDocs = await PumpingView.find({isUser:  0})
+                    .sort({ createdAt: -1 })
+                    .skip(12)
+                    .select('_id');
+
+                if (oldDocs.length > 0) {
+                    await PumpingView.deleteMany({
+                        _id: { $in: oldDocs.map(doc => doc._id) }
+                    });
+                }
+
                 const channel = ably.channels.get("pumpingGame");
                 const pumpingViewUpdate = await PumpingView.find().sort({ createdAt: -1 }).limit(12);
                 

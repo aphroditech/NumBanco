@@ -33,6 +33,7 @@ import UserMiningHistory from './UserMiningHistory'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HandshakeRoundedIcon from '@mui/icons-material/HandshakeRounded';
 import OtherUserHistory from './OtherUserHistory';
+import HelpIcon from '@mui/icons-material/Help';
 import { useHistory } from 'react-router-dom';
 
 const MIN_AMOUNT = 0.5;
@@ -683,14 +684,14 @@ export default function Mining() {
                         display="flex"
                         alignItems="center"
                     >
-                        <HandshakeRoundedIcon
+                        <HelpIcon
                             style={{
                                 fontSize: "26px",
                                 color: "#00D4FF",
                                 marginRight: "8px"
                             }}
                         />
-                        How to Play Mining Game
+                        How to Play Jackal Game
                     </ModalHeader>
 
                     <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
@@ -700,7 +701,7 @@ export default function Mining() {
 
                             <Box>
                                 <Text fontWeight="bold" color="#00D4FF" mb={2}>
-                                    💰 How to Play 
+                                 How to Play 
                                 </Text>
                                 <Text>
                                     1. The player selects a bet amount and chooses the number of turns they want to play.

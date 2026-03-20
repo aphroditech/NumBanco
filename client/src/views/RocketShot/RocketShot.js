@@ -35,33 +35,19 @@ import { useHistory } from 'react-router-dom';
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 /** Match Dove Cross step increments for +/- controls */
-const AMOUNT_STEP = 0.1;
+const AMOUNT_STEP = 1;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
-const BET_EPS = 1e-6;
 
 /**
  * Redux `user.balance` may be missing while the navbar still shows stale digits, or come back as a string.
  * When unknown, don't coerce to 0 (that makes `balance >= bet` false and locks Fire forever).
  */
-function getWalletBalanceInfo(user) {
-    const raw = user?.balance;
-    if (typeof raw === "number" && Number.isFinite(raw)) {
-        return { balance: raw, known: true };
-    }
-    if (typeof raw === "string") {
-        const cleaned = raw.replace(/,/g, "").trim();
-        if (cleaned === "") return { balance: 0, known: false };
-        const n = parseFloat(cleaned);
-        if (Number.isFinite(n)) return { balance: n, known: true };
-    }
-    return { balance: 0, known: false };
-}
 
 export default function RocketShotPage() {
     const dispatch = useDispatch();
     const history = useHistory();
 
-    const [amount, setAmount] = useState('0.5');
+    const [amount, setAmount] = useState(MIN_AMOUNT);
     const [isFiring, setIsFiring] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [mode, setMode] = useState("easy");
@@ -70,39 +56,15 @@ export default function RocketShotPage() {
     const firingLockRef = useRef(false);
 
     const user = useSelector((state) => state.user.userInfo) || {};
-    const { balance: walletBalance, known: balanceKnown } = getWalletBalanceInfo(user);
-    const maxAmount = balanceKnown
-        ? Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalance))
-        : MAX_AMOUNT;
-    const betNum = parseFloat(String(amount ?? "").trim());
-    const betValid =
-        Number.isFinite(betNum) &&
-        betNum + BET_EPS >= MIN_AMOUNT &&
-        betNum <= maxAmount + BET_EPS &&
-        (!balanceKnown || walletBalance + BET_EPS >= betNum);
-
-    const currentAmount = Number.isFinite(parseFloat(String(amount))) ? parseFloat(String(amount)) : MIN_AMOUNT;
-
-    const setClampedAmount = (val) => {
-        const v = Math.max(MIN_AMOUNT, Math.min(maxAmount, val));
-        setAmount(v.toFixed(1));
-    };
+    const walletBalance = user.balance;
+    const maxAmount = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalance));
 
     const handleAmountChange = (e) => {
         const raw = e.target.value;
         const v = parseFloat(raw);
-        if (!Number.isNaN(v)) {
-            setClampedAmount(v);
-        } else {
-            setAmount(raw);
+        if(v >= MIN_AMOUNT && v <= maxAmount) {
+            setAmount(v);
         }
-    };
-
-    const handleAmountBlur = () => {
-        const n = parseFloat(String(amount));
-        if (Number.isNaN(n) || n < MIN_AMOUNT) setAmount(MIN_AMOUNT.toFixed(1));
-        else if (n > maxAmount) setAmount(maxAmount.toFixed(1));
-        else setAmount(n.toFixed(1));
     };
 
     const handleRocketBet = async (amount, mode, selectedWinMode) => {
@@ -188,7 +150,7 @@ export default function RocketShotPage() {
             const bet = parseFloat(amount);
             if (Number.isNaN(bet) || bet < MIN_AMOUNT) return;
             if (bet > maxAmount) return;
-            if (balanceKnown && walletBalance < bet) return;
+            if (walletBalance < bet) return;
             handleRocketBet(bet, mode, winMode);
         };
 
@@ -196,7 +158,7 @@ export default function RocketShotPage() {
         return () => {
             if (window.onRocketShotBet === tryFireFromCanvas) window.onRocketShotBet = undefined;
         };
-    }, [amount, mode, winMode, maxAmount, walletBalance, balanceKnown]);
+    }, [amount, mode, winMode, maxAmount, walletBalance]);
 
     // Handle rocket shot miss
     window.onRocketShotMiss = () => {
@@ -285,7 +247,7 @@ export default function RocketShotPage() {
                                             border="1px solid rgba(0, 212, 255, 0.5)"
                                             borderRadius="8px"
                                             _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
-                                            onClick={() => setClampedAmount(MIN_AMOUNT)}
+                                            onClick={() => setAmount(MIN_AMOUNT)}
                                         >
                                             Min
                                         </Button>
@@ -308,14 +270,13 @@ export default function RocketShotPage() {
                                                 color="#fff"
                                                 borderRadius="6px"
                                                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                onClick={() => setClampedAmount(currentAmount - AMOUNT_STEP)}
-                                                isDisabled={currentAmount <= MIN_AMOUNT + BET_EPS}
+                                                onClick={() => setAmount(amount - AMOUNT_STEP)}
+                                                isDisabled={amount - AMOUNT_STEP < MIN_AMOUNT}
                                             />
                                             <Input
                                                 type="number"
                                                 value={amount}
                                                 onChange={handleAmountChange}
-                                                onBlur={handleAmountBlur}
                                                 min={MIN_AMOUNT}
                                                 max={maxAmount}
                                                 step={AMOUNT_STEP}
@@ -352,8 +313,8 @@ export default function RocketShotPage() {
                                                 color="#fff"
                                                 borderRadius="6px"
                                                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                onClick={() => setClampedAmount(currentAmount + AMOUNT_STEP)}
-                                                isDisabled={currentAmount >= maxAmount - BET_EPS}
+                                                onClick={() => setAmount(amount + AMOUNT_STEP)}
+                                                isDisabled={amount + AMOUNT_STEP > maxAmount}
                                             />
                                         </HStack>
                                         <Button
@@ -368,7 +329,7 @@ export default function RocketShotPage() {
                                             border="1px solid rgba(0, 212, 255, 0.5)"
                                             borderRadius="8px"
                                             _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
-                                            onClick={() => setClampedAmount(maxAmount)}
+                                            onClick={() => setAmount(maxAmount)}
                                         >
                                             Max
                                         </Button>
@@ -457,17 +418,13 @@ export default function RocketShotPage() {
                                             boxShadow: '0 4px 12px rgba(0, 212, 255, 0.3)',
                                         }}
                                         _active={{ transform: 'translateY(0)' }}
-                                        isDisabled={!betValid || isFiring}
+                                        isDisabled={isFiring || amount < MIN_AMOUNT || amount > maxAmount }
                                         title={
-                                            !betValid && !isFiring
-                                                ? !Number.isFinite(betNum) || betNum + BET_EPS < MIN_AMOUNT
-                                                    ? `Enter at least ${MIN_AMOUNT}`
-                                                    : balanceKnown && walletBalance + BET_EPS < betNum
-                                                      ? 'Insufficient balance for this bet'
-                                                      : betNum > maxAmount + BET_EPS
-                                                        ? `Max bet is ${maxAmount.toFixed(2)}`
-                                                        : ''
-                                                : undefined
+                                            amount < MIN_AMOUNT
+                                                ? `Enter at least ${MIN_AMOUNT}`
+                                                : amount > maxAmount
+                                                  ? `Max bet is ${maxAmount}`
+                                                  : ''
                                         }
                                         onClick={() => {
                                             handleRocketBet(parseFloat(amount), mode, winMode);

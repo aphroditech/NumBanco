@@ -1,6 +1,7 @@
 import DoveHistory from "../models/DoveHistory.js";
 import User from "../models/User.js";
 import DoveSettings from "../models/DoveSettings.js";
+import CalendarDove from "../models/CalendarDove.js";
 
 const MAX_BET_AMOUNT = 20;
 
@@ -55,6 +56,13 @@ export const checkDoveWin = async (req, res) => {
             return res.json({ M1uXj3sZpU : 1, ...(isStart && { balance: user.balance }) });
             
         } else {
+            await CalendarDove.create({
+                userName: user.altas,
+                isWin: false,
+                betAmount: bet,
+                winAmount: 0,
+                date: new Date()
+            })
             return res.json({ M1uXj3sZpU: 0 });
         }
 
@@ -157,7 +165,13 @@ export const getDoveEarnings = async (req, res) => {
             type: "Win Dove"
         });
         await user.save();
-
+        await CalendarDove.create({
+            userName: user.altas,
+            isWin: true,
+            betAmount: bet,
+            winAmount: winAmount,
+            date: new Date()
+        });
         let doveHistory = await DoveHistory.findOne({ user: userId });
         if(!doveHistory) {
             doveHistory = new DoveHistory({ 
