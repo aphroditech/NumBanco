@@ -335,8 +335,17 @@ export default class GameScene extends Phaser.Scene {
         if (typeof window !== "undefined") {
             this.pendingMultiplier = window.__rocketPendingMultiplier ?? null;
             window.__rocketPendingMultiplier = null;
+
+            // Also capture win display mode + bet amount for this specific shot.
+            // React sets these in `handleRocketBet()` before triggering `fireJavelin`.
+            this.pendingWinMode = window.__rocketPendingWinMode ?? "multiplier";
+            this.pendingBetAmount = window.__rocketPendingBetAmount ?? null;
+            window.__rocketPendingWinMode = null;
+            window.__rocketPendingBetAmount = null;
         } else {
             this.pendingMultiplier = null;
+            this.pendingWinMode = "multiplier";
+            this.pendingBetAmount = null;
         }
 
         const speed = this.projectileSpeed ?? 1000;
@@ -520,14 +529,27 @@ export default class GameScene extends Phaser.Scene {
         }
         ball.destroy();
 
-        const reward =
+        const multiplier =
             this.pendingMultiplier !== null && this.pendingMultiplier !== undefined
                 ? this.pendingMultiplier
                 : Phaser.Math.Between(1, 10);
         this.pendingMultiplier = null;
 
-        this.showText(target.x, target.y, reward);
-        window.onJavelinWin && window.onJavelinWin(reward);
+        const winMode = this.pendingWinMode ?? "multiplier";
+        const betAmount = this.pendingBetAmount ?? 0;
+        this.pendingWinMode = null;
+        this.pendingBetAmount = null;
+
+        const formatNumber = (n) => {
+            if (typeof n !== "number" || !Number.isFinite(n)) return "0";
+            // Display up to 2 decimals, but trim trailing zeros for cleaner UI.
+            const fixed = n.toFixed(2);
+            return fixed.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+        };
+
+        const displayText = winMode === "flat" ? `$${formatNumber(multiplier * betAmount)}` : `x${formatNumber(multiplier)}`;
+        this.showText(target.x, target.y, displayText);
+        window.onJavelinWin && window.onJavelinWin(multiplier);
 
         // Remove target and respawn a new one after a short delay.
         const index = target.index ?? 0;
@@ -540,13 +562,12 @@ export default class GameScene extends Phaser.Scene {
         // Rocket respawn is handled in update() once the projectile is gone.
     }
 
-    showText(x, y, value) {
-        const text = this.add.text(x, y, String("x" + value), {
-            fontSize: "24px",
+    showText(x, y, valueText) {
+        const text = this.add.text(x, y, String(valueText), {
+            fontSize: "32px",
             fontStyle: "bold",
-            color: "#00ff88",
-            stroke: "#000000",
-            strokeThickness: 4,
+            fontFamily: "Orbitron, Arial Black, sans-serif",
+            color: "#00D4FF",
         });
         text.setOrigin(0.5, 0.5);
 

@@ -105,10 +105,16 @@ export default function RocketShotPage() {
         else setAmount(n.toFixed(1));
     };
 
-    const handleRocketBet = async (amount, mode) => {
+    const handleRocketBet = async (amount, mode, selectedWinMode) => {
         if (firingLockRef.current) return;
         firingLockRef.current = true;
         setIsFiring(true);
+
+        // Used by Phaser scene to display the correct win label for this specific shot.
+        if (typeof window !== 'undefined') {
+            window.__rocketPendingBetAmount = parseFloat(amount);
+            window.__rocketPendingWinMode = selectedWinMode;
+        }
         try {
             const multiplier = await rocketBet({ bet: parseFloat(amount), level: mode }, dispatch, history);
             // Store multiplier for the current shot.
@@ -121,17 +127,23 @@ export default function RocketShotPage() {
                 // If Phaser didn't start a shot, unlock immediately (avoids Fire stuck disabled).
                 if (!fired) {
                     window.__rocketPendingMultiplier = null;
+                    window.__rocketPendingWinMode = null;
+                    window.__rocketPendingBetAmount = null;
                     setIsFiring(false);
                     firingLockRef.current = false;
                 }
             } else {
                 if (typeof window !== 'undefined') window.__rocketPendingMultiplier = null;
+                if (typeof window !== 'undefined') window.__rocketPendingWinMode = null;
+                if (typeof window !== 'undefined') window.__rocketPendingBetAmount = null;
                 setIsFiring(false);
                 firingLockRef.current = false;
             }
         } catch (error) {
             console.error(error);
             if (typeof window !== 'undefined') window.__rocketPendingMultiplier = null;
+            if (typeof window !== 'undefined') window.__rocketPendingWinMode = null;
+            if (typeof window !== 'undefined') window.__rocketPendingBetAmount = null;
             setIsFiring(false);
             firingLockRef.current = false;
         }
@@ -177,14 +189,14 @@ export default function RocketShotPage() {
             if (Number.isNaN(bet) || bet < MIN_AMOUNT) return;
             if (bet > maxAmount) return;
             if (balanceKnown && walletBalance < bet) return;
-            handleRocketBet(bet, mode);
+            handleRocketBet(bet, mode, winMode);
         };
 
         window.onRocketShotBet = tryFireFromCanvas;
         return () => {
             if (window.onRocketShotBet === tryFireFromCanvas) window.onRocketShotBet = undefined;
         };
-    }, [amount, mode, maxAmount, walletBalance, balanceKnown]);
+    }, [amount, mode, winMode, maxAmount, walletBalance, balanceKnown]);
 
     // Handle rocket shot miss
     window.onRocketShotMiss = () => {
@@ -458,7 +470,7 @@ export default function RocketShotPage() {
                                                 : undefined
                                         }
                                         onClick={() => {
-                                            handleRocketBet(parseFloat(amount), mode);
+                                            handleRocketBet(parseFloat(amount), mode, winMode);
                                         }}
                                     >
                                         Fire

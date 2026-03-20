@@ -55,7 +55,7 @@ export const checkDoveWin = async (req, res) => {
             return res.json({ M1uXj3sZpU : 1, ...(isStart && { balance: user.balance }) });
             
         } else {
-            return res.json({ M1uXj3sZpU: 0, balance: user.balance });
+            return res.json({ M1uXj3sZpU: 0 });
         }
 
     } catch (err) {

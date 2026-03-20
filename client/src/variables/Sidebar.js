@@ -65,7 +65,7 @@ export const Reward = {
 }
 
 export const Jackal = {
-    path: "/mining",
+    path: "/jackal",
     name: "JACKAL",
     icon: <ImageSearchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Mining,
