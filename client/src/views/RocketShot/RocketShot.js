@@ -39,6 +39,24 @@ const AMOUNT_STEP = 1;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
 
 /**
+ * Phaser may not be ready on the same tick the bet API returns (scene boot, pad respawn, etc.).
+ * Retry fire across a few animation frames so the rocket actually launches reliably.
+ */
+async function fireJavelinWhenReady(maxFrames = 40) {
+    for (let i = 0; i < maxFrames; i += 1) {
+        if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
+            try {
+                if (window.fireJavelin() === true) return true;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    return false;
+}
+
+/**
  * Redux `user.balance` may be missing while the navbar still shows stale digits, or come back as a string.
  * When unknown, don't coerce to 0 (that makes `balance >= bet` false and locks Fire forever).
  */
@@ -85,7 +103,7 @@ export default function RocketShotPage() {
                 window.__rocketPendingMultiplier = multiplier;
             }
             if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
-                const fired = window.fireJavelin();
+                const fired = await fireJavelinWhenReady();
                 // If Phaser didn't start a shot, unlock immediately (avoids Fire stuck disabled).
                 if (!fired) {
                     window.__rocketPendingMultiplier = null;
@@ -205,20 +223,6 @@ export default function RocketShotPage() {
                 {/* Center - Main Javelin Game */}
                 <GridItem area="game" minH={'450px'}>
                     <Card  minH="100%" alignItems="center"  w="100%">
-                        <CardHeader>
-                            <Box position="absolute" top="13px" right="13px" zIndex={2}>
-                                <IconButton
-                                    aria-label="Help"
-                                    icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
-                                    size="md"
-                                    bg="transparent"
-                                    color="#00d4ff"
-                                    borderRadius="50%"
-                                    _hover={{ bg: 'rgba(255,255,255,0.1)', color: '#00D4FF' }}
-                                    onClick={() => setIsHelpModalOpen(true)}
-                                />
-                            </Box>
-                        </CardHeader>
                         <CardBody w="100%" p="0" display="flex" flexDirection="column" >    
                             <Box  w="100%" minH="600px">
                                 <JavelinGame mode={mode}/>
@@ -435,7 +439,18 @@ export default function RocketShotPage() {
                                 </VStack>
                             </Box>
                         </CardBody>
-                        
+                        <Box position="absolute" bottom="20px" right="20px" zIndex={2}>
+                            <IconButton
+                                aria-label="Help"
+                                icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
+                                size="md"
+                                bg="transparent"
+                                color="#00d4ff"
+                                borderRadius="50%"
+                                _hover={{ bg: 'rgba(255,255,255,0.1)', color: '#00D4FF' }}
+                                onClick={() => setIsHelpModalOpen(true)}
+                            />
+                        </Box>
                     </Card>
                 </GridItem>
                 {/* Right Side - History */}
@@ -463,23 +478,25 @@ export default function RocketShotPage() {
                                 <Text fontWeight="bold" color="#00D4FF" mb={2}>
                                      Step into the action and test your timing in Rocket Shot!
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                      -The rocket swings back and forth in a smooth semicircle.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                      -Watch closely and time your move carefully.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                      -Press the FIRE button to launch the rocket into space.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                      - Aim to hit one of the targets above the rocket.
                                 </Text>
                                 
-                                <Text>
+                                <Text mb={1}>
                                      - The faster the rocket moves, the harder it is to hit high multipliers — but that’s where the big rewards are.
                                 </Text>
-                                
+                                <Text mb={1}>
+                                    - In normal mode winingAmount is 110% of easy mode. In hard mode it is 120% of easy mode. But the speed is more fast.
+                                </Text>
                             </Box>
                         </VStack>
                     </ModalBody>

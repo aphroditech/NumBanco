@@ -160,7 +160,7 @@ function UserMiningHistory() {
                                                     color={result.isWin ? '#68d391' : '#f56565'}
                                                     fontWeight='normal'
                                                 >
-                                                    ${result.winAmount}
+                                                    ${truncateToTwo(result.winAmount)}
                                                 </Td>
                                                 <Td
                                                     textAlign="left"

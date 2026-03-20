@@ -41,10 +41,22 @@ const MAX_AMOUNT = 20;
 const TOTAL_TILES = 16;
 const MIN_TURNS = 1;
 const MAX_TURNS = 8;
+/** Each safe flip reduces payout: mult = maxMult * DECAY_BASE^(turn - 1) */
+const MULTIPLIER_DECAY = 0.8;
 
-function getMultiplier(turns) {
+function getMaxMultiplier(turns) {
     if (turns < MIN_TURNS || turns > MAX_TURNS) return 0;
-    return (16 / turns).toFixed(2);
+    return 16 / turns;
+}
+
+/**
+ * @param {number} maxTurns - max flips the player chose (1–8)
+ * @param {number} currentTurn - 1-based flip on which the jackal was found
+ */
+function getEffectiveMultiplier(maxTurns, currentTurn) {
+    const maxMult = getMaxMultiplier(maxTurns);
+    if (maxMult <= 0 || currentTurn < 1 || currentTurn > maxTurns) return 0;
+    return maxMult * MULTIPLIER_DECAY ** (currentTurn - 1);
 }
 
 export default function Mining() {
@@ -67,8 +79,23 @@ export default function Mining() {
 
     const [canWin, setCanWin] = useState(false);
 
-    const multiplier = useMemo(() => getMultiplier(maxTurns), [maxTurns]);
-    const potentialWin = (parseFloat(amount) || 0) * parseFloat(multiplier);
+    const betNum = parseFloat(amount) || 0;
+
+    /**
+     * Which flip (1-based) the displayed multiplier applies to if the jackal is found on the next click.
+     * Idle / won / lost: flip 1 (preview for next round).
+     * Playing: current upcoming flip. null = no flips left (transitional).
+     */
+    const offerTurn =
+        gameState === 'playing' && flippedCount < maxTurns
+            ? flippedCount + 1
+            : gameState === 'playing' && flippedCount >= maxTurns
+                ? null
+                : 1;
+
+    const currentDisplayMultiplier =
+        offerTurn === null ? 0 : getEffectiveMultiplier(maxTurns, offerTurn);
+    const currentWinAmount = betNum * currentDisplayMultiplier;
 
     const showJackalCelebration = gameState === "won" && jackalCelebrationKey > 0;
 
@@ -113,7 +140,7 @@ export default function Mining() {
         setFlippedIndices(new Set());
         setJackalCelebrationKey(0);
         setGameState('playing');
-        setResultMessage('');
+        setResultMessage('Good luck! Play your best!');
     };
 
     const flipTile = (index) => {
@@ -133,19 +160,28 @@ export default function Mining() {
                 return next;
             });
             if (isJackal) {
+                const currentTurn = flippedCount + 1;
+                const effectiveMult = getEffectiveMultiplier(maxTurns, currentTurn);
+                const winAmount = betNum * effectiveMult;
                 setJackalCelebrationKey((k) => k + 1);
                 setGameState('won');
-                setResultMessage(`Jackal found! You win ${potentialWin.toFixed(2)}`);
-                resultGameMining({ betAmt: parseFloat(amount), turn: maxTurns, isWin: true }, dispatch, history);
+                setResultMessage(
+                    `Jackal found! You win ${winAmount.toFixed(2)}  (× ${effectiveMult.toFixed(2)} on flip ${currentTurn})`
+                );
+                resultGameMining(
+                    { betAmt: parseFloat(amount), turn: maxTurns, multiplier: parseFloat(effectiveMult.toFixed(2)), isWin: true, currentTurn },
+                    dispatch,
+                    history
+                );
             } else if (flippedCount + 1 >= maxTurns) {
                 setGameState('lost');
-                setResultMessage('No jackal in your turns. Try again!');
+                setResultMessage('No jackal in your turns. Try again next time!');
                 setTiles((prev) => {
                     const next = [...prev];
                     next[jackalIndex] = true;
                     return next;
                 });
-                resultGameMining({ betAmt: parseFloat(amount), turn: maxTurns, isWin: false }, dispatch, history);
+                resultGameMining({ betAmt: parseFloat(amount), turn: maxTurns, multiplier: 0, isWin: false }, dispatch, history);
             }
         } else {
             setTiles((prev) => {
@@ -158,7 +194,7 @@ export default function Mining() {
                 const jackalAt = remaining[Math.floor(Math.random() * remaining.length)];
                 setJackalIndex(jackalAt);
                 setGameState('lost');
-                setResultMessage('No jackal in your turns. Try again!');
+                setResultMessage('No jackal in your turns. Try again next time!');
                 setTiles((prev) => {
                     const next = [...prev];
                     next[jackalAt] = true;
@@ -351,13 +387,31 @@ export default function Mining() {
                                 </FormControl>
 
                                 <Box w="100%" maxW="300px" p="12px" bg="#323738" borderRadius="12px" border="1px solid rgba(0, 212, 255, 0.2)">
-                                    <HStack justify="space-between" mb="8px">
+                                    <HStack justify="space-between" mb="8px" align="flex-start">
                                         <Text fontSize="sm" color="rgba(255,255,255,0.7)">Multiplier</Text>
-                                        <Text fontSize="lg" fontWeight="bold" color="#00D4FF">{multiplier}×</Text>
+                                        <VStack align="end" spacing={0}>
+                                            <Text fontSize="lg" fontWeight="bold" color="#00D4FF">
+                                                {offerTurn === null ? '—' : `${currentDisplayMultiplier.toFixed(2)}×`}
+                                            </Text>
+                                            {gameState === 'playing' && offerTurn !== null && (
+                                                <Text fontSize="xs" color="rgba(255,255,255,0.5)">
+                                                    if found on flip {offerTurn}
+                                                </Text>
+                                            )}
+                                        </VStack>
                                     </HStack>
-                                    <HStack justify="space-between">
-                                        <Text fontSize="sm" color="rgba(255,255,255,0.7)">Potential win</Text>
-                                        <Text fontSize="md" fontWeight="bold" color="#fff">{potentialWin.toFixed(2)}</Text>
+                                    <HStack justify="space-between" align="flex-start">
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.7)">Win Amount</Text>
+                                        <VStack align="end" spacing={0}>
+                                            <Text fontSize="md" fontWeight="bold" color="#fff">
+                                                {offerTurn === null ? '—' : currentWinAmount.toFixed(2)}
+                                            </Text>
+                                            {gameState === 'playing' && offerTurn !== null && (
+                                                <Text fontSize="xs" color="rgba(255,255,255,0.5)">
+                                                    ×{MULTIPLIER_DECAY} less each safe flip
+                                                </Text>
+                                            )}
+                                        </VStack>
                                     </HStack>
                                 </Box>
 
@@ -406,8 +460,8 @@ export default function Mining() {
                                 <Text fontSize="lg" fontWeight="bold" color="#00D4FF">{maxTurns} / {flippedCount}</Text>
                             </Box>
 
-                            <Text fontSize="sm" color="rgba(255,255,255,0.6)" mb="16px">
-                                Find the jackal in up to {maxTurns} flips. One of 16 tiles hides the jackal.
+                            <Text fontSize="sm" color="rgba(255,255,255,0.6)" mb="16px" textAlign="center" px="8px">
+                            The sooner you find it, the higher your payout
                             </Text>
 
                             <Grid
@@ -651,19 +705,38 @@ export default function Mining() {
                                         py="12px"
                                         borderRadius="14px"
                                         bg={
-                                            gameState === "won"
+                                            gameState === "playing"
+                                                ? "linear-gradient(180deg, rgba(59, 130, 246, 0.26) 0%, rgba(59, 130, 246, 0.10) 100%)"
+                                                : gameState === "won"
                                                 ? "linear-gradient(180deg, rgba(74, 222, 128, 0.22) 0%, rgba(74, 222, 128, 0.08) 100%)"
                                                 : "linear-gradient(180deg, rgba(248, 113, 113, 0.22) 0%, rgba(248, 113, 113, 0.08) 100%)"
                                         }
                                         border="1px solid"
-                                        borderColor={gameState === "won" ? "rgba(74, 222, 128, 0.65)" : "rgba(248, 113, 113, 0.65)"}
+                                        borderColor={
+                                            gameState === "playing"
+                                                ? "rgba(59, 130, 246, 0.70)"
+                                                : gameState === "won"
+                                                    ? "rgba(74, 222, 128, 0.65)"
+                                                    : "rgba(248, 113, 113, 0.65)"
+                                        }
                                         boxShadow={
-                                            gameState === "won"
+                                            gameState === "playing"
+                                                ? "0 0 26px rgba(59, 130, 246, 0.22)"
+                                                : gameState === "won"
                                                 ? "0 0 26px rgba(74, 222, 128, 0.18)"
                                                 : "0 0 26px rgba(248, 113, 113, 0.18)"
                                         }
                                     >
-                                        <Text fontWeight="900" color={gameState === "won" ? "rgba(74, 222, 128, 1)" : "rgba(248, 113, 113, 1)"}>
+                                        <Text
+                                            fontWeight="900"
+                                            color={
+                                                gameState === "playing"
+                                                    ? "rgba(147, 197, 253, 1)"
+                                                    : gameState === "won"
+                                                        ? "rgba(74, 222, 128, 1)"
+                                                        : "rgba(248, 113, 113, 1)"
+                                            }
+                                        >
                                             {resultMessage}
                                         </Text>
                                     </Box>
@@ -703,20 +776,23 @@ export default function Mining() {
                                 <Text fontWeight="bold" color="#00D4FF" mb={2}>
                                  How to Play 
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                     1. The player selects a bet amount and chooses the number of turns they want to play.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                     2. For each turn, the player flips one card.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                     3. The goal is to find a jackal card while flipping.
                                 </Text>
-                                <Text>
+                                <Text mb={1}>
                                     4. If a jackal appears within the selected turns, the player wins.
                                 </Text>
-                                <Text>
-                                    5. The winning amount is calculated by multiplying the bet with the game’s multiplier.
+                                <Text mb={1}>
+                                    5. Max multiplier is 16 ÷ (your max flips). If you find the jackal on flip 1 you get
+                                    the full multiplier; each safe flip before that multiplies your payout by {MULTIPLIER_DECAY}{' '}
+                                    (effective multiplier = max × {MULTIPLIER_DECAY}
+                                    <sup>(flip − 1)</sup>).
                                 </Text>
                             </Box>
 

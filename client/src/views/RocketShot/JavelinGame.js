@@ -52,27 +52,27 @@ export default function JavelinGame({ onWin, mode }) {
         // 🔗 Connect React → Phaser (fire javelin)
         // Returns whether Phaser actually started a shot (React unlocks UI if false).
         window.fireJavelin = () => {
+            if (!game || !game.scene) return false;
             const scene =
-                game.scene && typeof game.scene.getScene === "function"
+                typeof game.scene.getScene === "function"
                     ? game.scene.getScene("GameScene")
-                    : game.scene?.keys?.["GameScene"];
-            if (scene && typeof scene.fire === "function") {
-                return scene.fire() === true;
-            }
-            return false;
+                    : game.scene.keys?.["GameScene"];
+            if (!scene || typeof scene.fire !== "function") return false;
+            return scene.fire() === true;
         };
 
-        // 🔗 Connect Phaser → React (win callback)
-        window.onJavelinWin = (value) => {
-            if (onWin) {
-                onWin(value);
-            }
-        };
+        // 🔗 Connect Phaser → React (win callback) only when provided (don't clobber page globals).
+        let winHandler;
+        if (typeof onWin === "function") {
+            winHandler = (value) => onWin(value);
+            window.onJavelinWin = winHandler;
+        }
 
         // Cleanup
         return () => {
             if (typeof window !== "undefined") {
                 if (window.fireJavelin) window.fireJavelin = undefined;
+                if (winHandler && window.onJavelinWin === winHandler) window.onJavelinWin = undefined;
             }
             if (gameInstance.current) {
                 gameInstance.current.destroy(true);

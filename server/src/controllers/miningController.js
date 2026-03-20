@@ -5,6 +5,24 @@ import MiningResult from "../models/MiningResult.js";
 
 import CalendarMining from "../models/CalendarMining.js";
 
+/** Max multiplier for chosen max flips (16 tiles, one jackal). */
+function jackalMaxMultiplier(maxTurns) {
+    const t = Number(maxTurns);
+    if (!Number.isFinite(t) || t < 1 || t > 8) return 0;
+    return 16 / t;
+}
+
+/**
+ * Effective payout multiplier if the jackal is found on flip `currentTurn` (1-based).
+ * multiplier = maxMultiplier * (0.8 ^ (currentTurn - 1))
+ */
+function jackalEffectiveMultiplier(maxTurns, currentTurn) {
+    const maxMult = jackalMaxMultiplier(maxTurns);
+    const ct = Number(currentTurn);
+    if (!Number.isFinite(ct) || ct < 1 || ct > maxTurns) return 0;
+    return maxMult * Math.pow(0.8, ct - 1);
+}
+
 export const checkCanWin = async (req, res) => {
     try {
         const settings = await MiningSettings.findOne();
@@ -61,26 +79,26 @@ async function isWinLimitReached(user, betAmt, turn) {
         h => h.betAmount >= min && h.betAmount < max
     );
 
-    const recentCount = filtered.length % totalNumber;
+    const recentCount = filtered?.length ? filtered.length % totalNumber : 0;
 
     const lastN = recentCount > 0
-        ? filtered.slice(-recentCount)
-        : filtered.slice(-totalNumber);
+        ? filtered?.slice(-recentCount)
+        : filtered?.slice(-totalNumber);
 
-    const wins = lastN.filter(h => h.isWin === true).length;
+    const wins = lastN?.filter(h => h.isWin === true)?.length || 0;
     // console.log("wins", wins, "canWinNumber", canWinNumber);
     return canWinNumber >= wins;
 }
 
 export const resultGameMining = async (req, res) => {
     try {
-        const { betAmt, turn, isWin } = req.body;
+        const { betAmt, turn, isWin, multiplier } = req.body;
         const user = await User.findById(req.user._id);
         const miningHistory = await MiningHistory.findOne({ user: req.user._id });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-        const profit = isWin ? Number((betAmt * (16/turn)).toFixed(2)) : 0;
+        let profit = multiplier * betAmt;
         if ( isWin === true ) {
             user.balance += profit;
             user.totalEarn = (1000 * user.totalEarn + 1000 * profit) / 1000;

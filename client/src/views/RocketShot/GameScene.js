@@ -328,6 +328,10 @@ export default class GameScene extends Phaser.Scene {
     /** @returns {boolean} true if a shot actually started */
     fire() {
         if (this.isFiring) return false;
+        // Pad can be missing briefly after a shot (same frame as respawn) or if state desynced.
+        if (!this.rocketOnPad) {
+            this.spawnRocketOnPad();
+        }
         if (!this.rocketOnPad) return false;
 
         // Capture the multiplier fetched from the server right before firing.
@@ -547,7 +551,7 @@ export default class GameScene extends Phaser.Scene {
             return fixed.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
         };
 
-        const displayText = winMode === "flat" ? `$${formatNumber(multiplier * betAmount)}` : `x${formatNumber(multiplier)}`;
+        const displayText = winMode === "flat" ? `$${formatNumber(multiplier * betAmount)}` : `× ${formatNumber(multiplier)}`;
         this.showText(target.x, target.y, displayText);
         window.onJavelinWin && window.onJavelinWin(multiplier);
 
