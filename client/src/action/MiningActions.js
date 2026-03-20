@@ -3,10 +3,10 @@ import axiosInstance from "../api/axiosConfig";
 export const checkCanWin = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/mining/checkCanWin', data);
-        if (res.data.user != null) {
+        if (res.data.balance != null) {
             dispatch({
-                type: 'SET_USER',
-                payload: res.data.user
+                type: 'SET_BALANCE',
+                payload: res.data.balance
             });
         }
         return res.data.M1uXj3sZpU; // if true, can win, if false, can't win
@@ -22,10 +22,10 @@ export const checkCanWin = async (data, dispatch, history) => {
 export const resultGameMining = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/mining/resultGameMining', data);
-        if (res.data.user != null) {
+        if (res.data.balance != null) {
             dispatch({
-                type: 'SET_USER',
-                payload: res.data.user
+                type: 'SET_BALANCE',
+                payload: res.data.balance
             });
         }
         if (res.data.histories != null) {

@@ -325,6 +325,22 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  miningAmount: {
+    type: Number,
+    default: 0
+  },
+  miningWinAmount: {
+    type: Number,
+    default: 0
+  },
+  rocketAmount: {
+    type: Number,
+    default: 0
+  },
+  rocketWinAmount: {
+    type: Number,
+    default: 0
+  },
 
   pumpingHistory: {
     type: [

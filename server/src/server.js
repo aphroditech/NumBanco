@@ -21,8 +21,8 @@ import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
-import {miningBot} from "./services/mining/miningBotService.js";
-import {rocketBot} from "./services/rocket/rocketBot.service.js";
+import { miningBot } from "./services/mining/miningBotService.js";
+import { rocketBot } from "./services/rocket/rocketBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 dotenv.config();
 

@@ -5,23 +5,6 @@ import MiningResult from "../models/MiningResult.js";
 
 import CalendarMining from "../models/CalendarMining.js";
 
-/** Max multiplier for chosen max flips (16 tiles, one jackal). */
-function jackalMaxMultiplier(maxTurns) {
-    const t = Number(maxTurns);
-    if (!Number.isFinite(t) || t < 1 || t > 8) return 0;
-    return 16 / t;
-}
-
-/**
- * Effective payout multiplier if the jackal is found on flip `currentTurn` (1-based).
- * multiplier = maxMultiplier * (0.8 ^ (currentTurn - 1))
- */
-function jackalEffectiveMultiplier(maxTurns, currentTurn) {
-    const maxMult = jackalMaxMultiplier(maxTurns);
-    const ct = Number(currentTurn);
-    if (!Number.isFinite(ct) || ct < 1 || ct > maxTurns) return 0;
-    return maxMult * Math.pow(0.8, ct - 1);
-}
 
 export const checkCanWin = async (req, res) => {
     try {
@@ -53,7 +36,7 @@ export const checkCanWin = async (req, res) => {
 
         const M1uXj3sZpU = await isWinLimitReached( user._id, betAmt, turn);
 
-        return res.json({ user, M1uXj3sZpU });
+        return res.json({ balance: user.balance, M1uXj3sZpU });
     }
     catch (error) {
         console.error("Error in checkCanWin:", error);
@@ -98,12 +81,16 @@ export const resultGameMining = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-        let profit = multiplier * betAmt;
+        let profit = 0;
+
+        if (isWin) {
+            profit = multiplier * betAmt;
+        }
         if ( isWin === true ) {
             user.balance += profit;
-            user.totalEarn = (1000 * user.totalEarn + 1000 * profit) / 1000;
-            user.miningWinAmount = (1000 * user.miningWinAmount + 1000 * profit) / 1000;
-            user.totalhistory.push({
+            user.totalEarn += profit;
+            user.miningWinAmount += profit;
+            user.totalhistory?.push({
                 amount: profit,
                 date: new Date(),
                 type: "Mining"
@@ -148,10 +135,11 @@ export const resultGameMining = async (req, res) => {
         }
 
         if (miningHistory) {
-            miningHistory.history.push({
+            miningHistory.history?.push({
                 isWin: isWin,
                 turns: turn,
                 betAmount: betAmt,
+                multiplier: multiplier,
                 winAmount: profit,
                 date: new Date()
             });
@@ -163,6 +151,7 @@ export const resultGameMining = async (req, res) => {
                     isWin: isWin,
                     turns: turn,
                     betAmount: betAmt,
+                    multiplier: multiplier,
                     winAmount: profit,
                     date: new Date()
                 }]
@@ -170,7 +159,7 @@ export const resultGameMining = async (req, res) => {
             await newMiningHistory.save();
         }
         const histories = await MiningHistory.findOne({ user: req.user._id });
-        return res.json({ user, histories: histories?.history || [] });
+        return res.json({ balance: user.balance, histories: histories?.history || [] });
     }
     catch (error) {
         console.error("Error in resultGameMining:", error);

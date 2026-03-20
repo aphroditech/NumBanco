@@ -13,8 +13,12 @@ export default function JavelinGame({ onWin, mode }) {
         if (!gameRef.current) return;
 
         const parentEl = gameRef.current;
-        const w = parentEl.clientWidth || 800;
-        const h = parentEl.clientHeight || 600;
+        const rect0 = parentEl.getBoundingClientRect();
+        let w = rect0.width || parentEl.clientWidth || 800;
+        let h = rect0.height || parentEl.clientHeight || 600;
+        // Avoid invalid Phaser sizes when layout hasn't settled yet.
+        w = Math.max(1, Math.round(w));
+        h = Math.max(1, Math.round(h));
 
         const config = {
             type: Phaser.AUTO,
@@ -49,6 +53,58 @@ export default function JavelinGame({ onWin, mode }) {
         const game = new Phaser.Game(config);
         gameInstance.current = game;
 
+        // Keep canvas responsive to container size changes.
+        // GameScene already listens to `this.scale.on("resize")` to reposition elements.
+        let rafId = null;
+        const resizeToContainer = () => {
+            if (!gameInstance.current) return;
+            const rect = parentEl.getBoundingClientRect();
+            const nextW = Math.max(1, Math.round(rect.width));
+            const nextH = Math.max(1, Math.round(rect.height));
+            if (nextW === w && nextH === h) return;
+            w = nextW;
+            h = nextH;
+            // Phaser supports multiple resize methods depending on version/config.
+            // Call the common ones defensively.
+            try {
+                if (gameInstance.current.scale && typeof gameInstance.current.scale.resize === "function") {
+                    gameInstance.current.scale.resize(nextW, nextH);
+                }
+            } catch (e) {
+                // ignore
+            }
+            try {
+                if (gameInstance.current.scale && typeof gameInstance.current.scale.setGameSize === "function") {
+                    gameInstance.current.scale.setGameSize(nextW, nextH);
+                }
+            } catch (e) {
+                // ignore
+            }
+            try {
+                if (gameInstance.current.scale && typeof gameInstance.current.scale.refresh === "function") {
+                    gameInstance.current.scale.refresh();
+                }
+            } catch (e) {
+                // ignore
+            }
+        };
+
+        const scheduleResize = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(resizeToContainer);
+        };
+
+        let resizeObserver;
+        if (typeof ResizeObserver !== "undefined") {
+            resizeObserver = new ResizeObserver(() => scheduleResize());
+            resizeObserver.observe(parentEl);
+        } else {
+            window.addEventListener("resize", scheduleResize);
+        }
+
+        // Do an extra resize on the next frame to catch "initial layout" timing.
+        scheduleResize();
+
         // 🔗 Connect React → Phaser (fire javelin)
         // Returns whether Phaser actually started a shot (React unlocks UI if false).
         window.fireJavelin = () => {
@@ -74,6 +130,9 @@ export default function JavelinGame({ onWin, mode }) {
                 if (window.fireJavelin) window.fireJavelin = undefined;
                 if (winHandler && window.onJavelinWin === winHandler) window.onJavelinWin = undefined;
             }
+            if (rafId) cancelAnimationFrame(rafId);
+            if (resizeObserver) resizeObserver.disconnect();
+            else window.removeEventListener("resize", scheduleResize);
             if (gameInstance.current) {
                 gameInstance.current.destroy(true);
                 gameInstance.current = null;
@@ -100,7 +159,8 @@ export default function JavelinGame({ onWin, mode }) {
                 borderRadius: "10px",
                 width: "100%",
                 height: "100%",
-                minHeight: "600px",
+                minWidth: 0,
+                minHeight: 0,
                 overflow: "hidden",
             }}
         />

@@ -182,7 +182,7 @@ function UserMiningHistory() {
                                                     color='#fff'
                                                     fontWeight='normal'
                                                 >
-                                                    {truncateToTwo( 16/result.turns)}
+                                                    {truncateToTwo(result.multiplier)}
                                                 </Td>
                                                 <Td
                                                     textAlign="left"

@@ -17,6 +17,7 @@ import {
     ModalBody,
     ModalCloseButton,
     Select,
+    useMediaQuery,
 } from '@chakra-ui/react';
 import Card from 'components/Card/Card.js';
 import CardHeader from 'components/Card/CardHeader.js';
@@ -76,6 +77,7 @@ export default function RocketShotPage() {
     const user = useSelector((state) => state.user.userInfo) || {};
     const walletBalance = user.balance;
     const maxAmount = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalance));
+    const [isNarrowLayout] = useMediaQuery("(max-width: 1799px)");
 
     const handleAmountChange = (e) => {
         const raw = e.target.value;
@@ -202,29 +204,24 @@ export default function RocketShotPage() {
     return (
         <Box px={{ base: '16px', md: '24px' }} minH="90vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
             <Grid
-                templateAreas={{
-                    sm: '"game" "empty"',
-                    md: '"game empty"',
-                    '1550px': '"game empty"'
-                }}
-                templateColumns={{
-                    sm: '1fr',
-                    md: '6fr 2fr',
-                    '1550px': '6fr 2fr'
-                }}
-                templateRows={{
-                    base: 'auto auto',
-                    md: 'auto',
-                    '1550px': 'auto'
-                }}
+                templateAreas={isNarrowLayout ? '"game" "empty"' : '"game empty"'}
+                templateColumns={isNarrowLayout ? '1fr' : '6fr 2fr'}
+                templateRows={isNarrowLayout ? 'auto auto' : 'auto'}
                 gap={{ base: '16px', md: '24px' }}
                 w="100%"
             >
                 {/* Center - Main Javelin Game */}
-                <GridItem area="game" minH={'450px'}>
+                <GridItem area="game" minH={{ base: "auto", md: "auto" }}>
                     <Card  minH="100%" alignItems="center"  w="100%">
                         <CardBody w="100%" p="0" display="flex" flexDirection="column" >    
-                            <Box  w="100%" minH="600px">
+                            <Box
+                                w="100%"
+                                minW={0}
+                                minH={{ base: "260px", sm: "320px", md: "380px" }}
+                                maxH={{ base: "52vh", md: "66vh" }}
+                                h="auto"
+                                style={{ aspectRatio: "16 / 9" }}
+                            >
                                 <JavelinGame mode={mode}/>
                             </Box>
 

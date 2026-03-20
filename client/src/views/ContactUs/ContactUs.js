@@ -129,15 +129,6 @@ const contactItems = [
     title: "Location",
     text: "United States",
   },
-  {
-    icon: (
-      <IconBoxCircle>
-        <GlobeIcon style={iconStyle} />
-      </IconBoxCircle>
-    ),
-    title: "Website",
-    text: "numexa.store",
-  },
 ];
 
 export default function ContactUs() {
