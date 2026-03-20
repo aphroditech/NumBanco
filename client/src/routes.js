@@ -40,13 +40,14 @@ import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
 import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
+import FishingPage from "views/Fishing/FishingPage";
 import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
 import Coco from "views/Coco/CocoPage";
-import { GiChicken } from "react-icons/gi";
+import { GiChicken, GiFishingHook } from "react-icons/gi";
 
 
 import {
@@ -92,6 +93,14 @@ var dashRoutes = [
     name: "PUMPING",
     icon: <GavelIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PumpingPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/fishing",
+    name: "Fishing",
+    icon: <GiFishingHook  style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: FishingPage,
     layout: "/game",
   },
   {

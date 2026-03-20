@@ -20,6 +20,7 @@ import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startUpDownGameLoop, startUpDownLiveFeed, setAblyClient, advancePhase } from "./services/updown/updownGame.service.js";
 
+import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
 import {rocketBot} from "./services/rocket/rocketBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
@@ -72,6 +73,7 @@ connectDB().then(async () => {
         // pumpingBot(ably);
         // miningBot(ably);
         // rocketBot(ably);
+        fishingBot(ably);
         // cocoBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();

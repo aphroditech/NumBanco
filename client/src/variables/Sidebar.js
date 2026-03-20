@@ -11,10 +11,11 @@ import RocketShot from "views/RocketShot/RocketShot";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import RubicPage from "views/Rubic/RubicPage";
 import PumpingPage from "views/Pumping/PumpingPage";
+import FishingPage from "views/Fishing/FishingPage";
 import GravityPage from "views/Gravity/GravityPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
-import { GiChicken } from "react-icons/gi";
+import { GiChicken, GiFishingHook } from "react-icons/gi";
 import CasinoIcon from '@mui/icons-material/Casino';
 import GavelIcon from '@mui/icons-material/Gavel';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -93,6 +94,14 @@ export const Pumping = {
     name: "PUMPING",
     icon: <GavelIcon style={{ fontSize: "24px", color: "#00D4FF" }} />, 
     component: PumpingPage,
+    layout: "/game",
+}
+
+export const Fishing = {
+    path: "/fishing",
+    name: "FISHING",
+    icon: <GiFishingHook style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: FishingPage,
     layout: "/game",
 }
 

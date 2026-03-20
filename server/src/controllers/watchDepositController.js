@@ -28,6 +28,7 @@ export const checkExpiredDeposits = async () => {
                     password: 0,
                     country: 0,
                     pumpingMode: 0,
+                    fishingMode: 0,
                     rubicMode: 0,
                     partnerId: 0,
                     partnerActivity: 0,

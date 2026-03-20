@@ -10,6 +10,8 @@ import { initializeSetting } from './initSetting.js';
 import { initDoveSetting } from './initDoveSetting.js';
 import { initMiningSetting } from './initMiningSetting.js';
 import { initRocketSetting } from './initRocket.js';
+import { initializeFishingPercentages } from './FishingPercentages.js';
+import { initializeFishingLimits } from './fishingLimits.js';
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
 
@@ -26,6 +28,8 @@ export const initializeDatabase = async () => {
     await initDoveSetting();
     await initMiningSetting();
     await initRocketSetting();
+    await initializeFishingPercentages();
+    await initializeFishingLimits();
 
     console.log('✅ Database initialization complete');
 };

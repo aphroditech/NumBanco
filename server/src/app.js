@@ -27,6 +27,7 @@ import doveRoutes from "./routes/doveRoutes.js";
 import miningRoutes from "./routes/miningRoutes.js";
 import rocketRoutes from "./routes/rocketRoutes.js";
 import cocoRoutes from "./routes/cocoRoutes.js";
+import fishingRoutes from "./routes/fishingRoutes.js";
 import moralisWebhook from "./webhooks/moralisWebhook.js";
 dotenv.config();
 
@@ -69,6 +70,7 @@ app.use("/api/updown", updownRoutes);
 app.use("/api/mining", miningRoutes);
 app.use("/api/rocket", rocketRoutes);
 app.use("/api/coco", cocoRoutes);
+app.use("/api/fishing", fishingRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },
