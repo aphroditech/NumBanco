@@ -66,7 +66,7 @@ app.use("/api/pumping", pumpingRoutes);
 app.use("/api/rubic", rubicRoutes);
 app.use("/api/updown", updownRoutes);
 app.use("/api/mining", miningRoutes);
-app.use("api/rocket", rocketRoutes);
+app.use("/api/rocket", rocketRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },
