@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import Phaser from "phaser";
 import DoveControlPanel from "./DoveGame/DoveControlPanel";
-import { getDovePrefix, getDifficultyKey, checkDoveWin, getDoveEarnings } from "action/DoveActions";
+import { getDovePrefix, getDifficultyKey, checkDoveWin, getDoveEarnings, reportDoveFail } from "action/DoveActions";
 
 const GAME_WIDTH = 1280
 const GAME_HEIGHT = 720
@@ -113,6 +113,7 @@ function DoveGame() {
         gameRef.current = game
         game.checkDoveWinFn = (data) => checkDoveWin(data, dispatchRef.current)
         game.getDoveEarningsFn = (data) => getDoveEarnings(data, dispatchRef.current)
+        game.reportDoveFailFn = (data) => reportDoveFail(data)
 
         function preload() {
 
@@ -620,7 +621,7 @@ function DoveGame() {
                 const bet = betAmountRef.current
                 const { a, b } = multiplierParamsRef.current
                 const multiplier = getMultiplier(step, a, b)
-                game.getDoveEarningsFn?.({ bet, multiplier, level: step })
+                game.getDoveEarningsFn?.({ bet, multiplier, level: step, difficulty: difficultyRef.current })
                 failedText.setText("CASH OUT!")
                 failedText.setStyle({ color: "#00ff00" })
                 failedText.setVisible(true)
@@ -944,6 +945,14 @@ function DoveGame() {
             game.updateStepBar?.(step, step)
 
             failedText.setVisible(true)
+            const { a, b } = multiplierParamsRef.current
+            const multiplier = getMultiplier(step, a, b)
+            game.reportDoveFailFn?.({
+                bet: betAmountRef.current,
+                multiplier,
+                level: step,
+                difficulty: difficultyRef.current
+            })
 
             scene.time.delayedCall(2000, () => {
                 resetGame()
@@ -1140,11 +1149,11 @@ function DoveGame() {
                 position: "relative",
                 display: "block",
                 width: "100%",
-                maxWidth: "1280px",
+                maxWidth: "1520px",
                 margin: "0 auto",
                 aspectRatio: "16/9",
                 minHeight: "250px",
-                maxHeight: "min(720px, 85vh)",
+                maxHeight: "min(820px, 88vh)",
                 minWidth: 0,
                 overflow: "hidden",
                 borderRadius: "8px",
