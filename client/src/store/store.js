@@ -6,7 +6,6 @@ import { currentReducer } from "../reducers/currentReducer";
 import { notificationReducer } from "../reducers/notificationReducer";
 import { myBetIdsReducer } from "../reducers/myBetIdsReducer";
 import { slideIndexReducer } from "../reducers/slideIndexReducer";
-import { upDownReducer } from "../reducers/upDownReducer";
 import { miningHistoryReducer } from "../reducers/miningHistoryReducer";
 
 const store = configureStore({
@@ -18,7 +17,6 @@ const store = configureStore({
     myBetIds: myBetIdsReducer,
     notifications: notificationReducer,
     slideIndex: slideIndexReducer,
-    upDown: upDownReducer,
     miningHistory: miningHistoryReducer,
   },
 

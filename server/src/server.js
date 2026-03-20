@@ -4,7 +4,6 @@ import http from "http";
 import fs from "fs";
 import app from "./app.js";
 import { connectDB } from "./config/db.js";
-import { createAblyClient } from "./config/ably.js";
 import { getUserStatusChannel } from "./services/ably.service.js";
 import { startBetEngine } from "./services/bet/betEngine.service.js";
 import { initMoralis } from "./config/moralis.js";
@@ -20,8 +19,9 @@ import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startUpDownGameLoop, startUpDownLiveFeed, setAblyClient, advancePhase } from "./services/updown/updownGame.service.js";
 
-import {miningBot} from "./services/mining/miningBotService.js";
-import {rocketBot} from "./services/rocket/rocketBot.service.js";
+import { fishingBot } from "./services/fishing/fishingBot.service.js";
+import { miningBot } from "./services/mining/miningBotService.js";
+import { rocketBot } from "./services/rocket/rocketBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 dotenv.config();
 
@@ -71,7 +71,8 @@ connectDB().then(async () => {
         // rubicBot(ably);
         // pumpingBot(ably);
         // miningBot(ably);
-        rocketBot(ably);
+        // rocketBot(ably);
+        // fishingBot(ably);
         // cocoBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();

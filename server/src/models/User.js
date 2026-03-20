@@ -422,6 +422,63 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  fishingMode: {
+    type: String,
+    default: 1
+  },
+
+  fishingHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        win: {
+          type: Number,
+          required: true
+        },
+        step: {
+          type: Number,
+          required: true,
+        },
+        multi: {
+          type: Number,
+          required: true
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        fishingBalance: {
+          type: Number,
+          default: 0
+        },
+        info: {
+          type: [
+            {
+              step: Number,
+              strength: Number,
+              multi: Number,
+            }
+          ]
+        },
+        active: {
+          type: Boolean,
+          default: false
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
   rubicHistory: {
     type: [
       {

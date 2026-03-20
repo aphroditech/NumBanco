@@ -24,6 +24,7 @@ import dove from "assets/img/Games/dove.png"
 import coco from "assets/img/Games/coco.png"
 import jackal from "assets/img/Games/jackal.png"
 import rocket from "assets/img/Games/rocket.png"
+import fishing from "assets/img/Games/fishing.png"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -34,6 +35,7 @@ const DASHBOARD_GAMES = [
     { img: tierC, name: "NumBanco Tier C", path: "/numbanco/tierC", reduxKey: "tierCUsers", tickMs: 5500 },
     { img: rubic, name: "Rubic", path: "/game/rubic", reduxKey: "rubicUsers", tickMs: 6000 },
     { img: pumping, name: "Pumping", path: "/game/pumping", reduxKey: "pumpingUsers", tickMs: 3800 },
+    { img: fishing, name: "Fishing", path: "/game/fishing", reduxKey: "fishingUsers", tickMs: 4200 },
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
     { img: dove, name: "Dove Cross", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
