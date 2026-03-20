@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { motion } from "framer-motion";
 import { useSelector, useDispatch } from 'react-redux';
 import {
     Box,
@@ -60,11 +61,27 @@ export default function Mining() {
     const [flippedCount, setFlippedCount] = useState(0);
     const [flippedIndices, setFlippedIndices] = useState(new Set());
     const [resultMessage, setResultMessage] = useState('');
+    // Incremented every time the player finds the jackal so we can replay effects.
+    const [jackalCelebrationKey, setJackalCelebrationKey] = useState(0);
 
     const [canWin, setCanWin] = useState(false);
 
     const multiplier = useMemo(() => getMultiplier(maxTurns), [maxTurns]);
     const potentialWin = (parseFloat(amount) || 0) * parseFloat(multiplier);
+
+    const showJackalCelebration = gameState === "won" && jackalCelebrationKey > 0;
+
+    const jackalCelebrationConfetti = useMemo(() => {
+        if (!showJackalCelebration) return [];
+        return Array.from({ length: 18 }).map((_, i) => {
+            const leftPct = 10 + Math.random() * 80;
+            const delay = Math.random() * 0.12;
+            const rot = Math.random() * 180 - 90;
+            const hue = 180 + Math.random() * 140;
+            const drift = (Math.random() - 0.5) * 50;
+            return { i, leftPct, delay, rot, hue, drift };
+        });
+    }, [showJackalCelebration, jackalCelebrationKey]);
 
     const handleAmountChange = (e) => {
         const v = e.target.value.replace(/[^0-9.]/g, '');
@@ -93,6 +110,7 @@ export default function Mining() {
         setTiles(Array(TOTAL_TILES).fill(null));
         setFlippedCount(0);
         setFlippedIndices(new Set());
+        setJackalCelebrationKey(0);
         setGameState('playing');
         setResultMessage('');
     };
@@ -114,6 +132,7 @@ export default function Mining() {
                 return next;
             });
             if (isJackal) {
+                setJackalCelebrationKey((k) => k + 1);
                 setGameState('won');
                 setResultMessage(`Jackal found! You win ${potentialWin.toFixed(2)}`);
                 resultGameMining({ betAmt: parseFloat(amount), turn: maxTurns, isWin: true }, dispatch, history);
@@ -396,62 +415,258 @@ export default function Mining() {
                                 w="100%"
                                 maxW="320px"
                             >
-                                {tiles.map((revealed, index) => (
-                                    <Button
-                                        key={index}
-                                        h="64px"
-                                        w="100%"
-                                        minW="0"
-                                        fontSize="lg"
-                                        fontWeight="bold"
-                                        borderRadius="12px"
-                                        bg={
-                                            revealed === null
-                                                ? '#323738'
-                                                : revealed === true
-                                                    ? 'red.500'
-                                                    : 'rgba(255,255,255,0.12)'
-                                        }
-                                        color={revealed === true ? '#fff' : 'rgba(255,255,255,0.9)'}
-                                        border="2px solid"
-                                        borderColor={
-                                            revealed === null
-                                                ? 'rgba(0, 212, 255, 0.3)'
-                                                : revealed === true
-                                                    ? 'red.400'
-                                                    : 'rgba(255,255,255,0.2)'
-                                        }
-                                        _hover={
-                                            gameState === 'playing' && revealed === null && flippedCount < maxTurns
-                                                ? {
-                                                    bg: 'rgba(0, 212, 255, 0.2)',
-                                                    borderColor: '#00D4FF',
-                                                    transform: 'scale(1.02)',
-                                                }
-                                                : {}
-                                        }
-                                        isDisabled={gameState !== 'playing' || revealed !== null || flippedCount >= maxTurns}
-                                        onClick={() => flipTile(index)}
-                                    >
-                                        {revealed === null ? '?' : revealed === true ? '🐺' : '—'}
-                                    </Button>
-                                ))}
+                                {tiles.map((revealed, index) => {
+                                    const canFlip = gameState === "playing" && revealed === null && flippedCount < maxTurns;
+                                    const isJackal = revealed === true;
+
+                                    return (
+                                        <Button
+                                            key={index}
+                                            variant="unstyled"
+                                            p="0"
+                                            minW="0"
+                                            w="100%"
+                                            h="64px"
+                                            borderRadius="16px"
+                                            isDisabled={!canFlip}
+                                            onClick={() => flipTile(index)}
+                                            _focusVisible={
+                                                canFlip
+                                                    ? {
+                                                        boxShadow: "0 0 0 3px rgba(0, 212, 255, 0.35), 0 0 22px rgba(0, 212, 255, 0.25)",
+                                                    }
+                                                    : undefined
+                                            }
+                                        >
+                                            <Box
+                                                w="100%"
+                                                h="100%"
+                                                position="relative"
+                                                style={{ perspective: "900px" }}
+                                            >
+                                                <motion.div
+                                                    initial={false}
+                                                    animate={{
+                                                        rotateY: revealed === null ? 0 : 180,
+                                                        ...(gameState === "won" &&
+                                                        jackalIndex === index &&
+                                                        jackalCelebrationKey > 0
+                                                            ? {
+                                                                x: [0, -4, 4, -3, 0],
+                                                                y: [0, 2, -2, 1, 0],
+                                                                rotateZ: [0, -2, 2, -1, 0],
+                                                                scale: [1, 1.06, 0.98, 1.03, 1],
+                                                            }
+                                                            : {}),
+                                                    }}
+                                                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                                                    whileHover={canFlip ? { scale: 1.03 } : undefined}
+                                                    whileTap={canFlip ? { scale: 0.98 } : undefined}
+                                                    style={{
+                                                        width: "100%",
+                                                        height: "100%",
+                                                        position: "relative",
+                                                        transformStyle: "preserve-3d",
+                                                    }}
+                                                >
+                                                    {/* Front (hidden) */}
+                                                    <Box
+                                                        position="absolute"
+                                                        inset="0"
+                                                        display="flex"
+                                                        alignItems="center"
+                                                        justifyContent="center"
+                                                        borderRadius="16px"
+                                                        bg="rgba(50, 55, 56, 1)"
+                                                        border="1px solid rgba(0, 212, 255, 0.28)"
+                                                        color="rgba(255,255,255,0.9)"
+                                                        style={{ backfaceVisibility: "hidden" }}
+                                                        overflow="hidden"
+                                                    >
+                                                        <Box
+                                                            position="absolute"
+                                                            inset="-20%"
+                                                            bg="radial-gradient(circle at 50% 20%, rgba(0,212,255,0.25) 0%, rgba(0,212,255,0) 60%)"
+                                                            opacity={canFlip ? 1 : 0.4}
+                                                        />
+                                                        <motion.div
+                                                            animate={canFlip ? { opacity: [0.9, 1, 0.9] } : undefined}
+                                                            transition={{ duration: 1.2, repeat: canFlip ? Infinity : 0 }}
+                                                            style={{ position: "relative" }}
+                                                        >
+                                                            <Box fontSize="22px" fontWeight="900" lineHeight="1" textShadow="0 0 18px rgba(0,212,255,0.2)">
+                                                                ?
+                                                            </Box>
+                                                        </motion.div>
+                                                    </Box>
+
+                                                    {/* Back (revealed) */}
+                                                    <Box
+                                                        position="absolute"
+                                                        inset="0"
+                                                        display="flex"
+                                                        alignItems="center"
+                                                        justifyContent="center"
+                                                        borderRadius="16px"
+                                                        style={{ transform: "rotateY(180deg)", backfaceVisibility: "hidden" }}
+                                                        overflow="hidden"
+                                                        bg={isJackal ? "rgba(239, 68, 68, 0.35)" : "rgba(0, 255, 160, 0.18)"}
+                                                        border={
+                                                            isJackal
+                                                                ? "1px solid rgba(239, 68, 68, 0.65)"
+                                                                : "1px solid rgba(0, 255, 160, 0.35)"
+                                                        }
+                                                        color="#fff"
+                                                    >
+                                                        <Box
+                                                            position="absolute"
+                                                            inset="-30%"
+                                                            bg={
+                                                                isJackal
+                                                                    ? "radial-gradient(circle at 50% 35%, rgba(239,68,68,0.35) 0%, rgba(239,68,68,0) 55%)"
+                                                                    : "radial-gradient(circle at 50% 35%, rgba(0,255,160,0.25) 0%, rgba(0,255,160,0) 55%)"
+                                                            }
+                                                        />
+
+                                                        {revealed !== null && (
+                                                            <motion.div
+                                                                key={isJackal ? `jackal-${jackalCelebrationKey}` : "safe"}
+                                                                initial={{ scale: 0.92, opacity: 0.4 }}
+                                                                animate={{
+                                                                    scale:
+                                                                        isJackal && gameState === "won" && jackalIndex === index && jackalCelebrationKey > 0
+                                                                            ? [1, 1.16, 0.95, 1.10, 1]
+                                                                            : isJackal
+                                                                                ? [1, 1.08, 1]
+                                                                                : [1, 1.04, 1],
+                                                                    opacity: 1,
+                                                                    filter: isJackal ? "drop-shadow(0 0 12px rgba(239,68,68,0.35))" : "drop-shadow(0 0 12px rgba(0,255,160,0.25))",
+                                                                }}
+                                                                transition={{ duration: isJackal && gameState === "won" ? 0.35 : 0.35 }}
+                                                                style={{ position: "relative" }}
+                                                            >
+                                                                <Box fontSize="26px" fontWeight="900" lineHeight="1">
+                                                                    {isJackal ? "🐺" : "🛡️"}
+                                                                </Box>
+                                                            </motion.div>
+                                                        )}
+                                                    </Box>
+                                                </motion.div>
+                                            </Box>
+                                        </Button>
+                                    );
+                                })}
                             </Grid>
 
-                            {resultMessage && (
+                            {/* Jackal celebration overlay (only on win) */}
+                            {showJackalCelebration && (
                                 <Box
-                                    mt="20px"
-                                    px="16px"
-                                    py="10px"
-                                    borderRadius="10px"
-                                    bg={gameState === 'won' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}
-                                    border="1px solid"
-                                    borderColor={gameState === 'won' ? 'green.400' : 'red.400'}
+                                    position="absolute"
+                                    top="90px"
+                                    left="0"
+                                    right="0"
+                                    margin="0 auto"
+                                    width="320px"
+                                    maxW="100%"
+                                    pointerEvents="none"
                                 >
-                                    <Text fontWeight="bold" color={gameState === 'won' ? 'green.300' : 'red.300'}>
-                                        {resultMessage}
-                                    </Text>
+                                    <motion.div
+                                        key={jackalCelebrationKey}
+                                        initial={{ opacity: 0, scale: 0.96 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.2 }}
+                                        style={{
+                                            position: "relative",
+                                            width: "100%",
+                                            height: "240px",
+                                            margin: "0 auto",
+                                            borderRadius: "16px",
+                                            background:
+                                                "radial-gradient(circle at 50% 35%, rgba(0,212,255,0.22) 0%, rgba(0,212,255,0) 60%), radial-gradient(circle at 50% 50%, rgba(239,68,68,0.18) 0%, rgba(239,68,68,0) 62%)",
+                                            border: "1px solid rgba(0,212,255,0.22)",
+                                            boxShadow: "0 0 40px rgba(0,212,255,0.12)",
+                                            overflow: "hidden",
+                                        }}
+                                    >
+                                        {/* Big jackpot text */}
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.25, delay: 0.05 }}
+                                            style={{
+                                                position: "absolute",
+                                                top: "8px",
+                                                left: 0,
+                                                right: 0,
+                                                display: "flex",
+                                                justifyContent: "center",
+                                                pointerEvents: "none",
+                                            }}
+                                        >
+                                            <Box
+                                                fontWeight="900"
+                                                fontSize="22px"
+                                                color="rgba(255,255,255,0.95)"
+                                                textShadow="0 0 18px rgba(0,212,255,0.35)"
+                                            >
+                                                JACKPOT
+                                            </Box>
+                                        </motion.div>
+
+                                        {/* Minimal confetti */}
+                                        {jackalCelebrationConfetti.map((c) => {
+                                            return (
+                                                <motion.div
+                                                    key={`${jackalCelebrationKey}-c-${c.i}`}
+                                                    initial={{ opacity: 0, y: 0, x: 0, rotate: c.rot, scale: 0.9 }}
+                                                    animate={{ opacity: [0, 1, 0], y: 130, x: c.drift, rotate: c.rot + 120, scale: 1 }}
+                                                    transition={{ duration: 1.1, delay: c.delay }}
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: "42px",
+                                                        left: `${c.leftPct}%`,
+                                                        width: "10px",
+                                                        height: "18px",
+                                                        borderRadius: "4px",
+                                                        background: `hsl(${c.hue} 90% 60%)`,
+                                                        boxShadow: "0 0 16px rgba(0,212,255,0.15)",
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </motion.div>
                                 </Box>
+                            )}
+
+                            {resultMessage && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ duration: 0.25 }}
+                                >
+                                    <Box
+                                        mt="20px"
+                                        px="16px"
+                                        py="12px"
+                                        borderRadius="14px"
+                                        bg={
+                                            gameState === "won"
+                                                ? "linear-gradient(180deg, rgba(74, 222, 128, 0.22) 0%, rgba(74, 222, 128, 0.08) 100%)"
+                                                : "linear-gradient(180deg, rgba(248, 113, 113, 0.22) 0%, rgba(248, 113, 113, 0.08) 100%)"
+                                        }
+                                        border="1px solid"
+                                        borderColor={gameState === "won" ? "rgba(74, 222, 128, 0.65)" : "rgba(248, 113, 113, 0.65)"}
+                                        boxShadow={
+                                            gameState === "won"
+                                                ? "0 0 26px rgba(74, 222, 128, 0.18)"
+                                                : "0 0 26px rgba(248, 113, 113, 0.18)"
+                                        }
+                                    >
+                                        <Text fontWeight="900" color={gameState === "won" ? "rgba(74, 222, 128, 1)" : "rgba(248, 113, 113, 1)"}>
+                                            {resultMessage}
+                                        </Text>
+                                    </Box>
+                                </motion.div>
                             )}
                         </CardBody>
                     </Card>

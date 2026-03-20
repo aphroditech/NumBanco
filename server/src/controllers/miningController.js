@@ -152,7 +152,7 @@ export const resultGameMining = async (req, res) => {
             await newMiningHistory.save();
         }
         const histories = await MiningHistory.findOne({ user: req.user._id });
-        return res.json({ user, histories: histories.history });
+        return res.json({ user, histories: histories?.history || [] });
     }
     catch (error) {
         console.error("Error in resultGameMining:", error);
@@ -163,7 +163,7 @@ export const resultGameMining = async (req, res) => {
 export const getMiningHistory = async (req, res) => {
     try {
         const histories = await MiningHistory.findOne({ user: req.user._id });
-        return res.json({ histories: histories.history });
+        return res.json({ histories: histories?.history || [] });
     }
     catch (error) {
         console.error("Error in getMiningHistory:", error);
