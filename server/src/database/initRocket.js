@@ -8,7 +8,10 @@ export const initRocketSetting = async () => {
             const defaultRocketSettings = new RocketSettings({
                 botWinProbability: 0.5,
                 botTriggerProbability: 0.4,
-                multiple: [{number: 0.5, probability: 0.5}]
+                limitNormalToHard: 1.2,
+                limitHardToNormal: 0.7,
+                normalMultiple: [{number: 0.5, probability: 5}],
+                hardMultiple: [{number: 1, probability: 5}],
             });
             await defaultRocketSettings.save();
             console.log('✅ Default RocketSettings document created');

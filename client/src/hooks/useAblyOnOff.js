@@ -12,7 +12,6 @@ export function useAblyOnOff(dispatch) {
             });
         };
         const offUser = (msg) => {
-            console.log("offline user message received:", msg.data);
 
             dispatch({
                 type: "ACTIVE_USER",

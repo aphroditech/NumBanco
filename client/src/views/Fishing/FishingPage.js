@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import {
@@ -21,7 +21,8 @@ import {
     SliderTrack,
     SliderFilledTrack,
     SliderThumb,
-    Input
+    Input,
+    keyframes
 } from '@chakra-ui/react';
 import ClickButton from 'components/Input/ClickButton';
 import Card from 'components/Card/Card.js';
@@ -44,6 +45,24 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { getFishingView, fishingBet, fishingPullStay, fishingCashOut } from 'action/FishingActions';
 const MIN_AMOUNT = 0.1;
 
+const strengthRiseUp = keyframes`
+  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0px); filter: blur(0px); }
+`;
+
+// Multi pop: rise + fade away (different feel than strength label).
+const multiRiseFade = keyframes`
+  from { opacity: 0; transform: translateY(12px) scale(0.92); filter: blur(3px); }
+  25% { opacity: 1; }
+  to { opacity: 0; transform: translateY(-28px) scale(1.04); filter: blur(0px); }
+`;
+
+const confirmFadeAway = keyframes`
+  from { opacity: 1; transform: translateY(0px) scale(1); filter: blur(0px); }
+  70% { opacity: 1; }
+  to { opacity: 1; transform: translateY(-12px) scale(0.98); filter: blur(0px); }
+`;
+
 export default function FishingPage() {
     const dispatch = useDispatch();
     const history = useHistory();
@@ -54,12 +73,34 @@ export default function FishingPage() {
     const [bet, setBet] = useState(null);
     const [step, setStep] = useState(0);
     const [multi, setMulti] = useState(1);
+    const [info, setInfo] = useState([]);
     const [strength, setStrength] = useState(50);
     const [status, setStatus] = useState("continue");
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmText, setConfirmText] = useState("");
+    const [confirmKind, setConfirmKind] = useState("finish"); // win | bang | cashout | finish
+    const confirmTimeoutRef = useRef(null);
     const maxAmount = Math.max(MIN_AMOUNT, Math.min(20, balance));
 
     const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
     const strengthValue = clamp(Number(strength ?? 0), 0, 100);
+
+    const openConfirmAndReset = (kind, text) => {
+        if (confirmTimeoutRef.current) window.clearTimeout(confirmTimeoutRef.current);
+        setConfirmKind(kind);
+        setConfirmText(text);
+        setConfirmOpen(true);
+
+        // Keep current fish/strength briefly, then reset.
+        confirmTimeoutRef.current = window.setTimeout(() => {
+            setConfirmOpen(false);
+            setBet(null);
+            setMulti(1);
+            setStep(0);
+            setInfo([]);
+            setStrength(50);
+        }, 1000);
+    };
 
     // Gauge styling constants (0..100 strength scale)
     const GAUGE_STEP = 5;
@@ -74,7 +115,7 @@ export default function FishingPage() {
     const FISH_BAR_MAX = 10;
     const fishStepValue = clamp(Math.round(Number(step ?? 0)), 0, FISH_BAR_MAX);
     // Right-to-left: step 0 => right, step 10 => left
-    const FISH_EDGE_MARGIN_PERCENT = 3; // keep dot fully visible inside rounded card
+    const FISH_EDGE_MARGIN_PERCENT = 0; // keep dot fully visible inside rounded card
     const fishXPercent = clamp(
         (1 - fishStepValue / FISH_BAR_MAX) * 100,
         FISH_EDGE_MARGIN_PERCENT,
@@ -171,39 +212,47 @@ export default function FishingPage() {
             amount
         }
         fishingBet(data, dispatch, history);
+        setStatus("continue");
     }
 
     const handlefishing = async (e) =>  {
-        const data = {
-            act: e
+        const data = { act: e };
+
+        const res = await fishingPullStay(data, dispatch, history);
+        const strength = res?.strength;
+        const status = res?.status;
+        const updatedUser = res?.user;
+
+        // Update gauge + state immediately so fish can move even when status != "continue".
+        if (typeof strength === "number" && Number.isFinite(strength)) setStrength(strength);
+        if (typeof status === "string") {
+            setTimeout(() => {
+                setStatus(status);
+            }, 1000)
         }
 
-        console.log(data);
-
-        const {strength, status} = await fishingPullStay(data, dispatch, history);
-        console.log(strength);
-        console.log(status);
-        setStrength(strength);
-        setStatus(status);
+        // Server updates the active history item each pull; when status changes (win/bang), the
+        // history item's `active` flag flips, so our current `active === false` effect doesn't update UI.
+        // Here we directly hydrate from the response so fish movement + label animations work.
+        const lastHistoryItem = updatedUser?.fishingHistory?.[updatedUser?.fishingHistory?.length - 1];
+        if (lastHistoryItem) {
+            if (Array.isArray(lastHistoryItem.info)) setInfo(lastHistoryItem.info);
+            if (typeof lastHistoryItem.step === "number" && Number.isFinite(lastHistoryItem.step)) setStep(lastHistoryItem.step);
+            if (typeof lastHistoryItem.multi === "number" && Number.isFinite(lastHistoryItem.multi)) setMulti(lastHistoryItem.multi);
+        }
 
         if(status !== "continue") {
-            setBet(null);
-            setTimeout(() => {
-                setMulti(1);
-                setStep(0);
-                // setAmount("0.10");
-                setStrength(50);
-            }, 3000);
+            if (status === "win") openConfirmAndReset("win", "Win!");
+            else if (status === "bang") openConfirmAndReset("bang", "Bang!");
+            else if (status === "cashout") openConfirmAndReset("cashout", "Cash Out!");
+            else openConfirmAndReset("finish", "Finished!");
         }
     }
 
-    const handleCashOut = () => {
-        setBet(null);
-        setMulti(1);
-        setStep(0);
-        // setAmount("0.10");
-        setStrength(50);
-        fishingCashOut(dispatch, history);
+    const handleCashOut = async () => {
+        setStatus("cashout");
+        await fishingCashOut(dispatch, history);
+        openConfirmAndReset("cashout", "Cash Out!");
     }
 
     useEffect(() => {
@@ -221,6 +270,8 @@ export default function FishingPage() {
         if(pending) {
             setAmount(pending.bet);
             setBet(pending.bet);
+            setInfo(pending.info);
+            setStrength(pending.info[pending.info.length - 1]?.strength || 50);
             setStep(pending.step);
             setMulti(pending.multi);
         }
@@ -489,7 +540,7 @@ export default function FishingPage() {
                                             hoverBg={"#ffc400ff"}
                                             color="#fff"
                                             border={"none"}
-                                            disabled={!bet}
+                                            disabled={!bet || status !== "continue"}
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
@@ -533,7 +584,7 @@ export default function FishingPage() {
                                             hoverBg={"#6DC64B"}
                                             color="#fff"
                                             border={"none"}
-                                            disabled={!bet}
+                                            disabled={!bet || status !== "continue"}
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
@@ -542,7 +593,7 @@ export default function FishingPage() {
                                                     handlefishing(-1);
                                                 }
                                             }
-                                            label="PULL"
+                                            label="HOLD"
                                         />
                                         <ClickButton
                                             w="100%"
@@ -554,7 +605,7 @@ export default function FishingPage() {
                                             hoverBg={"#E74C3C"}
                                             color="#fff"
                                             border={"none"}
-                                            disabled={!bet}
+                                            disabled={!bet || status !== "continue"}
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
@@ -563,7 +614,7 @@ export default function FishingPage() {
                                                     handlefishing(1);
                                                 }
                                             }
-                                            label="STAY"
+                                            label="REEL"
                                         />
                                     </Grid>
                                 </FormControl>
@@ -583,14 +634,112 @@ export default function FishingPage() {
                             display="block"
                         />
 
+                        {confirmOpen && (
+                            <Box
+                                position="absolute"
+                                inset="22px"
+                                zIndex="20"
+                                borderRadius="14px"
+                                bg="rgba(0,0,0,0.45)"
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
+                            >
+                                {/* Glass card */}
+                                <Box
+                                    p="2px"
+                                    borderRadius="18px"
+                            bg={
+                                confirmKind === "win"
+                                    ? "linear-gradient(135deg, rgba(37,246,168,0.55) 0%, rgba(0,212,255,0.45) 55%, rgba(0,0,0,0) 100%)"
+                                    : confirmKind === "bang"
+                                        ? "linear-gradient(135deg, rgba(255,77,109,0.55) 0%, rgba(231,76,60,0.45) 55%, rgba(0,0,0,0) 100%)"
+                                        : confirmKind === "cashout"
+                                            ? "linear-gradient(135deg, rgba(255,209,102,0.55) 0%, rgba(0,212,255,0.45) 55%, rgba(0,0,0,0) 100%)"
+                                            : "linear-gradient(135deg, rgba(0,212,255,0.55) 0%, rgba(88,44,255,0.45) 55%, rgba(0,0,0,0) 100%)"
+                            }
+                                    animation={`${confirmFadeAway} 1s ease-out forwards`}
+                                >
+                                    <Box
+                                        bg="rgba(42,45,46,0.92)"
+                                        backdropFilter="blur(10px)"
+                                        borderRadius="16px"
+                                    width="320px"
+                                        px={{ base: "16px", sm: "22px" }}
+                                        py={{ base: "14px", sm: "18px" }}
+                                        textAlign="center"
+                                        border="1px solid rgba(255,255,255,0.10)"
+                                    boxShadow={
+                                        confirmKind === "win"
+                                            ? "0 18px 60px rgba(37,246,168,0.14), 0 10px 30px rgba(0,0,0,0.35)"
+                                            : confirmKind === "bang"
+                                                ? "0 18px 60px rgba(255,77,109,0.14), 0 10px 30px rgba(0,0,0,0.35)"
+                                                : confirmKind === "cashout"
+                                                    ? "0 18px 60px rgba(255,209,102,0.14), 0 10px 30px rgba(0,0,0,0.35)"
+                                                    : "0 18px 60px rgba(0, 212, 255, 0.14), 0 10px 30px rgba(0,0,0,0.35)"
+                                    }
+                                    >
+                                    <Text
+                                        fontSize={{ base: "18px", sm: "22px" }}
+                                        fontWeight="900"
+                                        color={
+                                            confirmKind === "win"
+                                                ? "#25F6A8"
+                                                : confirmKind === "bang"
+                                                    ? "#FF4D6D"
+                                                    : confirmKind === "cashout"
+                                                        ? "#FFD166"
+                                                        : "#00D4FF"
+                                        }
+                                        mb="8px"
+                                    >
+                                        {confirmText}
+                                    </Text>
+                                    <Text fontSize="sm" color="rgba(255,255,255,0.75)" mb="14px">
+                                        Resetting...
+                                    </Text>
+                                    <Button
+                                        size="sm"
+                                        h="40px"
+                                        px="16px"
+                                        bg={
+                                            confirmKind === "win"
+                                                ? "linear-gradient(135deg, #25F6A8 0%, #00D4FF 100%)"
+                                                : confirmKind === "bang"
+                                                    ? "linear-gradient(135deg, #FF4D6D 0%, #E74C3C 100%)"
+                                                    : confirmKind === "cashout"
+                                                        ? "linear-gradient(135deg, #FFD166 0%, #00D4FF 100%)"
+                                                        : "linear-gradient(135deg, #00D4FF 0%, #582CFF 100%)"
+                                        }
+                                        color="#fff"
+                                        borderRadius="14px"
+                                        boxShadow="0 0 22px rgba(0,212,255,0.25)"
+                                        _hover={{ filter: "brightness(1.05)" }}
+                                        onClick={() => {
+                                            if (confirmTimeoutRef.current) window.clearTimeout(confirmTimeoutRef.current);
+                                            setConfirmOpen(false);
+                                            setBet(null);
+                                            setMulti(1);
+                                            setStep(0);
+                                            setInfo([]);
+                                            setStrength(50);
+                                        }}
+                                    >
+                                        OK
+                                    </Button>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        )}
+
                         {/* Strength gauge overlay (0..100) inside the sea view - LEFT to RIGHT */}
                         <Box
                             position="absolute"
-                            left="50%"
+                            left="70%"
                             top="58px"
                             transform="translateX(-50%)"
                             height="92px"
-                            width="70%"
+                            width="40%"
                             maxW="820px"
                             minW="320px"
                             pointerEvents="none"
@@ -715,7 +864,7 @@ export default function FishingPage() {
                                     transform="translate(-50%, -50%)"
                                     width={i % 10 === 0 ? "2px" : "1px"}
                                     height={i % 10 === 0 ? `${TICK_MAJOR_HEIGHT}px` : `${TICK_MINOR_HEIGHT}px`}
-                                    bg={i === GAUGE_REFERENCE ? "rgba(0,212,255,0.95)" : "rgba(255,255,255,0.33)"}
+                                    bg={i === GAUGE_REFERENCE ? "rgba(0,212,255,0.95)" : "rgba(255,255,255,0.3)"}
                                 />
                             ) : null))}
 
@@ -742,11 +891,11 @@ export default function FishingPage() {
                         {/* Bottom bar (0..10) moves fish */}
                         <Box
                             position="absolute"
-                            left="50%"
+                            left="60%"
                             top="65%"
                             transform="translateX(-50%)"
                             height="78px"
-                            width="80%"
+                            width="60%"
                             maxW="820px"
                             minW="320px"
                             pointerEvents="none"
@@ -781,10 +930,11 @@ export default function FishingPage() {
                             <Box
                                 position="absolute"
                                 left={`${fishXPercent}%`}
-                                top="0px"
+                                top="33px"
                                 transform="translate(-50%, -50%)"
                                 transition="left 450ms ease"
                                 willChange="left"
+                                    w="54px"
                                 zIndex="2"
                             >
                                 <Box
@@ -797,7 +947,7 @@ export default function FishingPage() {
                             </Box>
 
                             {/* labels (0..10) */}
-                            <Box
+                            {/* <Box
                                 position="absolute"
                                 left="0"
                                 right="0"
@@ -806,22 +956,63 @@ export default function FishingPage() {
                                 bg="rgba(0,0,0,0.30)"
                                 borderRadius="999px"
                                 border="1px solid rgba(255,255,255,0.10)"
-                            />
+                            /> */}
                             {Array.from({ length: FISH_BAR_MAX + 1 }).map((_, v) => (
-                                <Text
-                                    key={`fish-label-${v}`}
-                                    position="absolute"
-                                    left={`${(1 - v / FISH_BAR_MAX) * 100}%`}
-                                    bottom="4px"
-                                    transform="translateX(-50%)"
-                                    fontSize="10px"
-                                    fontWeight={v === 5 ? "bold" : "normal"}
-                                    color={v === 5 ? "rgba(0,212,255,0.95)" : "rgba(255,255,255,0.80)"}
-                                    textShadow="0 2px 4px rgba(0,0,0,0.7)"
-                                    whiteSpace="nowrap"
+                                <Box
+                                    key={`fish-label-${v}-${info[v - 1]?.strength ?? 'na'}`}
+                                        position="absolute"
+                                        left={`${(1 - v / FISH_BAR_MAX) * 100}%`}
+                                        bottom="4px"
+                                        transform="translateX(-50%)"
+                                        fontSize="10px"
+                                        fontWeight={v === 5 ? "bold" : "normal"}
+                                        color={v === 5 ? "rgba(0,212,255,0.95)" : "rgba(255,255,255,0.80)"}
+                                        textShadow="0 2px 4px rgba(0,0,0,0.7)"
+                                        whiteSpace="nowrap"
                                 >
-                                    {v}
-                                </Text>
+                                    <Text 
+                                    position='absolute' 
+                                    left="-6" 
+                                    top="-100px" 
+                                    fontSize="20px"
+                                    color={info[v - 1]?.status === 1 ? "#25F6A8" : "#FF4D6D"}
+                                    fontWeight="800"
+                                    lineHeight="1"
+                                    px="8px"
+                                    py="2px"
+                                    borderRadius="10px"
+                                    // bg={info[v - 1]?.status === 1 ? "rgba(37,246,168,0.18)" : "rgba(255,77,109,0.18)"}
+                                    animation={`${strengthRiseUp} 0.45s ease-out`}>
+                                        {info[v - 1]?.strength}
+                                    </Text>
+                                    {info[v - 1]?.multi ? (
+                                        <Text
+                                            position="absolute"
+                                            left="-6"
+                                            top="-180px"
+                                            fontSize="28px"
+                                            color={info[v - 1]?.status === 1 ? "#25F6A8" : "#FF4D6D"}
+                                            fontWeight="900"
+                                            lineHeight="1"
+                                            px="8px"
+                                            py="2px"
+                                            borderRadius="10px"
+                                            bg={
+                                                info[v - 1]?.status === 1
+                                                    ? "rgba(255, 209, 102, 0.18)"
+                                                    : "rgba(255, 77, 109, 0.18)"
+                                            }
+                                            boxShadow={
+                                                info[v - 1]?.status === 1
+                                                    ? "0 0 20px rgba(255, 209, 102, 0.25)"
+                                                    : "0 0 20px rgba(255, 77, 109, 0.20)"
+                                            }
+                                            animation={`${multiRiseFade} 1.75s ease-out forwards`}
+                                        >
+                                            {info[v - 1].status === 1 ? "+" : "-"} {Math.abs(info[v - 1]?.strength - 50) / 5}
+                                        </Text>
+                                    ) : null}
+                                </Box>
                             ))}
                         </Box>
 

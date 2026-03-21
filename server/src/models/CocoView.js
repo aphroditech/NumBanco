@@ -13,6 +13,10 @@ const CocoViewSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    result: {
+        type: Number,
+        required: true
+    },
     // result: {
     //     type: Number,
     //     required: true

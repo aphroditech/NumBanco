@@ -10,6 +10,10 @@ const initialState = {
         cloudSpreadUsers: 0,
         doveUsers: 0,
         cocoUsers: 0,
+        rocketUsers: 0,
+        jackalUsers: 0,
+        mineUsers: 0,
+        fishingUsers: 0,
         onlineUsers: 0
     },
     lootAvailable: false,

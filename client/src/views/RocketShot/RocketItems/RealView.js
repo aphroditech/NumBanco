@@ -83,8 +83,17 @@ function RealView() {
     }
     
     return (
-        <Card p="24px" pt="30px" overflowX="hidden" minH="800px">
-            <Box overflowX="hidden" width="100%" overflowY="auto">
+        <Card
+            p="24px"
+            pt="30px"
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+            h="100%"
+            minH="0"
+            flex="1"
+        >
+            <Box overflowX="hidden" width="100%" flex="1" minH="0" overflowY="auto">
                 <Table
                 variant="unstyled"
                 color="#fff"

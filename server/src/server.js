@@ -25,6 +25,7 @@ import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
 import {rocketBot} from "./services/rocket/rocketBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
+import { doveBot } from "./services/dove/doveBot.service.js";
 dotenv.config();
 
 const PORT = process.env.API_PORT || 5000;
@@ -74,6 +75,7 @@ connectDB().then(async () => {
         startGravityGameLoop(ably);
         startCloudSpreadGameLoop(ably);
         // cocoBot(ably);
+        // doveBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();
         // getWithdrawWallet();

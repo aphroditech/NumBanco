@@ -34,8 +34,8 @@ import PlinkoPage from "views/Plinko/Plinko";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import DiamondIcon from '@mui/icons-material/Diamond';
+import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
-
 import SupportPage from "views/Support/Support";
 import GavelIcon from '@mui/icons-material/Gavel';
 import Landing from "views/Landing/Landing"
@@ -48,10 +48,12 @@ import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
 import MinesPage from "views/Mines/MinesPage";
 
+
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
 import Coco from "views/Coco/CocoPage";
 import { GiChicken, GiFishingHook } from "react-icons/gi";
+import AToZPage from "views/AToZ/AToZ";
 
 
 import {
@@ -129,6 +131,14 @@ var dashRoutes = [
     name: "DOVE CROSS",
     icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/a-to-z",
+    name: "A TO Z",
+    icon: <SortByAlphaIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: AToZPage,
     layout: "/game",
   },
   {

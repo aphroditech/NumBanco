@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, Fishing, Gravity, CloudSpread, DoveGame, CocoGame } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, CloudSpread, Pumping, Fishing, Gravity, DoveGame, CocoGame, AToZGame } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -71,6 +71,7 @@ function Sidebar(props) {
                 <SidebarButtonLink value={Mines} />
                 <SidebarButtonLink value={DoveGame} />
                 <SidebarButtonLink value={CocoGame} />
+                <SidebarButtonLink value={AToZGame} />
               </Collapse>
           </Box>
           )
@@ -200,6 +201,33 @@ export function SidebarResponsive(props) {
             </Collapse>
           </Box>
         );
+      }
+      if (prop.name === "GAMES") {
+        return( 
+          <Box key={key}>
+            <SideBarToggle
+            value={prop}
+            isExpanded={activeMenu === "games"}
+            onClick={() => toggleMenu("games")} />
+              <Collapse in={activeMenu === "games"} animateOpacity>
+              <Stack
+                spacing={2}
+                mt={2}
+              >
+                <SidebarButtonLink value={Rubic} />
+                <SidebarButtonLink value={Pumping} />
+                <SidebarButtonLink value={Fishing} />
+                <SidebarButtonLink value={Gravity} />
+                <SidebarButtonLink value={Rocket} />
+                <SidebarButtonLink value={Jackal} />
+                <SidebarButtonLink value={Mines} />
+                <SidebarButtonLink value={DoveGame} />
+                <SidebarButtonLink value={CocoGame} />
+                <SidebarButtonLink value={AToZGame} />
+              </Stack>
+              </Collapse>
+          </Box>
+          )
       }
 
       if (prop.name === "LOTTERY") {

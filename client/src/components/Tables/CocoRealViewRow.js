@@ -61,7 +61,7 @@ if (typeof document !== 'undefined') {
 }
 
 function CocoRealViewRow(props) {
-    const { altas, avatar, bet, win } = props;
+    const { altas, avatar, result, win } = props;
     const winColor = win > 0 ? "#6DC64B" : "#E74C3C";
     const displayName = altas?.length > 7 ? altas.slice(0, 5) + "..." : (altas || "");
 
@@ -103,7 +103,7 @@ function CocoRealViewRow(props) {
         overflow="visible"
         >
         <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-            {bet}
+            {Number(result).toFixed(2)}
         </Text>
         </Td>
         <Td
