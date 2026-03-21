@@ -17,22 +17,6 @@ const CocoViewSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    // result: {
-    //     type: Number,
-    //     required: true
-    // },
-    // totalBet: {
-    //     type: Number,
-    //     required: true
-    // },
-    // totalWin: {
-    //     type: Number,
-    //     required: true
-    // },
-    // pumpingBalance: {
-    //     type: Number,
-    //     required: true
-    // },
     isUser: {
         type: Number,
         default: 0
