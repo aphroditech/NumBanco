@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Box,
     Grid,
@@ -34,7 +34,7 @@ import { useHistory } from 'react-router-dom';
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 /** Match Dove Cross step increments for +/- controls */
-const AMOUNT_STEP = 1;
+const AMOUNT_STEP = 0.5;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
 
 async function fireJavelinWhenReady(maxFrames = 40) {
@@ -61,14 +61,27 @@ export default function RocketShotPage() {
     const history = useHistory();
 
     const [amount, setAmount] = useState(MIN_AMOUNT);
+    /** True while the rocket is in flight (Phaser shot in progress). */
     const [isFiring, setIsFiring] = useState(false);
+    /** True while /rocket/bet request is in flight — prevents double-submit without relying on isFiring alone. */
+    const [isBetPending, setIsBetPending] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [mode, setMode] = useState("easy");
     /** "flat" = flat win display, "multiplier" = multiplier display (UI; extend payout logic if needed) */
     const [winMode, setWinMode] = useState("multiplier");
     const firingLockRef = useRef(false);
 
-    const [fireLoading, setFireLoading] = useState(false);
+    /** Clears React state + ref + pending window globals so Fire never stays disabled. */
+    const unlockShooting = useCallback(() => {
+        firingLockRef.current = false;
+        setIsBetPending(false);
+        setIsFiring(false);
+        if (typeof window !== 'undefined') {
+            window.__rocketPendingMultiplier = null;
+            window.__rocketPendingWinMode = null;
+            window.__rocketPendingBetAmount = null;
+        }
+    }, []);
     
     const user = useSelector((state) => state.user.userInfo) || {};
     const rocketMultiplier = useSelector((state) => state.rocket?.multiplier ?? 0);
@@ -87,8 +100,8 @@ export default function RocketShotPage() {
     const handleRocketBet = async (amount, mode, selectedWinMode) => {
         if (firingLockRef.current) return;
         firingLockRef.current = true;
-        setIsFiring(true);
-
+        setIsBetPending(true);
+        // Do NOT set isFiring until bet succeeds — avoids UI stuck "firing" during slow/failed API.
 
         // Used by Phaser scene to display the correct win label for this specific shot.
         if (typeof window !== 'undefined') {
@@ -96,72 +109,58 @@ export default function RocketShotPage() {
             window.__rocketPendingWinMode = selectedWinMode;
         }
         try {
-            
             const data = {
                 bet: parseFloat(amount),
                 level: mode,
             };
             const multiplier = await rocketBet(data, dispatch, history);
+            setIsBetPending(false);
             // Store multiplier for the current shot.
             if (typeof window !== 'undefined') {
                 window.__rocketPendingMultiplier = multiplier;
             }
             if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
+                setIsFiring(true);
                 const fired = await fireJavelinWhenReady();
                 // If Phaser didn't start a shot, unlock immediately (avoids Fire stuck disabled).
                 if (!fired) {
-                    window.__rocketPendingMultiplier = null;
-                    window.__rocketPendingWinMode = null;
-                    window.__rocketPendingBetAmount = null;
-                    setIsFiring(false);
-                    firingLockRef.current = false;
+                    unlockShooting();
                 }
             } else {
-                if (typeof window !== 'undefined') window.__rocketPendingMultiplier = null;
-                if (typeof window !== 'undefined') window.__rocketPendingWinMode = null;
-                if (typeof window !== 'undefined') window.__rocketPendingBetAmount = null;
-                setIsFiring(false);
-                firingLockRef.current = false;
+                unlockShooting();
             }
         } catch (error) {
             console.error(error);
-            if (typeof window !== 'undefined') window.__rocketPendingMultiplier = null;
-            if (typeof window !== 'undefined') window.__rocketPendingWinMode = null;
-            if (typeof window !== 'undefined') window.__rocketPendingBetAmount = null;
-            setIsFiring(false);
-            firingLockRef.current = false;
+            unlockShooting();
         }
     }
 
     // Never leave the page stuck from a prior session / failed Phaser handoff.
     useEffect(() => {
-        setIsFiring(false);
-        firingLockRef.current = false;
-    }, []);
+        unlockShooting();
+    }, [unlockShooting]);
 
     // If Phaser never calls onJavelinShotEnd (edge case), unlock so the user can play again.
     useEffect(() => {
         if (!isFiring) return;
         const failSafe = window.setTimeout(() => {
-            firingLockRef.current = false;
-            setIsFiring(false);
-        }, 45000);
+            unlockShooting();
+        }, 20000);
         return () => window.clearTimeout(failSafe);
-    }, [isFiring]);
+    }, [isFiring, unlockShooting]);
 
     // Unlock the Fire button only when the current rocket shot is fully done
     // (hit or miss). This prevents overwriting the pending multiplier.
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const handler = () => {
-            firingLockRef.current = false;
-            setIsFiring(false);
+            unlockShooting();
         };
         window.onJavelinShotEnd = handler;
         return () => {
             if (window.onJavelinShotEnd === handler) window.onJavelinShotEnd = undefined;
         };
-    }, []);
+    }, [unlockShooting]);
 
     // Allow firing by clicking the rocket/launch pad inside the Phaser canvas.
     useEffect(() => {
@@ -182,230 +181,279 @@ export default function RocketShotPage() {
         };
     }, [amount, mode, winMode, maxAmount, walletBalance]);
 
-    // Handle rocket shot miss
-    window.onRocketShotMiss = () => {
-        const data = {
-            isWin: false,
-            betAmount: parseFloat(amount),
-            multiplier: 0,
-            level: mode,
+    // Miss handler: always clear firing lock (onJavelinShotEnd runs first in GameScene, but this is idempotent).
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.onRocketShotMiss = () => {
+            unlockShooting();
+            const data = {
+                isWin: false,
+                betAmount: parseFloat(amount),
+                multiplier: 0,
+                level: mode,
+            };
+            rocketShotResult(data, dispatch, history);
         };
-        rocketShotResult(data, dispatch, history);
-    };
+        return () => {
+            if (window.onRocketShotMiss) window.onRocketShotMiss = undefined;
+        };
+    }, [amount, mode, dispatch, history, unlockShooting]);
 
-    window.onJavelinWin = (multiplier) => {
-        const data = {
-            isWin: true,
-            betAmount: parseFloat(amount),
-            multiplier: multiplier,
-            level: mode,
+    // Win handler: same pattern as miss — unlock first, then persist result (onJavelinShotEnd still runs after; idempotent).
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.onJavelinWin = (multiplier) => {
+            unlockShooting();
+            const data = {
+                isWin: true,
+                betAmount: parseFloat(amount),
+                multiplier,
+                level: mode,
+            };
+            rocketShotResult(data, dispatch, history);
         };
-        rocketShotResult(data, dispatch, history);
-    };
+        return () => {
+            if (window.onJavelinWin) window.onJavelinWin = undefined;
+        };
+    }, [amount, mode, dispatch, history, unlockShooting]);
 
     return (
-        <Box px={{ base: '16px', md: '24px' }} minH="90vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
+        <Box px={{ base: '16px', md: '24px' }} minH="85vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
             <Grid
                 templateAreas={isNarrowLayout ? '"game" "empty"' : '"game empty"'}
                 templateColumns={isNarrowLayout ? '1fr' : '6fr 2fr'}
-                templateRows={isNarrowLayout ? 'auto auto' : 'auto'}
+                templateRows={isNarrowLayout ? 'auto auto' : 'minmax(0, 1fr)'}
                 gap={{ base: '16px', md: '24px' }}
                 w="100%"
+                alignItems="stretch"
+                minH={{ base: 'auto', xl: 'min(920px, calc(100vh - 112px))' }}
             >
                 {/* Center - Main Javelin Game */}
-                <GridItem area="game" minH={{ base: "auto", md: "auto" }}>
-                    <Card  minH="100%" alignItems="center"  w="100%">
-                        <CardBody w="100%" p="0" display="flex" flexDirection="column" >    
+                <GridItem area="game" display="flex" flexDirection="column" minH={{ base: 'auto', xl: 0 }}>
+                    <Card
+                        flex="1"
+                        minH="0"
+                        w="100%"
+                        display="flex"
+                        flexDirection="column"
+                        overflow="hidden"
+                        alignItems="stretch"
+                    >
+                        <CardBody
+                            w="100%"
+                            p="0"
+                            display="flex"
+                            flexDirection="column"
+                            flex="1"
+                            minH="0"
+                            overflow="hidden"
+                        >
+                            {/* Phaser fills remaining space above controls (no extra “dead” card footer) */}
                             <Box
                                 w="100%"
+                                flex="1"
+                                minH={{ base: '260px', sm: '300px', md: '320px' }}
                                 minW={0}
-                                minH={{ base: "260px", sm: "320px", md: "380px" }}
-                                maxH={{ base: "52vh", md: "66vh" }}
-                                h="auto"
-                                style={{ aspectRatio: "16 / 9" }}
+                                position="relative"
                             >
-                                <JavelinGame mode={mode}/>
+                                <JavelinGame mode={mode} />
                             </Box>
 
-                            {/* Bottom controls moved from the left panel */}
+                            {/* Bottom controls */}
                             <Box
                                 w="100%"
+                                flexShrink={0}
                                 pt="12px"
                                 pb="14px"
+                                position="relative"
                                 bg="linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 100%)"
                                 borderTop="1px solid rgba(0, 212, 255, 0.3)"
                             >
-                                <VStack spacing="16px" align="center" w="100%" maxW="560px" mx="auto" px="16px">
-                                    {/* Bet amount — Dove Cross style: Min | [− value +] | Max */}
-                                    <Flex align="center" justify="center" gap="6px" flexWrap="wrap" w="100%">
-                                        <Button
-                                            size="sm"
-                                            h="32px"
-                                            minW="44px"
-                                            px="10px"
-                                            fontSize="xs"
-                                            fontWeight="bold"
-                                            bg="rgba(0, 212, 255, 0.2)"
-                                            color="#00D4FF"
-                                            border="1px solid rgba(0, 212, 255, 0.5)"
-                                            borderRadius="8px"
-                                            _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
-                                            onClick={() => setAmount(MIN_AMOUNT)}
-                                        >
-                                            Min
-                                        </Button>
-                                        <HStack
-                                            spacing="4px"
-                                            bg="#323738"
-                                            borderRadius="8px"
-                                            px="6px"
-                                            h="36px"
-                                            border="1px solid rgba(255, 255, 255, 0.1)"
-                                        >
-                                            <IconButton
-                                                aria-label="Decrease bet"
-                                                icon={<RemoveIcon style={{ fontSize: 16 }} />}
-                                                size="xs"
-                                                h="28px"
-                                                w="28px"
-                                                minW="28px"
-                                                bg="transparent"
-                                                color="#fff"
-                                                borderRadius="6px"
-                                                _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                onClick={() => setAmount(amount - AMOUNT_STEP)}
-                                                isDisabled={amount - AMOUNT_STEP < MIN_AMOUNT}
-                                            />
-                                            <Input
-                                                type="number"
-                                                value={amount}
-                                                onChange={handleAmountChange}
-                                                min={MIN_AMOUNT}
-                                                max={maxAmount}
-                                                step={AMOUNT_STEP}
-                                                w={{ base: '72px', sm: '80px' }}
-                                                textAlign="center"
-                                                fontSize="md"
-                                                fontWeight="bold"
-                                                color="#fff"
-                                                bg="transparent"
-                                                border="none"
-                                                p="0"
-                                                _focus={{ outline: 'none', boxShadow: 'none', border: 'none' }}
-                                                _hover={{ border: 'none' }}
-                                                sx={{
-                                                    MozAppearance: 'textfield',
-                                                    '&::-webkit-outer-spin-button': {
-                                                        WebkitAppearance: 'none',
-                                                        margin: 0,
-                                                    },
-                                                    '&::-webkit-inner-spin-button': {
-                                                        WebkitAppearance: 'none',
-                                                        margin: 0,
-                                                    },
-                                                }}
-                                            />
-                                            <IconButton
-                                                aria-label="Increase bet"
-                                                icon={<AddIcon style={{ fontSize: 16 }} />}
-                                                size="xs"
-                                                h="28px"
-                                                w="28px"
-                                                minW="28px"
-                                                bg="transparent"
-                                                color="#fff"
-                                                borderRadius="6px"
-                                                _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                onClick={() => setAmount(amount + AMOUNT_STEP)}
-                                                isDisabled={amount + AMOUNT_STEP > maxAmount}
-                                            />
-                                        </HStack>
-                                        <Button
-                                            size="sm"
-                                            h="32px"
-                                            minW="44px"
-                                            px="10px"
-                                            fontSize="xs"
-                                            fontWeight="bold"
-                                            bg="rgba(0, 212, 255, 0.2)"
-                                            color="#00D4FF"
-                                            border="1px solid rgba(0, 212, 255, 0.5)"
-                                            borderRadius="8px"
-                                            _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
-                                            onClick={() => setAmount(maxAmount)}
-                                        >
-                                            Max
-                                        </Button>
-                                    </Flex>
-
-                                    <HStack spacing="10px" align="center" flexWrap="wrap" justify="center" w="100%">
-                                        <HStack spacing="6px" align="center">
-                                            <Text as="span" fontSize="xs" color="rgba(255,255,255,0.8)" whiteSpace="nowrap">
-                                                Difficulty:
-                                            </Text>
-                                            <Select
+                                <IconButton
+                                    aria-label="Help"
+                                    position="absolute"
+                                    top="5px"
+                                    right="5px"
+                                    icon={<HelpOutlineIcon style={{ fontSize: 22 }} />}
+                                    size="sm"
+                                    variant="ghost"
+                                    color="#00d4ff"
+                                    _hover={{ bg: 'rgba(255,255,255,0.08)', color: '#00D4FF' }}
+                                    onClick={() => setIsHelpModalOpen(true)}
+                                />
+                                <HStack justify="center" align="center" w="100%">
+                                    <VStack spacing="16px" align="center" px="16px">
+                                        {/* Bet amount — Dove Cross style: Min | [− value +] | Max */}
+                                        <Flex align="center" justify="center" gap="6px" flexWrap="wrap" w="100%">
+                                            <Button
                                                 size="sm"
-                                                w={{ base: "100px", sm: "110px" }}
                                                 h="32px"
+                                                minW="44px"
+                                                px="10px"
                                                 fontSize="xs"
+                                                fontWeight="bold"
+                                                bg="rgba(0, 212, 255, 0.2)"
+                                                color="#00D4FF"
+                                                border="1px solid rgba(0, 212, 255, 0.5)"
+                                                borderRadius="8px"
+                                                _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
+                                                onClick={() => setAmount(MIN_AMOUNT)}
+                                            >
+                                                Min
+                                            </Button>
+                                            <HStack
+                                                spacing="4px"
                                                 bg="#323738"
-                                                color="#fff"
-                                                borderColor="rgba(0, 212, 255, 0.3)"
+                                                borderRadius="8px"
+                                                px="6px"
+                                                h="36px"
+                                                border="1px solid rgba(255, 255, 255, 0.1)"
+                                            >
+                                                <IconButton
+                                                    aria-label="Decrease bet"
+                                                    icon={<RemoveIcon style={{ fontSize: 16 }} />}
+                                                    size="xs"
+                                                    h="28px"
+                                                    w="28px"
+                                                    minW="28px"
+                                                    bg="transparent"
+                                                    color="#fff"
+                                                    borderRadius="6px"
+                                                    _hover={{ bg: 'rgba(255,255,255,0.1)' }}
+                                                    onClick={() => setAmount(amount - AMOUNT_STEP)}
+                                                    isDisabled={amount - AMOUNT_STEP < MIN_AMOUNT}
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    value={amount}
+                                                    onChange={handleAmountChange}
+                                                    min={MIN_AMOUNT}
+                                                    max={maxAmount}
+                                                    step={AMOUNT_STEP}
+                                                    w={{ base: '72px', sm: '80px' }}
+                                                    textAlign="center"
+                                                    fontSize="md"
+                                                    fontWeight="bold"
+                                                    color="#fff"
+                                                    bg="transparent"
+                                                    border="none"
+                                                    p="0"
+                                                    _focus={{ outline: 'none', boxShadow: 'none', border: 'none' }}
+                                                    _hover={{ border: 'none' }}
+                                                    sx={{
+                                                        MozAppearance: 'textfield',
+                                                        '&::-webkit-outer-spin-button': {
+                                                            WebkitAppearance: 'none',
+                                                            margin: 0,
+                                                        },
+                                                        '&::-webkit-inner-spin-button': {
+                                                            WebkitAppearance: 'none',
+                                                            margin: 0,
+                                                        },
+                                                    }}
+                                                />
+                                                <IconButton
+                                                    aria-label="Increase bet"
+                                                    icon={<AddIcon style={{ fontSize: 16 }} />}
+                                                    size="xs"
+                                                    h="28px"
+                                                    w="28px"
+                                                    minW="28px"
+                                                    bg="transparent"
+                                                    color="#fff"
+                                                    borderRadius="6px"
+                                                    _hover={{ bg: 'rgba(255,255,255,0.1)' }}
+                                                    onClick={() => setAmount(amount + AMOUNT_STEP)}
+                                                    isDisabled={amount + AMOUNT_STEP > maxAmount}
+                                                />
+                                            </HStack>
+                                            <Button
+                                                size="sm"
+                                                h="32px"
+                                                minW="44px"
+                                                px="10px"
+                                                fontSize="xs"
+                                                fontWeight="bold"
+                                                bg="rgba(0, 212, 255, 0.2)"
+                                                color="#00D4FF"
+                                                border="1px solid rgba(0, 212, 255, 0.5)"
+                                                borderRadius="8px"
+                                                _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
+                                                onClick={() => setAmount(maxAmount)}
+                                            >
+                                                Max
+                                            </Button>
+                                        </Flex>
+
+                                        <HStack spacing="10px" align="center" flexWrap="wrap" justify="center" w="100%">
+                                            <HStack spacing="6px" align="center">
+                                                <Text as="span" fontSize="xs" color="rgba(255,255,255,0.8)" whiteSpace="nowrap">
+                                                    Difficulty:
+                                                </Text>
+                                                <Select
+                                                    size="sm"
+                                                    w={{ base: "100px", sm: "110px" }}
+                                                    h="32px"
+                                                    fontSize="xs"
+                                                    bg="#323738"
+                                                    color="#fff"
+                                                    borderColor="rgba(0, 212, 255, 0.3)"
+                                                    borderRadius="6px"
+                                                    value={mode}
+                                                    onChange={(e) => setMode(e.target.value)}
+                                                    sx={{ option: { bg: "#323738", color: "#fff" } }}
+                                                >
+                                                    <option value="easy">Easy</option>
+                                                    <option value="normal">Normal</option>
+                                                    <option value="hard">Hard</option>
+                                                </Select>
+                                            </HStack>
+
+                                            <HStack
+                                                spacing="0"
+                                                bg="#323738"
                                                 borderRadius="6px"
-                                                value={mode}
-                                                onChange={(e) => setMode(e.target.value)}
-                                                sx={{ option: { bg: "#323738", color: "#fff" } }}
+                                                p="2px"
+                                                border="1px solid rgba(0, 212, 255, 0.2)"
                                             >
-                                                <option value="easy">Easy</option>
-                                                <option value="normal">Normal</option>
-                                                <option value="hard">Hard</option>
-                                            </Select>
+                                                <Button
+                                                    size="xs"
+                                                    h="26px"
+                                                    px="10px"
+                                                    fontSize="xs"
+                                                    fontWeight="bold"
+                                                    bg={winMode === "flat" ? "#00D4FF" : "transparent"}
+                                                    color={winMode === "flat" ? "#000" : "#fff"}
+                                                    borderRadius="4px"
+                                                    _hover={{
+                                                        bg: winMode === "flat" ? "#00D4FF" : "rgba(255,255,255,0.1)",
+                                                    }}
+                                                    onClick={() => setWinMode("flat")}
+                                                >
+                                                    Flat Win
+                                                </Button>
+                                                <Button
+                                                    size="xs"
+                                                    h="26px"
+                                                    px="10px"
+                                                    fontSize="xs"
+                                                    fontWeight="bold"
+                                                    bg={winMode === "multiplier" ? "#00D4FF" : "transparent"}
+                                                    color={winMode === "multiplier" ? "#000" : "#fff"}
+                                                    borderRadius="4px"
+                                                    _hover={{
+                                                        bg: winMode === "multiplier" ? "#00D4FF" : "rgba(255,255,255,0.1)",
+                                                    }}
+                                                    onClick={() => setWinMode("multiplier")}
+                                                >
+                                                    Multiplier
+                                                </Button>
+                                            </HStack>
                                         </HStack>
 
-                                        <HStack
-                                            spacing="0"
-                                            bg="#323738"
-                                            borderRadius="6px"
-                                            p="2px"
-                                            border="1px solid rgba(0, 212, 255, 0.2)"
-                                        >
-                                            <Button
-                                                size="xs"
-                                                h="26px"
-                                                px="10px"
-                                                fontSize="xs"
-                                                fontWeight="bold"
-                                                bg={winMode === "flat" ? "#00D4FF" : "transparent"}
-                                                color={winMode === "flat" ? "#000" : "#fff"}
-                                                borderRadius="4px"
-                                                _hover={{
-                                                    bg: winMode === "flat" ? "#00D4FF" : "rgba(255,255,255,0.1)",
-                                                }}
-                                                onClick={() => setWinMode("flat")}
-                                            >
-                                                Flat Win
-                                            </Button>
-                                            <Button
-                                                size="xs"
-                                                h="26px"
-                                                px="10px"
-                                                fontSize="xs"
-                                                fontWeight="bold"
-                                                bg={winMode === "multiplier" ? "#00D4FF" : "transparent"}
-                                                color={winMode === "multiplier" ? "#000" : "#fff"}
-                                                borderRadius="4px"
-                                                _hover={{
-                                                    bg: winMode === "multiplier" ? "#00D4FF" : "rgba(255,255,255,0.1)",
-                                                }}
-                                                onClick={() => setWinMode("multiplier")}
-                                            >
-                                                Multiplier
-                                            </Button>
-                                        </HStack>
-                                    </HStack>
-
+                                    </VStack>
                                     <Button
-                                        h="36px"
+                                        h="66px"
                                         w="100%"
                                         maxW="300px"
                                         fontSize="md"
@@ -421,13 +469,19 @@ export default function RocketShotPage() {
                                             boxShadow: '0 4px 12px rgba(0, 212, 255, 0.3)',
                                         }}
                                         _active={{ transform: 'translateY(0)' }}
-                                        isDisabled={isFiring || amount < MIN_AMOUNT || amount > maxAmount || amount > walletBalance }
+                                        isDisabled={
+                                            isFiring ||
+                                            isBetPending ||
+                                            amount < MIN_AMOUNT ||
+                                            amount > maxAmount ||
+                                            amount > walletBalance
+                                        }
                                         title={
                                             amount < MIN_AMOUNT
                                                 ? `Enter at least ${MIN_AMOUNT}`
                                                 : amount > maxAmount
-                                                  ? `Max bet is ${maxAmount}`
-                                                  : ''
+                                                    ? `Max bet is ${maxAmount}`
+                                                    : ''
                                         }
                                         onClick={() => {
                                             handleRocketBet(parseFloat(amount), mode, winMode);
@@ -435,26 +489,16 @@ export default function RocketShotPage() {
                                     >
                                         Fire
                                     </Button>
-                                </VStack>
+                                </HStack>
                             </Box>
                         </CardBody>
-                        <Box position="absolute" bottom="20px" right="20px" zIndex={2}>
-                            <IconButton
-                                aria-label="Help"
-                                icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
-                                size="md"
-                                bg="transparent"
-                                color="#00d4ff"
-                                borderRadius="50%"
-                                _hover={{ bg: 'rgba(255,255,255,0.1)', color: '#00D4FF' }}
-                                onClick={() => setIsHelpModalOpen(true)}
-                            />
-                        </Box>
                     </Card>
                 </GridItem>
-                {/* Right Side - History */}
-                <GridItem area="empty">
-                    <RealView />
+                {/* Right Side - History (same row height as game on xl+) */}
+                <GridItem area="empty" display="flex" flexDirection="column" minH={{ base: 'auto', xl: 0 }}>
+                    <Box flex="1" minH={{ base: '280px', xl: 0 }} display="flex" flexDirection="column">
+                        <RealView />
+                    </Box>
                 </GridItem>
             </Grid>
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
@@ -489,10 +533,13 @@ export default function RocketShotPage() {
                                 <Text mb={1}>
                                      - Aim to hit one of the targets above the rocket.
                                 </Text>
-                                
+                                <Text mb={1}>
+                                     - If you hit the rocket, you will win the multiplier. (min 0.1x - max 10x)
+                                </Text>
                                 <Text mb={1}>
                                      - The faster the rocket moves, the harder it is to hit high multipliers — but that’s where the big rewards are.
                                 </Text>
+
                                 <Text mb={1}>
                                     - In normal mode winingAmount is 110% of easy mode. In hard mode it is 120% of easy mode. But the speed is more fast.
                                 </Text>

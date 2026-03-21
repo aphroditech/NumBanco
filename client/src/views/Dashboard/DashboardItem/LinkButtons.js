@@ -281,27 +281,6 @@ const GameCard = ({
 };
 
 function LinkButtons() {
-
-    const [totalActiveUsers, setTotalActiveUsers] = useState([]);
-    useEffect(() => {
-        let isMounted = true;
-
-        async function fetchData() {
-            try {
-                const tempUsers = await fetchTotalActiveUsers();
-                if (isMounted) {
-                    setTotalActiveUsers(tempUsers);
-                }
-            } catch (err) {
-                console.log(err);
-            }
-        }
-        fetchData();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
     const [isDailyOpen, setDailyOpen] = useState(false);
     const [isRewardOpen, setRewardOpen] = useState(false);
     const { isOpen, onOpen, onClose } = useDisclosure();

@@ -19,10 +19,11 @@ import { initializeDatabase } from "./database/index.js";
 import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
+import { startCloudSpreadGameLoop } from "./services/cloudSpread/cloudSpreadGame.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
-import { miningBot } from "./services/mining/miningBotService.js";
-import { rocketBot } from "./services/rocket/rocketBot.service.js";
+import {miningBot} from "./services/mining/miningBotService.js";
+import {rocketBot} from "./services/rocket/rocketBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
 dotenv.config();
@@ -72,6 +73,7 @@ connectDB().then(async () => {
         // rocketBot(ably);
         // fishingBot(ably);
         // startGravityGameLoop(ably);
+        // startCloudSpreadGameLoop(ably);
         // cocoBot(ably);
         // doveBot(ably);
         // fundMergeEngine();

@@ -20,6 +20,7 @@ import tierC from "assets/img/Games/tierC.png";
 import rubic from "assets/img/Games/dice5.png";
 import pumping from "assets/img/Games/pumping.png";
 import gravity from "assets/img/Games/gravity.png";
+import cloudSpread from "assets/img/Games/gravity.png";
 import dove from "assets/img/Games/dove.png"
 import coco from "assets/img/Games/coco.png"
 import jackal from "assets/img/Games/jackal.png"
@@ -38,6 +39,7 @@ const DASHBOARD_GAMES = [
     { img: pumping, name: "Pumping", path: "/game/pumping", reduxKey: "pumpingUsers", tickMs: 3800 },
     { img: fishing, name: "Fishing", path: "/game/fishing", reduxKey: "fishingUsers", tickMs: 4200 },
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
+    { img: cloudSpread, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
     { img: dove, name: "Dove Cross", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
     { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 3600 },

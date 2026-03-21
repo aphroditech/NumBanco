@@ -96,6 +96,8 @@ export default class GameScene extends Phaser.Scene {
             fg.destroy();
         }
 
+        this.ensureExplosionTextures();
+
         // Cannon pivot: bottom center
         this.pivotX = width / 2;
         this.pivotY = height - 40;
@@ -627,6 +629,133 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    ensureExplosionTextures() {
+        if (this.textures.exists("explosionSpark")) return;
+        const mk = (key, r, color, alpha = 1) => {
+            const g = this.make.graphics({ x: 0, y: 0, add: false });
+            const s = (r + 1) * 2;
+            g.fillStyle(color, alpha);
+            g.fillCircle(r + 1, r + 1, r);
+            g.generateTexture(key, s, s);
+            g.destroy();
+        };
+        mk("explosionSpark", 6, 0xffffff, 1);
+        mk("explosionChunk", 4, 0xff7733, 1);
+        mk("explosionEmber", 3, 0xffcc55, 0.95);
+        mk("explosionDebris", 3, 0x6688aa, 1);
+    }
+
+    /**
+     * Modern “planet explosion” FX: particle bursts, shockwave ring, camera shake + subtle flash.
+     */
+    playPlanetExplosion(x, y, targetRadius = 40) {
+        const r = Math.max(18, Math.min(70, targetRadius));
+        const intensity = Phaser.Math.Clamp(r / 42, 0.65, 1.35);
+
+        // Screen punch (sci‑fi impact)
+        this.cameras.main.shake(220, 0.0055 * intensity);
+        this.cameras.main.flash(100, 255, 248, 220, false);
+
+        const depth = 20;
+
+        // Core flash — bright radial burst (ADD)
+        const core = this.add.particles(x, y, "explosionSpark", {
+            speed: { min: 180 * intensity, max: 520 * intensity },
+            angle: { min: 0, max: 360 },
+            rotate: { min: 0, max: 360 },
+            scale: { start: 0.45 * intensity, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: { min: 380, max: 520 },
+            blendMode: "ADD",
+            tint: [0xffffff, 0xffee88, 0xffaa44, 0x66eeff, 0xff6622],
+            gravityY: -20,
+            emitting: false,
+        });
+        core.setDepth(depth);
+        core.explode(Math.floor(42 * intensity), x, y);
+
+        // Secondary sparks
+        const sparks = this.add.particles(x, y, "explosionEmber", {
+            speed: { min: 80 * intensity, max: 320 * intensity },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.55, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: { min: 400, max: 700 },
+            blendMode: "ADD",
+            tint: [0xffdd99, 0xff9944, 0x00d4ff],
+            gravityY: 35,
+            emitting: false,
+        });
+        sparks.setDepth(depth - 1);
+        sparks.explode(Math.floor(28 * intensity), x, y);
+
+        // Debris chunks (darker, slower)
+        const debris = this.add.particles(x, y, "explosionChunk", {
+            speed: { min: 40, max: 200 },
+            angle: { min: 0, max: 360 },
+            rotate: { min: -180, max: 180 },
+            scale: { start: 0.7, end: 0 },
+            alpha: { start: 0.95, end: 0 },
+            lifespan: { min: 500, max: 900 },
+            tint: [0x886644, 0x554433, 0x334455],
+            gravityY: 55,
+            emitting: false,
+        });
+        debris.setDepth(depth - 2);
+        debris.explode(Math.floor(16 * intensity), x, y);
+
+        const ice = this.add.particles(x, y, "explosionDebris", {
+            speed: { min: 60, max: 220 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.55, end: 0 },
+            alpha: { start: 0.75, end: 0 },
+            lifespan: 600,
+            blendMode: "ADD",
+            tint: [0xffffff, 0xffee88, 0xffaa44, 0x00d4ff],
+            gravityY: 0,
+            emitting: false,
+        });
+        ice.setDepth(depth - 1);
+        ice.explode(Math.floor(14 * intensity), x, y);
+
+        // Expanding shockwave ring (vector-style)
+        const ring = this.add.graphics();
+        ring.setDepth(depth + 1);
+        ring.lineStyle(3 + intensity, 0xffcc88, 0.85);
+        ring.strokeCircle(0, 0, r * 0.6);
+        ring.setPosition(x, y);
+        this.tweens.add({
+            targets: ring,
+            scaleX: 1 + 4.5 * intensity,
+            scaleY: 1 + 4.5 * intensity,
+            alpha: 0,
+            duration: 420,
+            ease: "Cubic.Out",
+            onComplete: () => ring.destroy(),
+        });
+
+        const ring2 = this.add.graphics();
+        ring2.setDepth(depth);
+        ring2.lineStyle(2, 0x00d4ff, 0.55);
+        ring2.strokeCircle(0, 0, r * 0.45);
+        ring2.setPosition(x, y);
+        this.tweens.add({
+            targets: ring2,
+            scaleX: 1 + 5.5 * intensity,
+            scaleY: 1 + 5.5 * intensity,
+            alpha: 0,
+            duration: 520,
+            ease: "Quad.Out",
+            onComplete: () => ring2.destroy(),
+        });
+
+        this.time.delayedCall(900, () => {
+            [core, sparks, debris, ice].forEach((p) => {
+                if (p && p.scene) p.destroy();
+            });
+        });
+    }
+
     hitTarget(ball, target) {
         if (!ball.active || !target.active) return;
         if (target.isSpawning) return;
@@ -636,6 +765,11 @@ export default class GameScene extends Phaser.Scene {
         // We detected at least a slight touch (hitTarget is called only on contact).
         this.rocketWasHit = true;
         if (typeof window !== "undefined") window.__rocketWasHit = true;
+
+        const tr = typeof target.hitRadius === "number"
+            ? target.hitRadius
+            : (typeof target.size === "number" ? target.size * this.targetRadiusFactor : 28);
+        this.playPlanetExplosion(target.x, target.y, tr);
 
         if (ball.trailEmitter) {
             ball.trailEmitter.destroy();

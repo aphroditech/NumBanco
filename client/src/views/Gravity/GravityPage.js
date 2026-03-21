@@ -1,41 +1,69 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Badge, Box, Button, CircularProgress, CircularProgressLabel, Flex, Grid, GridItem, HStack, Input, Progress, Select, Text, useBreakpointValue, useToast, VStack } from "@chakra-ui/react";
+import { Badge, Box, Button, CircularProgress, CircularProgressLabel, Flex, Grid, GridItem, HStack, Input, Progress, Select, Text, useBreakpointValue, VStack } from "@chakra-ui/react";
 import { useDispatch } from "react-redux";
 import ablyClient from "../../ably/ablyClient";
 import Card from "components/Card/Card";
 import CardBody from "components/Card/CardBody";
 import GravityBetHistory from "./GravityItem/BetHistory";
 import GravityCanvasChart from "./GravityItem/GravityCanvasChart";
-import { getGravityState, getLiveGravityHistory, getMyGravityHistory, placeGravityBet } from "action/GravityActions";
-import { getUserData } from "action";
+import { getGravityState, getMyGravityHistory, placeGravityBet } from "action/GravityActions";
+import { toast } from "react-toastify";
 
 const phaseColor = { betting: "green", viewing: "yellow", result: "red" };
 
+const roundTo2 = (n) => {
+  const num = Number(n);
+  return Number.isFinite(num) ? Math.round(num * 100) / 100 : 0;
+};
+
 export default function GravityPage() {
   const dispatch = useDispatch();
-  const toast = useToast();
   const [state, setState] = useState(null);
   const [amount, setAmount] = useState("1");
   const [direction, setDirection] = useState("up");
   const [liveRows, setLiveRows] = useState([]);
   const [myHistory, setMyHistory] = useState([]);
+  const roundStartAtMsRef = React.useRef(null);
+  // Optimistic UI: immediately disable the button after a successful bet,
+  // even before the backend round result refreshes `myHistory`.
+  const [optimisticPlacedSides, setOptimisticPlacedSides] = useState({ up: false, down: false });
   const [timeLeft, setTimeLeft] = useState(0);
   const [nowMs, setNowMs] = useState(Date.now());
 
   const graphHeight = useBreakpointValue({ base: 280, md: 340 }) ?? 280;
 
+  const dedupeLiveRows = (rows) => {
+    const arr = Array.isArray(rows) ? rows : [];
+    const map = new Map();
+
+    for (const r of arr) {
+      const betId = r?.betId;
+      const amountRaw = r?.betAmount ?? r?.amount ?? "";
+      const amountNum = Number(amountRaw);
+      const amountKey = Number.isFinite(amountNum) ? amountNum.toFixed(2) : String(amountRaw);
+
+      const key = betId
+        ? `betId:${String(betId)}`
+        : `${String(r?.roundId ?? "")}|${String(r?.userId ?? "")}|${String(r?.direction ?? "")}|${amountKey}`;
+
+      if (!map.has(key)) map.set(key, r);
+    }
+
+    return Array.from(map.values());
+  };
+
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [s, me, live] = await Promise.all([getGravityState(), getMyGravityHistory(), getLiveGravityHistory()]);
+        const [s, me] = await Promise.all([getGravityState(), getMyGravityHistory()]);
         if (!mounted) return;
         setState(s);
         setTimeLeft(Math.ceil((s.timeLeftMs || 0) / 1000));
-        setLiveRows(s.liveUsers?.length ? s.liveUsers : live);
+        setLiveRows(dedupeLiveRows(Array.isArray(s.liveUsers) ? s.liveUsers : []));
         setMyHistory(me || []);
       } catch {
-        toast({ title: "Failed to load Gravity", status: "error", isClosable: true });
+        toast.error("Failed to load Gravity");
       }
     })();
 
@@ -45,20 +73,66 @@ export default function GravityPage() {
       if (!data) return;
       setState((prev) => ({ ...prev, ...data }));
       if (typeof data.timeLeftMs === "number") setTimeLeft(Math.ceil(data.timeLeftMs / 1000));
-      if (Array.isArray(data.liveUsers)) setLiveRows(data.liveUsers);
+      if (Array.isArray(data.liveUsers)) setLiveRows(dedupeLiveRows(data.liveUsers));
     };
     const onBet = (msg) => {
       const data = msg?.data;
       if (!data) return;
-      setLiveRows((prev) => [data, ...prev].slice(0, 40));
+      setLiveRows((prev) => {
+        const prevArr = Array.isArray(prev) ? prev : [];
+        // Prefer betId (backend sends it); fallback to a composite key.
+        const key = data?.betId
+          ? { betId: String(data.betId) }
+          : {
+              roundId: String(data?.roundId ?? ""),
+              userId: String(data?.userId ?? ""),
+              direction: String(data?.direction ?? ""),
+            };
+
+        const filtered = prevArr.filter((r) => {
+          if (key.betId) return String(r?.betId) !== key.betId;
+          return !(
+            String(r?.roundId ?? "") === key.roundId &&
+            String(r?.userId ?? "") === key.userId &&
+            String(r?.direction ?? "") === key.direction
+          );
+        });
+
+        return dedupeLiveRows([data, ...filtered]);
+      });
       setState((prev) => (prev ? { ...prev, upTotalBet: data.upTotalBet ?? prev.upTotalBet, downTotalBet: data.downTotalBet ?? prev.downTotalBet } : prev));
     };
-    const onResult = async () => {
+    const onResult = async (msg) => {
+      const data = msg?.data;
       try {
+        if (data && mounted) {
+          // Gate graph/phase update until the local expected "result start" time.
+          // This prevents the last value from jumping early.
+          const BETTING_MS_G = 10000;
+          const VIEWING_MS_G = 5000;
+          const startAt = typeof roundStartAtMsRef.current === "number" ? roundStartAtMsRef.current : null;
+          const elapsed = startAt ? Math.max(0, Date.now() - startAt) : 0;
+          const shouldApplyGraph = elapsed >= BETTING_MS_G + VIEWING_MS_G;
+
+          setState((prev) => {
+            const base = {
+              ...(prev || {}),
+              result: data.result ?? prev?.result ?? null,
+              upTotalBet: data.upTotalBet ?? prev?.upTotalBet,
+              downTotalBet: data.downTotalBet ?? prev?.downTotalBet,
+            };
+
+            if (shouldApplyGraph) {
+              base.endValue = data.endValue ?? prev?.endValue;
+              base.phase = data.phase ?? prev?.phase;
+              base.points = Array.isArray(data.points) ? data.points : prev?.points;
+            }
+            return base;
+          });
+        }
+
         const me = await getMyGravityHistory();
         if (mounted) setMyHistory(me || []);
-        // Refresh user so navbar notifications show immediately for winners.
-        getUserData(dispatch);
       } catch {}
     };
     channel.subscribe("GRAVITY_STATE", onState);
@@ -72,6 +146,12 @@ export default function GravityPage() {
     };
   }, [toast]);
 
+  // Keep a ref to the server round start timestamp for phase gating.
+  useEffect(() => {
+    const v = state?.roundStartAtMs;
+    if (typeof v === "number") roundStartAtMsRef.current = v;
+  }, [state?.roundStartAtMs]);
+
   useEffect(() => {
     const id = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
     return () => clearInterval(id);
@@ -83,15 +163,22 @@ export default function GravityPage() {
     return () => clearInterval(id);
   }, []);
 
-  const canBet = state?.phase === "betting";
   const myRoundBets = useMemo(() => {
     const rid = state?.roundId;
     if (!rid) return [];
     return (myHistory || []).filter((h) => String(h?.roundId) === String(rid));
   }, [myHistory, state?.roundId]);
 
-  const myPlacedUp = myRoundBets.some((b) => String(b?.direction).toLowerCase() === "up");
-  const myPlacedDown = myRoundBets.some((b) => String(b?.direction).toLowerCase() === "down");
+  const hasPlacedRoundBetBase = myRoundBets.length > 0;
+  const hasPlacedRoundBet = hasPlacedRoundBetBase || optimisticPlacedSides.up || optimisticPlacedSides.down;
+  const myPlacedUp = hasPlacedRoundBet;
+  const myPlacedDown = hasPlacedRoundBet;
+
+  useEffect(() => {
+    // New round: clear optimistic flags; if user already bet, base flags from `myHistory`
+    // will re-disable the buttons after initial load.
+    setOptimisticPlacedSides({ up: false, down: false });
+  }, [state?.roundId]);
 
   const upTotal = Number(state?.upTotalBet || 0);
   const downTotal = Number(state?.downTotalBet || 0);
@@ -124,8 +211,25 @@ export default function GravityPage() {
       : phaseLocal === "result"
       ? (resultElapsed / RESULT_MS) * 100
       : 100;
+
+  // Use real points to decide up/down color during `result`.
+  const resultUptrend = useMemo(() => {
+    const pts = state?.points || [];
+    if (!pts.length) return null;
+    const mapped = pts
+      .map((p) => ({ t: Number(p.t), price: Number(p.value) }))
+      .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.price))
+      .sort((a, b) => a.t - b.t);
+    if (!mapped.length) return null;
+    return mapped[mapped.length - 1].price >= mapped[0].price;
+  }, [state]);
+
   const timelineColor =
-    phaseLocal === "betting" ? "#63e486" : phaseLocal === "viewing" ? "#f6ad55" : "#ff6b6b";
+    phaseLocal === "betting"
+      ? "#63e486"
+      : phaseLocal === "viewing"
+      ? "#f6ad55"
+      : resultUptrend ? "#63e486" : "#ff6b6b";
 
   const timeLeftLocal =
     phaseLocal === "betting"
@@ -135,6 +239,8 @@ export default function GravityPage() {
       : phaseLocal === "result"
       ? Math.ceil((RESULT_MS - resultElapsed) / 1000)
       : 0;
+
+  const canBet = phaseLocal === "betting";
   const chartData = useMemo(() => {
     const raw = (state?.points || [])
       .map((p) => ({
@@ -203,22 +309,96 @@ export default function GravityPage() {
     if (!chartData.length) return 50;
     return chartData[0].price;
   }, [chartData]);
-  const upUsers = useMemo(() => liveRows.filter((r) => String(r.direction).toLowerCase() === "up").slice(0, 7), [liveRows]);
-  const downUsers = useMemo(() => liveRows.filter((r) => String(r.direction).toLowerCase() === "down").slice(0, 7), [liveRows]);
+  const upUsers = useMemo(() => {
+    const rows = (Array.isArray(liveRows) ? liveRows : []).filter((r) => String(r.direction).toLowerCase() === "up");
+    const map = new Map();
+    for (const r of rows) {
+      const userIdKey = String(r?.userId ?? r?.userName ?? "");
+      const prev = map.get(userIdKey) || {
+        userId: r?.userId,
+        userName: r?.userName,
+        avatar: r?.avatar,
+        amount: 0,
+        betAmount: 0,
+      };
+      const amt = Number(r?.amount ?? r?.betAmount ?? 0);
+      prev.amount = roundTo2(prev.amount + (Number.isFinite(amt) ? amt : 0));
+      prev.betAmount = prev.amount;
+      map.set(userIdKey, prev);
+    }
+    return Array.from(map.values()).sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+  }, [liveRows]);
+
+  const downUsers = useMemo(() => {
+    const rows = (Array.isArray(liveRows) ? liveRows : []).filter((r) => String(r.direction).toLowerCase() === "down");
+    const map = new Map();
+    for (const r of rows) {
+      const userIdKey = String(r?.userId ?? r?.userName ?? "");
+      const prev = map.get(userIdKey) || {
+        userId: r?.userId,
+        userName: r?.userName,
+        avatar: r?.avatar,
+        amount: 0,
+        betAmount: 0,
+      };
+      const amt = Number(r?.amount ?? r?.betAmount ?? 0);
+      prev.amount = roundTo2(prev.amount + (Number.isFinite(amt) ? amt : 0));
+      prev.betAmount = prev.amount;
+      map.set(userIdKey, prev);
+    }
+    return Array.from(map.values()).sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+  }, [liveRows]);
   const potentialReturn = (Number(amount || 0) * 1.95).toFixed(2);
 
   const handleBet = async (dir = direction) => {
     try {
-      await placeGravityBet({ amount: Number(amount), direction: dir }, dispatch);
+      const res = await placeGravityBet({ amount: Number(amount), direction: dir }, dispatch);
       setDirection(dir);
+      const betId = res?.betId || res?.row?.betId;
+      const betAmount = res?.betAmount ?? Number(amount);
+      const roundId = res?.roundId ?? state?.roundId;
+      toast.success(`You bet $${Number(betAmount || 0).toFixed(2)} in round ${roundId ?? "-"}`);
+      setOptimisticPlacedSides((prev) => ({ ...prev, [String(dir).toLowerCase()]: true }));
+
+      // Optimistic UI: show it immediately in both the right panel and Bet History table.
+      // Bet history UI only refreshes on GRAVITY_RESULT otherwise.
+      const userObj = res?.user || {};
+      const row = {
+        userId: userObj?.userId,
+        userName: userObj?.altas,
+        avatar: userObj?.avatar,
+        amount: Number(betAmount || 0),
+        betAmount: Number(betAmount || 0),
+        direction: dir,
+        roundId: roundId ?? state?.roundId,
+        betId: betId ? String(betId) : undefined,
+        isBot: false,
+      };
+      setLiveRows((prev) => dedupeLiveRows([row, ...(Array.isArray(prev) ? prev : [])]));
+
+      if (betId && roundId) {
+        const optimisticHistoryEntry = {
+          _id: String(betId),
+          roundId,
+          direction: dir,
+          betAmount: Number(betAmount || 0),
+          winAmount: 0,
+          createdAt: new Date().toISOString(),
+        };
+        setMyHistory((prev) => [...(Array.isArray(prev) ? prev : []), optimisticHistoryEntry]);
+      }
     } catch (e) {
-      toast({ title: e?.response?.data?.message || "Failed to place bet", status: "error", isClosable: true });
+      toast.error(e?.response?.data?.message || "Failed to place bet");
     }
   };
 
   return (
     <Box px={{ base: "8px", md: "16px" }} minH="100vh" mt="90px" w="100%">
-      <Grid templateAreas={{ base: `"board" "side" "history"`, xl: `"board side" "history history"` }} templateColumns={{ base: "1fr", xl: "5fr 1.35fr" }} gap="10px">
+      <Grid
+        templateAreas={{ base: `"board" "side" "history"`, xl: `"board side" "history history"` }}
+        templateColumns={{ base: "1fr", xl: "minmax(0, 1fr) 420px" }}
+        gap="10px"
+      >
         <GridItem area="board">
         <Card
           p="10px"
@@ -278,7 +458,8 @@ export default function GravityPage() {
                       chartMin={chartMin}
                       chartMax={chartMax}
                       chartThreshold={chartThreshold}
-                      roundPhase={state?.phase === "betting" ? "trading" : state?.phase}
+                      // Use local deterministic phase to avoid Ably 1s delay.
+                      roundPhase={phaseLocal === "betting" ? "trading" : phaseLocal}
                       tradingStartSec={10}
                       roundStartAtMs={state?.roundStartAtMs}
                       roundId={state?.roundId}
@@ -292,13 +473,6 @@ export default function GravityPage() {
                     <Text color="white" fontSize="xl" fontWeight="700">Wait For Next Round</Text>
                   </Box>
                 )}
-              </Box>
-
-              <Box mt="10px">
-                <Flex justify="space-between">
-                  <Text color="rgba(255,255,255,0.7)" fontSize="xs">Graph flows 15s, then freezes to result</Text>
-                  <Text color="rgba(255,255,255,0.7)" fontSize="xs">Round: 18s</Text>
-                </Flex>
               </Box>
 
               <Text mt="10px" color="rgba(255,255,255,0.8)" fontSize="sm">Amount(USDT): ${Number(amount || 0).toFixed(2)}</Text>
@@ -341,13 +515,41 @@ export default function GravityPage() {
               >
                 🚀 UP
               </Button>
-                <Button h="46px" bg="linear-gradient(90deg, #ef5d53 0%, #ea564c 100%)" color="white" fontWeight="800" onClick={() => handleBet("down")} isDisabled={!canBet || myPlacedDown}>Down</Button>
+                <Button
+                  h="56px"
+                  fontSize="xl"
+                  fontWeight="900"
+                  borderRadius="14px"
+                  bg="linear-gradient(90deg, #ef5d53 0%, #ea564c 100%)"
+                  color="white"
+                  position="relative"
+                  overflow="hidden"
+                  onClick={() => handleBet("down")}
+                  isDisabled={!canBet || myPlacedDown}
+                  _before={{
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    left: "-100%",
+                    width: "100%",
+                    height: "100%",
+                    background: "linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent)",
+                    transition: "0.6s"
+                  }}
+                  _hover={{
+                    transform: "translateY(-3px) scale(1.03)",
+                    boxShadow: "0 0 40px rgba(231,94,92,0.8)"
+                  }}
+                  _active={{ transform: "scale(0.97)" }}
+                >
+                  Down
+                </Button>
               </Grid>
             </CardBody>
           </Card>
         </GridItem>
 
-        <GridItem area="side">
+        <GridItem area="side" w={{ base: "100%", xl: "420px" }} minW={{ base: "100%", xl: "420px" }}>
           <Card p="8px" bg="#2a2d2e" border="1px solid rgba(255,255,255,0.08)" h="100%">
             <CardBody flexDirection="column" alignItems="stretch">
               <Grid templateColumns="1fr 1fr" gap="8px">
@@ -361,7 +563,7 @@ export default function GravityPage() {
                     <Text color="#61d879" textAlign="center" fontWeight="800">Up</Text>
                     <Text color="#61d879" textAlign="center" fontSize="sm">{upUsers.length} Players</Text>
                   </Box>
-                  <Box mt="8px" maxH="340px" overflowY="auto">
+                  <Box mt="8px">
                     {upUsers.map((u, i) => (
                       <Flex
                         key={`${u.userId || u.userName}-up-${i}`}
@@ -369,7 +571,21 @@ export default function GravityPage() {
                         py="6px"
                         borderBottom="1px solid rgba(255,255,255,0.08)"
                       >
-                        <Text color="white" fontSize="sm">{u.userName || "Unknown"}</Text>
+                        <Flex align="center" gap="8px" minW="0">
+                          <Box
+                            as="img"
+                            src={u.avatar || "/avatars/pfp1.png"}
+                            alt={u.userName || "avatar"}
+                            w="26px"
+                            h="26px"
+                            borderRadius="999px"
+                            objectFit="cover"
+                            flexShrink="0"
+                          />
+                          <Text color="white" fontSize="sm" noOfLines={1}>
+                            {u.userName || "Unknown"}
+                          </Text>
+                        </Flex>
                         <Text color="#61d879" fontSize="sm" fontWeight="700">${Number(u.amount || u.betAmount || 0).toFixed(2)}</Text>
                       </Flex>
                     ))}
@@ -385,7 +601,7 @@ export default function GravityPage() {
                     <Text color="#ff6b6b" textAlign="center" fontWeight="800">Down</Text>
                     <Text color="#ff6b6b" textAlign="center" fontSize="sm">{downUsers.length} Players</Text>
                   </Box>
-                  <Box mt="8px" maxH="340px" overflowY="auto">
+                  <Box mt="8px">
                     {downUsers.map((u, i) => (
                       <Flex
                         key={`${u.userId || u.userName}-down-${i}`}
@@ -393,7 +609,21 @@ export default function GravityPage() {
                         py="6px"
                         borderBottom="1px solid rgba(255,255,255,0.08)"
                       >
-                        <Text color="white" fontSize="sm">{u.userName || "Unknown"}</Text>
+                        <Flex align="center" gap="8px" minW="0">
+                          <Box
+                            as="img"
+                            src={u.avatar || "/avatars/pfp1.png"}
+                            alt={u.userName || "avatar"}
+                            w="26px"
+                            h="26px"
+                            borderRadius="999px"
+                            objectFit="cover"
+                            flexShrink="0"
+                          />
+                          <Text color="white" fontSize="sm" noOfLines={1}>
+                            {u.userName || "Unknown"}
+                          </Text>
+                        </Flex>
                         <Text color="#ff6b6b" fontSize="sm" fontWeight="700">${Number(u.amount || u.betAmount || 0).toFixed(2)}</Text>
                       </Flex>
                     ))}
