@@ -15,6 +15,7 @@ export const userActive = async () => {
         const pumpingUsers = users.filter(user => (user.active === 6)).length + 270;
         const gravityUsers = users.filter(user => (user.active === 7)).length + 100;
         const doveUsers = users.filter(user => (user.active === 8)).length + 123;
+        const cloudSpreadUsers = users.filter(user => (user.active === 9)).length + 96;
         const cocoUsers = users.filter(user => (user.active === 10)).length + 88;
 
         return {
@@ -28,6 +29,7 @@ export const userActive = async () => {
             pumpingUsers,
             gravityUsers,
             doveUsers,
+            cloudSpreadUsers,
             cocoUsers,
         }
     } catch (err) {

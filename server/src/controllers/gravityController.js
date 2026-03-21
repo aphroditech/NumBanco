@@ -24,11 +24,16 @@ export async function createGravityBet(req, res) {
     const user = await User.findOne({ userAuthId: req.user.userAuthId });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const { row, round, betId, betAmount, direction: betDirection } = await placeGravityBet({ user, amount, direction });
+    const { row, round, betId, betAmount } = await placeGravityBet({ user, amount, direction });
     const ably = req.app.locals.ably;
     await publishGravityBetEvent(ably, row, round);
-    const msg = `Round ${round.roundId} | Amount $${Number(betAmount ?? amount ?? 0).toFixed(2)}`;
-    return res.status(200).json({ user, roundId: round.roundId, betId, betAmount: betAmount ?? amount, direction: betDirection ?? direction, message: msg });
+    return res.status(200).json({
+      user,
+      roundId: round.roundId,
+      betId,
+      betAmount: betAmount ?? amount,
+      direction,
+    });
   } catch (error) {
     const status = /closed|already|Minimum|Invalid|Insufficient|ready/i.test(error.message) ? 400 : 500;
     return res.status(status).json({ message: error.message || "Server Error" });

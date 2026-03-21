@@ -7,6 +7,7 @@ const initialState = {
         rubicUsers: 0,
         pumpingUsers: 0,
         gravityUsers: 0,
+        cloudSpreadUsers: 0,
         doveUsers: 0,
         cocoUsers: 0,
         onlineUsers: 0

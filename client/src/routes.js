@@ -34,6 +34,7 @@ import PlinkoPage from "views/Plinko/Plinko";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import DiamondIcon from '@mui/icons-material/Diamond';
+import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 
 import SupportPage from "views/Support/Support";
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -41,6 +42,7 @@ import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
 import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
+import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import FishingPage from "views/Fishing/FishingPage";
 import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
@@ -111,6 +113,14 @@ var dashRoutes = [
     name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: GravityPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/cloud-spread",
+    name: "CLOUD SPREAD",
+    icon: <CloudQueueIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CloudSpreadPage,
     layout: "/game",
   },
   {
