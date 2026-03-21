@@ -200,6 +200,32 @@ export function SidebarResponsive(props) {
           </Box>
         );
       }
+      if (prop.name === "GAMES") {
+        return( 
+          <Box key={key}>
+            <SideBarToggle
+            value={prop}
+            isExpanded={activeMenu === "games"}
+            onClick={() => toggleMenu("games")} />
+              <Collapse in={activeMenu === "games"} animateOpacity>
+              <Stack
+                spacing={2}
+                mt={2}
+              >
+                <SidebarButtonLink value={Rubic} />
+                <SidebarButtonLink value={Pumping} />
+                <SidebarButtonLink value={Fishing} />
+                <SidebarButtonLink value={Gravity} />
+                <SidebarButtonLink value={Rocket} />
+                <SidebarButtonLink value={Jackal} />
+                <SidebarButtonLink value={Mines} />
+                <SidebarButtonLink value={DoveGame} />
+                <SidebarButtonLink value={CocoGame} />
+              </Stack>
+              </Collapse>
+          </Box>
+          )
+      }
 
       if (prop.name === "LOTTERY") {
         return (

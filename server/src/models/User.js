@@ -215,6 +215,19 @@ const userSchema = new mongoose.Schema({
     default: 0
   },
 
+  weelAmount: {
+    type: Number,
+    default: 0
+  },
+  wheelWinAmount: {
+    type: Number,
+    default: 0
+  },
+  wheelMode: {
+    type: Number,
+    default: 0, // normal 0, and hard 1
+  },
+
   partnerActivity: {
     type: [
       {
@@ -473,6 +486,7 @@ const userSchema = new mongoose.Schema({
               step: Number,
               strength: Number,
               multi: Number,
+              status: Number,
             }
           ]
         },
