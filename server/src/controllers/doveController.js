@@ -1,9 +1,93 @@
 import DoveHistory from "../models/DoveHistory.js";
+import DoveView from "../models/DoveView.js";
 import User from "../models/User.js";
 import DoveSettings from "../models/DoveSettings.js";
 import CalendarDove from "../models/CalendarDove.js";
 
 const MAX_BET_AMOUNT = 20;
+const VIEW_LIMIT = 22;
+const MAX_LANES = 20;
+
+function getModeParams(settings, difficulty) {
+    if (difficulty === "easy") return settings?.easy || { a: 0.2, b: 0.05 };
+    if (difficulty === "med") return settings?.med || { a: 0.15, b: 0.03 };
+    if (difficulty === "difficult" || difficulty === "hard") return settings?.hard || { a: 0.1, b: 0.02 };
+    return settings?.ace || { a: 0.08, b: 0.01 };
+}
+
+function getMultiplier(step, a, b) {
+    if (step <= 1) return 0.5;
+    if (step <= 2) return 1;
+    const s = step - 2;
+    return 1 + a * s + b * s * s;
+}
+
+function getExpectedValueForFail(level, settings, difficulty) {
+    const { a, b } = getModeParams(settings, difficulty);
+    const prevStep = Math.max(0, (Number(level) || 1) - 1);
+    return getMultiplier(prevStep, a, b);
+}
+
+function getExpectedValueForCashOut(level, settings, difficulty) {
+    const { a, b } = getModeParams(settings, difficulty);
+    const currentStep = Math.max(1, Number(level) || 1);
+    const currentMultiplier = getMultiplier(currentStep, a, b);
+    const candidates = [];
+    for (let s = currentStep + 1; s <= MAX_LANES; s++) {
+        const m = getMultiplier(s, a, b);
+        if (m > currentMultiplier) candidates.push(m);
+    }
+    if (candidates.length === 0) return currentMultiplier;
+    const idx = Math.floor(Math.random() * candidates.length);
+    return candidates[idx];
+}
+
+async function enrichDoveViewsWithUser(doveViews) {
+    return Promise.all(
+        doveViews.map(async (item) => {
+            const user = await User.findOne(
+                { _id: item.userId },
+                {
+                    "wallets.eth.privateKey": 0,
+                    "wallets.bsc.privateKey": 0,
+                    "wallets.tron.privateKey": 0,
+                    country: 0,
+                    doveMode: 0,
+                    doveAmount: 0,
+                    doveWinAmount: 0,
+                    partnerId: 0,
+                    partnerActivity: 0,
+                    lastClickDate: 0,
+                    canWithdraw: 0,
+                }
+            );
+            const obj = item.toObject();
+            delete obj.isUser;
+            if (user) {
+                return {
+                    ...obj,
+                    avatar: user.avatar,
+                    altas: user.altas,
+                };
+            }
+            return { ...obj, avatar: null, altas: "Player" };
+        })
+    );
+}
+
+async function publishDoveViewToAbly(app) {
+    const ably = app?.locals?.ably;
+    if (!ably) return;
+    try {
+        const views = await DoveView.find().sort({ createdAt: -1 }).limit(VIEW_LIMIT);
+        const data = await enrichDoveViewsWithUser(views);
+        ably.channels.get("doveGame").publish("doveUpdate", { updatedData: data }).catch((err) => {
+            console.error("❌ [doveController] Ably publish error:", err);
+        });
+    } catch (err) {
+        console.error("❌ [doveController] Error publishing dove view:", err);
+    }
+}
 
 export const checkDoveWin = async (req, res) => {
     try {
@@ -56,13 +140,6 @@ export const checkDoveWin = async (req, res) => {
             return res.json({ M1uXj3sZpU : 1, ...(isStart && { balance: user.balance }) });
             
         } else {
-            await CalendarDove.create({
-                userName: user.altas,
-                isWin: false,
-                betAmount: bet,
-                winAmount: 0,
-                date: new Date()
-            })
             return res.json({ M1uXj3sZpU: 0 });
         }
 
@@ -142,7 +219,7 @@ async function checkHardToNormal(userId) {
 export const getDoveEarnings = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { bet, multiplier, level } = req.body;
+        const { bet, multiplier, level, difficulty } = req.body;
 
         const betNum = Number(bet) || 0;
         if (betNum < 0.1 || betNum > MAX_BET_AMOUNT) {
@@ -194,6 +271,19 @@ export const getDoveEarnings = async (req, res) => {
             });
         }
         await doveHistory.save();
+        const doveSettings = await DoveSettings.findOne();
+        const expectedValue = getExpectedValueForCashOut(level, doveSettings, difficulty);
+
+        const doveView = new DoveView({
+            userId: userId,
+            bet: betNum,
+            multiplier: Number(multiplier) || 0,
+            win: winAmount,
+            expectedValue: Number(expectedValue) || 0,
+            isUser: user.partnerLevel > 0 ? 1 : 0,
+        });
+        await doveView.save();
+        publishDoveViewToAbly(req.app);
 
         return res.json({ balance: user.balance });
     }
@@ -202,3 +292,73 @@ export const getDoveEarnings = async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 }
+
+export const getDoveView = async (req, res) => {
+    try {
+        const views = await DoveView.find().sort({ createdAt: -1 }).limit(VIEW_LIMIT);
+        const data = await enrichDoveViewsWithUser(views);
+        return res.status(200).json({ data });
+    } catch (error) {
+        console.error("Error getting dove view:", error);
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+export const getMyDoveHistory = async (req, res) => {
+    try {
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        const data = await DoveView.find({ userId })
+            .sort({ createdAt: -1 })
+            .limit(100);
+        return res.status(200).json({ data });
+    } catch (error) {
+        console.error("Error getting my dove history:", error);
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+export const reportDoveFail = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { bet, multiplier, level, difficulty } = req.body;
+
+        const betNum = Number(bet) || 0;
+        if (betNum < 0.1 || betNum > MAX_BET_AMOUNT) {
+            return res.status(400).json({ error: `Bet must be between 0.1 and ${MAX_BET_AMOUNT}` });
+        }
+
+        const user = await User.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        const doveSettings = await DoveSettings.findOne();
+        const expectedValue = getExpectedValueForFail(level, doveSettings, difficulty);
+
+        await CalendarDove.create({
+            userName: user.altas,
+            isWin: false,
+            betAmount: betNum,
+            winAmount: 0,
+            date: new Date()
+        });
+
+        const doveView = new DoveView({
+            userId: userId,
+            bet: betNum,
+            multiplier: Number(multiplier) || 0,
+            win: 0,
+            expectedValue: Number(expectedValue) || 0,
+            isUser: user.partnerLevel > 0 ? 1 : 0,
+        });
+        await doveView.save();
+        publishDoveViewToAbly(req.app);
+
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error("Error reporting dove fail:", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};

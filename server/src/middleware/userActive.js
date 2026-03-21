@@ -16,6 +16,10 @@ export const userActive = async () => {
         const gravityUsers = users.filter(user => (user.active === 7)).length + 100;
         const doveUsers = users.filter(user => (user.active === 8)).length + 123;
         const cocoUsers = users.filter(user => (user.active === 10)).length + 88;
+        const rocketUsers = users.filter(user => (user.active === 11)).length + 150;
+        const jackalUsers = users.filter(user => (user.active === 12)).length + 80;
+        const mineUsers = users.filter(user => (user.active === 13)).length + 60;
+        const fishingUsers = users.filter(user => (user.active === 14)).length + 90;
 
         return {
             offlineUsers,
@@ -29,6 +33,10 @@ export const userActive = async () => {
             gravityUsers,
             doveUsers,
             cocoUsers,
+            rocketUsers,
+            jackalUsers,
+            mineUsers,
+            fishingUsers
         }
     } catch (err) {
         console.log("Error fetching active users:", err);
