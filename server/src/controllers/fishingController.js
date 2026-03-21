@@ -4,6 +4,10 @@ import FishingPercentage from "../models/FishingPercentage.js";
 import FishingLimit from "../models/FishingLimit.js";
 import { sendUserResponse } from "../utils/responses.js";
 
+// Prevent concurrent `pullStay` updates for the same user.
+// VersionError happens when two requests update the same user doc at nearly the same time.
+const fishingPullStayLocks = new Map();
+
 const fishingUserProjection = {
     "wallets.eth.privateKey": 0,
     "wallets.bsc.privateKey": 0,
@@ -118,7 +122,8 @@ export const bet = async (req, res) => {
     };
 
     user.fishingHistory.push(betEntry);
-    await user.save();
+    // Avoid Mongoose optimistic concurrency failures (VersionError) on fast repeated requests.
+    await user.save({ optimisticConcurrency: false });
 
     return sendUserResponse(res, "", user);
 };
@@ -126,6 +131,14 @@ export const pullStay = async (req, res) => {
     try {
         const { userId } = req.user;
         const { act } = req.body;
+
+        if (fishingPullStayLocks.get(userId) === true) {
+            return res.status(409).json({ error: "Fishing action is already in progress" });
+        }
+        fishingPullStayLocks.set(userId, true);
+
+        // if act is 1, then stay
+        // if act is -1, then pull
 
         const user = await getFishingUser(userId);
         if (!user) return res.status(404).json({ error: "User not found" });
@@ -196,11 +209,15 @@ export const pullStay = async (req, res) => {
             scheduleCreditAndBroadcast(req.app);
         }
 
-        await user.save();
+        // Avoid Mongoose optimistic concurrency failures (VersionError) on fast repeated requests.
+        await user.save({ optimisticConcurrency: false });
         return sendUserResponse(res, "", user, { strength, status });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: "Server error" });
+    } finally {
+        const { userId } = req.user || {};
+        if (userId) fishingPullStayLocks.delete(userId);
     }
 };
 
@@ -233,7 +250,8 @@ export const fishingCashOut = async (req, res) => {
 
         applyFishingMode(user, historyItem.totalBet, historyItem.totalWin - historyItem.totalBet);
 
-        await user.save();
+        // Avoid Mongoose optimistic concurrency failures (VersionError) on fast repeated requests.
+        await user.save({ optimisticConcurrency: false });
 
         await createFishingViewEntry({
             userId: user.userId,
@@ -286,6 +304,7 @@ const calculateFlag = (act, operator) => {
 };
 
 const updateHistory = (historyItem, step, distance, flag, strength, act) => {
+    console.log("flag", Number(flag), "act", Number(act));
     historyItem.step++;
 
     const delta = (distance / 5) * flag;
@@ -295,6 +314,7 @@ const updateHistory = (historyItem, step, distance, flag, strength, act) => {
         step,
         strength,
         act,
+        status: flag,
         multi: historyItem.multi,
     });
 };

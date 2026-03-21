@@ -19,14 +19,12 @@ import {
     Select,
     useMediaQuery,
 } from '@chakra-ui/react';
-import Card from 'components/Card/Card.js';
-import CardHeader from 'components/Card/CardHeader.js';
+import Card from 'components/Card/Card.js'; 
 import CardBody from 'components/Card/CardBody.js';
 import { useSelector, useDispatch } from 'react-redux';
 import { rocketBet, rocketShotResult } from 'action/RocketActions';
 
-import RealView from './RocketItems/RealView';
-import Loading from 'components/Loading/Loading';
+import RealView from './RocketItems/RealView';  
 import JavelinGame from './JavelinGame';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import AddIcon from '@mui/icons-material/Add';
@@ -39,10 +37,6 @@ const MAX_AMOUNT = 20;
 const AMOUNT_STEP = 1;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
 
-/**
- * Phaser may not be ready on the same tick the bet API returns (scene boot, pad respawn, etc.).
- * Retry fire across a few animation frames so the rocket actually launches reliably.
- */
 async function fireJavelinWhenReady(maxFrames = 40) {
     for (let i = 0; i < maxFrames; i += 1) {
         if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
@@ -74,7 +68,10 @@ export default function RocketShotPage() {
     const [winMode, setWinMode] = useState("multiplier");
     const firingLockRef = useRef(false);
 
+    const [fireLoading, setFireLoading] = useState(false);
+    
     const user = useSelector((state) => state.user.userInfo) || {};
+    const rocketMultiplier = useSelector((state) => state.rocket?.multiplier ?? 0);
     const walletBalance = user.balance;
     const maxAmount = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalance));
     const [isNarrowLayout] = useMediaQuery("(max-width: 1799px)");
@@ -92,15 +89,20 @@ export default function RocketShotPage() {
         firingLockRef.current = true;
         setIsFiring(true);
 
+
         // Used by Phaser scene to display the correct win label for this specific shot.
         if (typeof window !== 'undefined') {
             window.__rocketPendingBetAmount = parseFloat(amount);
             window.__rocketPendingWinMode = selectedWinMode;
         }
         try {
-            const multiplier = await rocketBet({ bet: parseFloat(amount), level: mode }, dispatch, history);
+            
+            const data = {
+                bet: parseFloat(amount),
+                level: mode,
+            };
+            const multiplier = await rocketBet(data, dispatch, history);
             // Store multiplier for the current shot.
-            // `GameScene.hitTarget()` will display this value only if the shot hits.
             if (typeof window !== 'undefined') {
                 window.__rocketPendingMultiplier = multiplier;
             }
@@ -138,14 +140,14 @@ export default function RocketShotPage() {
     }, []);
 
     // If Phaser never calls onJavelinShotEnd (edge case), unlock so the user can play again.
-    useEffect(() => {
-        if (!isFiring) return;
-        const failSafe = window.setTimeout(() => {
-            firingLockRef.current = false;
-            setIsFiring(false);
-        }, 45000);
-        return () => window.clearTimeout(failSafe);
-    }, [isFiring]);
+    // useEffect(() => {
+    //     if (!isFiring) return;
+    //     const failSafe = window.setTimeout(() => {
+    //         firingLockRef.current = false;
+    //         setIsFiring(false);
+    //     }, 45000);
+    //     return () => window.clearTimeout(failSafe);
+    // }, [isFiring]);
 
     // Unlock the Fire button only when the current rocket shot is fully done
     // (hit or miss). This prevents overwriting the pending multiplier.

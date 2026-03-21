@@ -9,7 +9,13 @@ export const rocketBet = async (data, dispatch, history) => {
                 payload: res.data.balance
             });
         }
-        return res.data.multiplier || 0;
+        if(res.data.multiplier != null) {
+            dispatch({
+                type: "SET_ROCKET_MULTIPLIER",
+                payload: res.data.multiplier
+            })
+        }
+        return res.data.multiplier;
     } catch (error) {
         console.error(error);
         if (error.response?.status === 401 && history) {

@@ -28,6 +28,7 @@ export const bet = async (req, res) => {
         user.totalBet += bet;
         user.lotterybet += bet;
         user.refreshBet += bet;
+        user.rocketAmount += bet;
         user.totalhistory.push({
             amount: -bet,
             date: new Date(),
@@ -41,6 +42,7 @@ export const bet = async (req, res) => {
             multiplier *= 1200;
             multiplier /= 1000;  
         }
+        console.log( multiplier, level);
 
         return res.json({ balance: user.balance, multiplier: multiplier });
 
@@ -100,6 +102,7 @@ export const shotResult = async (req, res) => {
         if (isWin) {
             user.balance += winAmount;
             user.totalEarn += winAmount;
+            user.rocketWinAmount += winAmount;
             user.totalhistory.push({
                 amount: winAmount,
                 date: new Date(),

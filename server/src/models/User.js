@@ -467,6 +467,7 @@ const userSchema = new mongoose.Schema({
               step: Number,
               strength: Number,
               multi: Number,
+              status: Number,
             }
           ]
         },
