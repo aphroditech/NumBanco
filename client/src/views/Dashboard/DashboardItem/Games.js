@@ -40,9 +40,9 @@ const DASHBOARD_GAMES = [
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
     { img: dove, name: "Dove Cross", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
-    { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 4600 },
-    { img: jackal, name: "Jackal", path: "/game/jackal", reduxKey: "jackalUsers", tickMs: 4600 },
-    { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4600 },
+    { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 3600 },
+    { img: jackal, name: "Jackal", path: "/game/jackal", reduxKey: "jackalUsers", tickMs: 2600 },
+    { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4900 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {

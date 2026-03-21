@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import { sendUserResponse } from "../utils/responses.js";
 import CocoView from "../models/CocoView.js";
 import CocoState from "../models/CocoState.js";
+import CocoRate from "../models/CocoRate.js";
 
 const CREDIT_DELAY_MS = 300;
 const VIEW_LIMIT = 18;
@@ -17,6 +18,78 @@ const multiTable = [
 const TARGET_SUM = 6;
 
 const rand = (min, max) => min + Math.random() * (max - min);
+
+// Fallback success-rate formula per cocoMode.
+// If DB table doesn't have data for the selected mode, we use these.
+const COCO_MODE_SUCCESS_CONFIG = {
+    0: { base: 0.7, dropPerCombo: 0.08, min: 0.25 }, // easy
+    1: { base: 0.65, dropPerCombo: 0.1, min: 0.22 }, // normal
+    2: { base: 0.6, dropPerCombo: 0.12, min: 0.18 }, // hard
+};
+
+function getFallbackCocoSuccessRateByCombo(combo, cocoMode) {
+    const safeCombo = Number.isFinite(combo) ? Math.max(0, combo) : 0;
+    const mode = Number.isFinite(cocoMode) ? cocoMode : 0;
+    const cfg = COCO_MODE_SUCCESS_CONFIG[mode] || COCO_MODE_SUCCESS_CONFIG[0];
+    return Math.max(cfg.min, cfg.base - safeCombo * cfg.dropPerCombo);
+}
+
+function normalizeRate(rate) {
+    const num = Number(rate);
+    if (!Number.isFinite(num)) return null;
+    // Allow either decimal (0.7) or percent (70) from DB input habits.
+    const decimal = num > 1 ? num / 100 : num;
+    return Math.max(0, Math.min(1, decimal));
+}
+
+function getRateFieldForMode(cocoMode) {
+    const mode = Number.isFinite(cocoMode) ? cocoMode : 0;
+    if (mode === 0) return "easyRate";
+    if (mode === 1) return "normalRate";
+    if (mode === 2) return "hardRate";
+    return "easyRate";
+}
+
+function updateCocoModeByTotalProfit(user) {
+    const history = Array.isArray(user?.cocoHistory) ? user.cocoHistory : [];
+    const totalProfit = history.reduce((acc, item) => {
+        const p = Number(item?.profit);
+        return acc + (Number.isFinite(p) ? p : 0);
+    }, 0);
+    const totalBet = history.reduce((acc, item) => {
+        const b = Number(item?.betAmount);
+        return acc + (Number.isFinite(b) ? b : 0);
+    }, 0);
+
+    // Your definition: profit = totalProfit - total betAmount
+    const netProfit = totalProfit - totalBet;
+
+    // Mode changes only at extremes; otherwise keep current mode.
+    if (netProfit > 100) user.cocoMode = 2;
+    else if (netProfit < -10) user.cocoMode = 0;
+}
+
+async function getCocoSuccessRateByCombo(combo, cocoMode) {
+    const safeCombo = Number.isFinite(combo) ? Math.max(0, combo) : 0;
+    const exact = await CocoRate.findOne({ successCount: safeCombo }).lean();
+    const field = getRateFieldForMode(cocoMode);
+    const exactRate =
+        normalizeRate(exact?.[field]) ??
+        normalizeRate(exact?.rate);
+    if (exactRate !== null && exactRate !== undefined) return exactRate;
+
+    // Fallback to closest lower combo row if exact combo row does not exist.
+    const nearest = await CocoRate.findOne({ successCount: { $lte: safeCombo } })
+        .sort({ successCount: -1 })
+        .lean();
+    const nearestRate =
+        normalizeRate(nearest?.[field]) ??
+        normalizeRate(nearest?.rate);
+    if (nearestRate !== null && nearestRate !== undefined) return nearestRate;
+
+    // Final fallback keeps current behavior if no DB table rows exist yet.
+    return getFallbackCocoSuccessRateByCombo(safeCombo, cocoMode);
+}
 
 async function getState(userId) {
     return CocoState.findOne({ userId });
@@ -86,6 +159,7 @@ export const smash = async (req, res) => {
         user.balance = newBalance;
         let state = await getState(userId);
 
+
         // Allow changing betAmount between hits: always sync the in-round state bet
         // with the current betAmount from request.
         if (state) {
@@ -122,6 +196,18 @@ export const smash = async (req, res) => {
 
             user.balance += win;
 
+            // Store the result snapshot for this smash.
+            user.cocoHistory = user.cocoHistory || [];
+            user.cocoHistory.push({
+                betAmount: state.bet,
+                profit: win,
+                multiplier: finalMulti,
+                successCount: state.successCount,
+                totalSum: state.totalSum,
+            });
+
+            updateCocoModeByTotalProfit(user);
+
             user.totalhistory.push({
                 amount: win,
                 date: new Date(),
@@ -152,7 +238,12 @@ export const smash = async (req, res) => {
         }
 
 
-        const success = Math.random() < 0.7;
+        const cocoMode = Number(user?.cocoMode ?? 0);
+        const successRate = await getCocoSuccessRateByCombo(
+            state.successCount,
+            cocoMode
+        );
+        const success = Math.random() < successRate;
 
         if (!success) {
             state.successCount = 0;
@@ -164,6 +255,19 @@ export const smash = async (req, res) => {
                 totalSum: state.totalSum,
                 ready: state.ready,
             });
+
+            // Store the result snapshot for this (failed) smash.
+            user.cocoHistory = user.cocoHistory || [];
+            user.cocoHistory.push({
+                betAmount: state.bet,
+                profit: 0,
+                multiplier: 0,
+                successCount: state.successCount,
+                totalSum: state.totalSum,
+            });
+
+            updateCocoModeByTotalProfit(user);
+
             await user.save();
 
             await CocoView.create({
@@ -212,6 +316,18 @@ export const smash = async (req, res) => {
             ) / 100;
 
         user.balance += win;
+
+        // Store the result snapshot for this (successful step) smash.
+        user.cocoHistory = user.cocoHistory || [];
+        user.cocoHistory.push({
+            betAmount: state.bet,
+            profit: win,
+            multiplier: state.currentMultiplier,
+            successCount: state.successCount,
+            totalSum: state.totalSum,
+        });
+
+        updateCocoModeByTotalProfit(user);
 
         user.totalhistory.push({
             amount: win,

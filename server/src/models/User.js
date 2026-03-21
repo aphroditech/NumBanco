@@ -215,6 +215,19 @@ const userSchema = new mongoose.Schema({
     default: 0
   },
 
+  weelAmount: {
+    type: Number,
+    default: 0
+  },
+  wheelWinAmount: {
+    type: Number,
+    default: 0
+  },
+  wheelMode: {
+    type: Number,
+    default: 0, // normal 0, and hard 1
+  },
+
   partnerActivity: {
     type: [
       {
@@ -316,6 +329,12 @@ const userSchema = new mongoose.Schema({
   doveMode: {
     type: Number,
     default: 1 // normal mode by default
+  },
+  cocoMode: {
+    type: Number,
+    default: 0, // 0=easy, 1=normal, 2=hard
+    min: 0,
+    max: 2
   },
   doveAmount: {
     type: Number,
@@ -515,6 +534,38 @@ const userSchema = new mongoose.Schema({
         isWin: {
           type: Boolean,
           default: false
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
+  cocoHistory: {
+    type: [
+      {
+        betAmount: {
+          type: Number,
+          required: true
+        },
+        profit: {
+          type: Number,
+          default: 0
+        },
+        multiplier: {
+          type: Number,
+          default: 0
+        },
+        successCount: {
+          type: Number,
+          default: 0
+        },
+        totalSum: {
+          type: Number,
+          default: 0
         },
         createAt: {
           type: Date,

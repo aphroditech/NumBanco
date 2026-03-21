@@ -421,7 +421,7 @@ export default function RocketShotPage() {
                                             boxShadow: '0 4px 12px rgba(0, 212, 255, 0.3)',
                                         }}
                                         _active={{ transform: 'translateY(0)' }}
-                                        isDisabled={isFiring || amount < MIN_AMOUNT || amount > maxAmount }
+                                        isDisabled={isFiring || amount < MIN_AMOUNT || amount > maxAmount || amount > walletBalance }
                                         title={
                                             amount < MIN_AMOUNT
                                                 ? `Enter at least ${MIN_AMOUNT}`
