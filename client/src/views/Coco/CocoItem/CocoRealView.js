@@ -25,7 +25,7 @@ function CocoRealView() {
     const history = useHistory();
     const getRowId = (row) => {
         if (!row) return "";
-        return row._id || row.id || `${row.altas || "user"}-${row.bet || 0}-${row.win || 0}`;
+        return row._id || row.id || `${row.altas || "user"}-${Number(row.result).toFixed(2)}-${row.win || 0}`;
     };
 
     useEffect(() => {
@@ -87,7 +87,7 @@ function CocoRealView() {
                                 User
                             </Th>
                             <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                Bet
+                                Result
                             </Th>
                             <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
                                 Win
@@ -102,7 +102,7 @@ function CocoRealView() {
                                 key={rowId || index}
                                 altas={row.altas}
                                 avatar={row.avatar}
-                                bet={row.bet}
+                                result={Number(row.result).toFixed(2)}
                                 win={row.win}
                                 isNew={newRowIds.has(rowId)}
                             />

@@ -10,6 +10,7 @@ import {
     ModalBody,
     ModalCloseButton,
     IconButton,
+    useMediaQuery,
 } from '@chakra-ui/react';
 import Card from 'components/Card/Card.js';
 import CardBody from 'components/Card/CardBody.js';
@@ -17,20 +18,22 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import sky from 'assets/img/Games/sky.png';
-import egg from 'assets/img/Games/egg.png';
-import chicken from 'assets/img/Games/chicken.png';
-import chickenHit from 'assets/img/Games/chicken_hit.png';
-import chickenStand from 'assets/img/Games/chicken_stand.png';
-import eggBreak from 'assets/img/Games/broken_egg.png';
-import eggCrack from 'assets/img/Games/cracked_egg.png';
+import sky from 'assets/img/Coco/sky.png';
+import egg from 'assets/img/Coco/egg.png';
+import chicken from 'assets/img/Coco/chicken.png';
+import chickenHit from 'assets/img/Coco/chicken_hit.png';
+import chickenStand from 'assets/img/Coco/chicken_stand.png';
+import eggBreak from 'assets/img/Coco/broken_egg.png';
+import eggCrack from 'assets/img/Coco/cracked_egg.png';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { cocoSmash, cocoRestart } from 'action/CocoActions';
 import { onlineUser, offlineUser } from 'action/BetActions';
+import { getUserData } from 'action';
 import CocoRealView from './CocoItem/CocoRealView';
+import CocoBetHistory from './CocoItem/BetHistory';
 import PaidIcon from "@mui/icons-material/Paid";
-import cloud from 'assets/img/Games/cloud.png';
-import sky1 from 'assets/img/Games/sky1.png';
+import cloud from 'assets/img/Coco/cloud.png';
+import sky1 from 'assets/img/Coco/sky1.png';
 
 /** Chicken stays here except short jump on smash */
 const CHICKEN_BOTTOM_IDLE = 260;
@@ -38,7 +41,7 @@ const CHICKEN_BOTTOM_IDLE = 260;
 const EGG_SLOT_LIFT_PX = 48;
 /** How far clouds move up each normal break (can differ from egg slot) */
 const CLOUD_RISE_PER_BREAK_PX = 48;
-const EGG_TOWER_COUNT = 7;
+const EGG_TOWER_COUNT = 7;  
 /** egg1 breaks → remove egg1, egg2–egg7 rise (gap at old egg7 spot) → new egg fills bottom */
 const EGG_NORMAL_REMOVE_TOP_MS = 380;
 /** Pause so empty bottom slot is visible before new egg7 appears */
@@ -68,6 +71,11 @@ const CLOUD_SLOTS = [
     { left: '42%', top: 355, w: 110, opacity: 0.88 },
     { left: '74%', top: 318, w: 76, opacity: 0.9 },
 ];
+
+/** All in-scene pixel positions/sizes are authored for this width; scene scales to fit container */
+const COCO_SCENE_DESIGN_WIDTH = 900;
+/** Fallback height until sky.png reports natural dimensions */
+const COCO_SCENE_DEFAULT_HEIGHT = 506;
 
 function positiveMod(n, m) {
     return ((n % m) + m) % m;
@@ -162,24 +170,77 @@ export default function CocoPage() {
             return () => cancelAnimationFrame(id);
         }
     }, [sceneRisePx]);
+    const dispatch = useDispatch();
+    const history = useHistory();
     useEffect(() => {
         onlineUser(8);
+        getUserData(dispatch);
         return () => {
             offlineUser(8);
         };
-    }, []);
-    const dispatch = useDispatch();
-    const history = useHistory();
+    }, [dispatch]);
     const [latestWin, setLatestWin] = useState('0.00');
     const [latestMulti, setLatestMulti] = useState('0.00');
     const [latestCombo, setLatestCombo] = useState('0');
     const [loading, setLoading] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+    /** Same as Rocket Shot: stacked below 1800px, side‑by‑side at 1800px+ */
+    const [isNarrowLayout] = useMediaQuery('(max-width: 1799px)');
+    const sceneMeasureRef = useRef(null);
+    const skyImgRef = useRef(null);
+    const [cocoSceneScale, setCocoSceneScale] = useState(1);
+    const [cocoDesignHeight, setCocoDesignHeight] = useState(COCO_SCENE_DEFAULT_HEIGHT);
+
+    const applySkyNaturalSize = (img) => {
+        if (!img || !img.naturalWidth) return;
+        setCocoDesignHeight(
+            (img.naturalHeight * COCO_SCENE_DESIGN_WIDTH) / img.naturalWidth
+        );
+    };
+
+    useLayoutEffect(() => {
+        const img = skyImgRef.current;
+        if (img?.complete) applySkyNaturalSize(img);
+    }, []);
+
+    useLayoutEffect(() => {
+        const el = sceneMeasureRef.current;
+        if (!el) return;
+
+        let rafId = 0;
+
+        const update = () => {
+            const w = el.getBoundingClientRect().width;
+            if (w <= 0) return;
+            const s = w / COCO_SCENE_DESIGN_WIDTH;
+            setCocoSceneScale(Math.min(Math.max(s, 0.2), 4));
+        };
+
+        // Defer to next frame so we don't setState inside the same turn as ResizeObserver
+        // (avoids "ResizeObserver loop completed with undelivered notifications" in dev).
+        const scheduleUpdate = () => {
+            cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                rafId = 0;
+                update();
+            });
+        };
+
+        scheduleUpdate();
+        const ro = new ResizeObserver(() => scheduleUpdate());
+        ro.observe(el);
+        return () => {
+            cancelAnimationFrame(rafId);
+            ro.disconnect();
+        };
+    }, []);
+
     const isLandingSky =
         animState === "finalDown" ||
         animState === "finalStand" ||
         animState === "showMulti";
     const user = useSelector((state) => state.user.userInfo) || {};
+    const cocoHistory = Array.isArray(user?.cocoHistory) ? user.cocoHistory : [];
     const balance = Number(user?.balance ?? 0);
     const username = user?.username ?? 'User';
     const displayName = username.length > 12 ? username.slice(0, 8) + '...' : username;
@@ -447,40 +508,57 @@ export default function CocoPage() {
         }
     };
     return (
-        <Box px={{ base: '16px', md: '24px' }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
-            {/* Restart fog cover is rendered inside the sky image container */}
-            <Flex
-                flexWrap="wrap"
-                gap="20px"
-                justifyContent="center"
-                alignItems="stretch"
-                w="100%"
-            >
-                <Box
-                    flex="1 1 450px"
-                    minH="450px"
-                    minW={{ base: '100%', md: '500px' }}
-                    maxW="500px"
-                    display="flex"
+        <Box minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
+            {/* Same inset + grid behavior as Rocket Shot (game | realView) */}
+            <Box px={{ base: '16px', md: '24px' }} w="100%" maxW="100%">
+                <Grid
+                    templateAreas={
+                        isNarrowLayout ? '"game" "empty"' : '"game empty"'
+                    }
+                    templateColumns={isNarrowLayout ? '1fr' : '6fr 2fr'}
+                    templateRows={isNarrowLayout ? 'auto auto' : 'auto'}
+                    gap={{ base: '16px', md: '24px' }}
+                    w="100%"
                 >
-                    <Card w="100%" h="100%">
+                    <GridItem area="game" minW={0}>
+                        <Card w="100%" h="auto">
                         <CardBody p={0}>
                             <div
                                 style={{
-                                    flex: 1,
+                                    width: '100%',
                                     display: 'flex',
                                     justifyContent: 'center',
-                                    alignItems: 'center',
+                                    alignItems: 'flex-start',
                                 }}
                             >
-                                <div
-                                    style={{
-                                        position: 'relative',
-                                        width: '100%',
-                                        maxWidth: 450,
-                                        minWidth: 450,
-                                    }}
+                                <Box
+                                    ref={sceneMeasureRef}
+                                    position="relative"
+                                    w="100%"
+                                    minW={0}
+                                    alignSelf="stretch"
                                 >
+                                    <div
+                                        style={{
+                                            width: '100%',
+                                            height: cocoDesignHeight * cocoSceneScale,
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                left: '50%',
+                                                top: 0,
+                                                width: COCO_SCENE_DESIGN_WIDTH,
+                                                height: cocoDesignHeight,
+                                                marginLeft: -COCO_SCENE_DESIGN_WIDTH / 2,
+                                                transform: `scale(${cocoSceneScale})`,
+                                                transformOrigin: 'top center',
+                                                willChange: 'transform',
+                                            }}
+                                        >
                                     {/* Restart fog cover (limited to the sky image area) */}
                                     <Box
                                         position="absolute"
@@ -538,8 +616,10 @@ export default function CocoPage() {
                                     {/* SKY IMAGE (crossfade to sky1 when chicken lands on big multi) */}
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <img
+                                            ref={skyImgRef}
                                             src={sky}
                                             alt="sky"
+                                            onLoad={(e) => applySkyNaturalSize(e.currentTarget)}
                                             style={{ width: '100%', display: 'block' }}
                                         />
                                         <img
@@ -984,7 +1064,7 @@ export default function CocoPage() {
                                             {loading ? '...' : 'SMASH'}
                                         </button>
 
-                                        <button
+                                        {/* <button
                                             onClick={handleRestart}
                                             disabled={restartCoverOn}
                                             style={{
@@ -1000,23 +1080,34 @@ export default function CocoPage() {
                                             }}
                                         >
                                             RESTART
-                                        </button>
+                                        </button> */}
                                     </div>
-                                </div>
+                                        </div>
+                                    </div>
+                                </Box>
                             </div>
                         </CardBody>
                     </Card>
-                </Box>
+                    </GridItem>
 
-                <Box
-                    flex="0 0 450px"
-                    minW={{ base: '100%', md: '500px' }}
-                    maxW="500px"
-                    minH="500px"
-                    display="flex"
-                >
-                    <CocoRealView />
-                </Box>
+                    <GridItem
+                        area="empty"
+                        minW={0}
+                        h="100%"
+                        display="flex"
+                        flexDirection="column"
+                    >
+                        <Box
+                            flex="1"
+                            minH={0}
+                            w="100%"
+                            display="flex"
+                            flexDirection="column"
+                        >
+                            <CocoRealView />
+                        </Box>
+                    </GridItem>
+                </Grid>
 
                 {/* Coco Help Modal */}
                 <Modal
@@ -1099,7 +1190,8 @@ export default function CocoPage() {
                         </ModalBody>
                     </ModalContent>
                 </Modal>
-            </Flex>
+            <CocoBetHistory results={cocoHistory} />
+            </Box>
         </Box>
     );
 }
