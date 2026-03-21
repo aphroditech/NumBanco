@@ -1,4 +1,5 @@
 import axiosInstance from "../api/axiosConfig";
+import { toast } from "react-toastify"
 
 export const rocketBet = async (data, dispatch, history) => {
     try {
@@ -12,6 +13,7 @@ export const rocketBet = async (data, dispatch, history) => {
         return res.data.multiplier || 0;
     } catch (error) {
         console.error(error);
+        if(error.response.message) toast.error(err.response.message);
         if (error.response?.status === 401 && history) {
             history.push("/auth/landing");
         }

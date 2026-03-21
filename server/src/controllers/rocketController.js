@@ -12,6 +12,10 @@ export const bet = async (req, res) => {
         if (!rocketSettings) {
             return res.status(404).json({ error: "Rocket settings not found" });
         }
+
+        if(bet > user.balance ) {
+            return res.status(400).json({message: "You don't have engough money to fire."})
+        }
         // mode check and change
         if(user.rocketMode === 0 && await checkNormalToHard(user.rocketAmount, user.rocketWinAmount)) {
             user.rocketMode = 1;
