@@ -14,6 +14,7 @@ const initialState = {
         jackalUsers: 0,
         mineUsers: 0,
         fishingUsers: 0,
+        alphaTreeUsers: 0,
         onlineUsers: 0
     },
     lootAvailable: false,

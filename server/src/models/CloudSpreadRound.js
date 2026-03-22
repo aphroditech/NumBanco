@@ -8,6 +8,7 @@ const cloudSpreadBetSchema = new mongoose.Schema(
     avatar: { type: String, default: "" },
     targetStep: { type: Number, min: 1, max: 8, required: true },
     targetMultiplier: { type: Number, required: true },
+    selectedCloudMultiplier: { type: Number, default: 1 },
     betAmount: { type: Number, required: true },
     isBot: { type: Boolean, default: false },
   },
@@ -15,7 +16,9 @@ const cloudSpreadBetSchema = new mongoose.Schema(
 );
 
 const CloudSpreadRoundSchema = new mongoose.Schema({
-  roundId: { type: Number, required: true, unique: true, index: true },
+  /** Each user has their own rounds (like Rubic / Pumping). */
+  userId: { type: String, required: true, index: true },
+  roundId: { type: Number, required: true },
   phase: { type: String, enum: ["betting", "running", "result", "closed"], default: "betting" },
   startAt: { type: Date, required: true },
   runStartAt: { type: Date, required: true },
@@ -25,8 +28,17 @@ const CloudSpreadRoundSchema = new mongoose.Schema({
   finalClouds: { type: Number, default: 0 },
   users: { type: [cloudSpreadBetSchema], default: [] },
   totalBet: { type: Number, default: 0 },
+  /** Paid once on the first play; later steps are free until cash-out. */
+  sessionStake: { type: Number, default: 0 },
+  /** In-session board state (per-user round); persisted so restarts don’t reset progress. */
+  sessionClouds: { type: Number, default: 0 },
+  sessionTrail: { type: [Number], default: [] },
+  sessionMultipliers: { type: [Number], default: [] },
+  /** When phase became `result` (cash-out / bust); used to advance after RESULT_MS. */
+  resultSettledAt: { type: Date, default: null },
 });
 
-CloudSpreadRoundSchema.index({ roundId: -1 });
+CloudSpreadRoundSchema.index({ userId: 1, roundId: -1 });
+CloudSpreadRoundSchema.index({ userId: 1, roundId: 1 }, { unique: true });
 
 export default mongoose.model("CloudSpreadRound", CloudSpreadRoundSchema);

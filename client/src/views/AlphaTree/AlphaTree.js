@@ -1,11 +1,329 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { useHistory } from "react-router-dom";
+import { toast } from "react-toastify";
 import ForestIcon from '@mui/icons-material/Forest';
+import { 
+    Box,
+    Grid,
+    GridItem,
+    FormControl,
+    FormLabel,
+    Input,
+    Button,
+    Flex,
+    VStack,
+    HStack,
+    IconButton,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalCloseButton,
+    Tabs,
+    TabList,
+    TabPanels,
+    Tab,
+    TabPanel,
+    Slider,
+    SliderTrack,
+    SliderFilledTrack,
+    SliderThumb,
+    Popover,
+    PopoverTrigger,
+    PopoverContent,
+    PopoverBody,
+    Text,
+} from "@chakra-ui/react";
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import ClickButton from 'components/Input/ClickButton';
+import GradientBorder from 'components/GradientBorder/GradientBorder';
+import Card from 'components/Card/Card.js';
+import CardBody from 'components/Card/CardBody.js';
+import CardHeader from 'components/Card/CardHeader.js';
+import {
+    alphaTreeStart,
+    alphaTreePick,
+    alphaTreeCashOut,
+    getAlphaTreeState,
+} from "action/AlphaTreeActions";
+import { onlineUser, offlineUser } from "action/BetActions";
+import { allowedLettersForStep } from "constants/alphaTreeSteps";
+import AlphaTreeRealView from "./AlphaTreeItem/AlphaTreeView";
+import BetHistory from "./AlphaTreeItem/BetHistory";
+import AlphaTreeLetterDiagram from "./AlphaTreeItem/AlphaTreeLetterDiagram";
+import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 
+const MIN_AMOUNT = 0.1;
+const MAX_AMOUNT = 20;
+
+/** High-band upper bound for step s (2–10): 0.6 × 2^(s−1); matches server */
+function alphaTreeMaxForRandomStep(step) {
+    const s = Number(step);
+    if (!Number.isFinite(s) || s < 2 || s > 10) return null;
+    return Math.round(0.6 * Math.pow(2, s - 1) * 100) / 100;
+}
 
 export default function AlphaTreePage() {
+
+    const dispatch = useDispatch();
+    const history = useHistory();
+    const [amount, setAmount] = useState("0.1");
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+    /** Server game state (null = no active round) */
+    const [treeState, setTreeState] = useState(null);
+    const [playLoading, setPlayLoading] = useState(false);
+    const [pickLoading, setPickLoading] = useState(false);
+    const [cashLoading, setCashLoading] = useState(false);
+    /** Last step result shown (e.g. "0.60" after A, or random draw) */
+    const [lastStepResult, setLastStepResult] = useState(null);
+    /** Band label for last pick (from server lastDraw.band) */
+    const [lastBandLabel, setLastBandLabel] = useState(null);
+    /** Completed picks for diagram path: lines + per-letter results */
+    const [pathSteps, setPathSteps] = useState([]);
+    /** Full-screen win FX after cash out (matches Mines / Lottery). */
+    const [cashOutWinFx, setCashOutWinFx] = useState({
+        visible: false,
+        amount: "0.00",
+        subtitle: "",
+    });
+    const cashOutFxTimeoutRef = useRef(null);
+    const amountRef = useRef('0.10');
+    const updateAmount = (value) => {
+        setAmount(value);
+        amountRef.current = value;
+    };
+    useEffect(() => {
+        amountRef.current = amount;
+    }, [amount]);
+    useEffect(() => {
+        onlineUser(13);
+        return () => {
+            offlineUser(13);
+            if (cashOutFxTimeoutRef.current) {
+                clearTimeout(cashOutFxTimeoutRef.current);
+                cashOutFxTimeoutRef.current = null;
+            }
+        };
+    }, []);
+
+    const handleAmountChange = (e) => {
+        const value = e.target.value;
+        // Allow empty
+        if (value === '') {
+            updateAmount('');
+            return;
+        }
+
+        // Allow typing numbers with up to 2 decimals
+        if (/^\d*\.?\d{0,2}$/.test(value)) {
+            updateAmount(value);
+        }
+    };
+
+    const handleAmountBlur = () => {
+        let num = parseFloat(amount);
+
+        if (isNaN(num)) {
+            updateAmount('0.10');
+            return;
+        }
+
+        num = Math.max(0.10, Math.min(1000, num));
+        updateAmount(num.toFixed(2));
+    };
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const d = await getAlphaTreeState(history);
+                if (!cancelled && d?.alphaTree) setTreeState(d.alphaTree);
+            } catch (_) {
+                /* ignore */
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [history]);
+
+    const amountLocked = Boolean(treeState);
+
+    const handlePlayGame = async () => {
+        const bet = parseFloat(amountRef.current || amount);
+        if (!Number.isFinite(bet) || bet < MIN_AMOUNT || bet > MAX_AMOUNT) {
+            toast.error(`Enter a bet between ${MIN_AMOUNT} and ${MAX_AMOUNT}`);
+            return;
+        }
+        setPlayLoading(true);
+        setLastStepResult(null);
+        setLastBandLabel(null);
+        setPathSteps([]);
+        try {
+            const data = await alphaTreeStart({ betAmount: bet }, dispatch, history);
+            setTreeState(data.alphaTree ?? null);
+        } catch (err) {
+            const msg =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                "Could not start game";
+            toast.error(msg);
+        } finally {
+            setPlayLoading(false);
+        }
+    };
+
+    const handlePickLetter = async (letter) => {
+        setPickLoading(true);
+        try {
+            const data = await alphaTreePick({ letter }, dispatch, history);
+            const ld = data.lastDraw;
+            if (ld?.kind === "fixed_a") {
+                setLastStepResult("0.60");
+                setLastBandLabel(null);
+            } else if (ld?.kind === "fixed_z" && typeof ld.value === "number") {
+                setLastStepResult(ld.value.toFixed(2));
+                setLastBandLabel("Fixed: 0.6 × 2^9");
+            } else if (ld && typeof ld.value === "number") {
+                setLastStepResult(ld.value.toFixed(2));
+                if (ld.band === "zero") {
+                    setLastBandLabel("0 (bust)");
+                } else if (ld.band === "mid") {
+                    setLastBandLabel("Between 0 and 1");
+                } else if (ld.band === "high") {
+                    const cap = alphaTreeMaxForRandomStep(ld.step);
+                    setLastBandLabel(
+                        cap != null ? `Between 1 and ${cap.toFixed(2)}` : "Between 1 and max"
+                    );
+                } else {
+                    setLastBandLabel(null);
+                }
+            }
+            if (ld?.busted) {
+                setTreeState(null);
+                setLastStepResult("0");
+                setLastBandLabel("0 (bust)");
+                setPathSteps([]);
+                toast.error("Round ended — result was 0");
+                return;
+            }
+            if (ld?.kind === "fixed_a") {
+                setPathSteps([
+                    {
+                        step: 1,
+                        letter: "A",
+                        value: 0.6,
+                        letterResults: ld.letterResults || { A: 0.6 },
+                    },
+                ]);
+            } else if (ld?.kind === "fixed_z" && typeof ld.value === "number") {
+                setPathSteps((prev) => [
+                    ...prev,
+                    {
+                        step: 10,
+                        letter: "Z",
+                        value: ld.value,
+                        letterResults: ld.letterResults || { Z: ld.value },
+                    },
+                ]);
+            } else if (ld && typeof ld.value === "number" && ld.letter) {
+                const L = String(ld.letter).toUpperCase();
+                const lr = ld.letterResults;
+                const letterResults =
+                    lr && typeof lr === "object"
+                        ? Object.fromEntries(
+                              Object.entries(lr).map(([k, v]) => [
+                                  String(k).toUpperCase(),
+                                  v,
+                              ])
+                          )
+                        : undefined;
+                setPathSteps((prev) => [
+                    ...prev,
+                    {
+                        step: ld.step,
+                        letter: L,
+                        value: ld.value,
+                        letterResults,
+                    },
+                ]);
+            }
+            setTreeState(data.alphaTree ?? null);
+        } catch (err) {
+            const msg =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                "Invalid move";
+            toast.error(msg);
+        } finally {
+            setPickLoading(false);
+        }
+    };
+
+    const handleCashOutGame = async () => {
+        setCashLoading(true);
+        try {
+            const data = await alphaTreeCashOut(dispatch, history);
+            const win = data.cashout?.win;
+            const totalMult = data.cashout?.totalMultiplier;
+            setTreeState(null);
+            setLastStepResult(null);
+            setLastBandLabel(null);
+            setPathSteps([]);
+            const amountStr =
+                win != null && Number.isFinite(Number(win))
+                    ? Number(win).toFixed(2)
+                    : "0.00";
+            const subtitle =
+                totalMult != null && Number.isFinite(Number(totalMult))
+                    ? `Total multiplier ×${Number(totalMult).toFixed(2)}`
+                    : "";
+            setCashOutWinFx({
+                visible: true,
+                amount: amountStr,
+                subtitle,
+            });
+            if (cashOutFxTimeoutRef.current) {
+                clearTimeout(cashOutFxTimeoutRef.current);
+            }
+            const fxMs = 2600;
+            cashOutFxTimeoutRef.current = setTimeout(() => {
+                setCashOutWinFx((s) => ({ ...s, visible: false }));
+                cashOutFxTimeoutRef.current = null;
+            }, fxMs);
+        } catch (err) {
+            const msg =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                "Cash out failed";
+            toast.error(msg);
+        } finally {
+            setCashLoading(false);
+        }
+    };
+
+    const lettersToShow =
+        treeState &&
+        (treeState.allowedLetters?.length
+            ? treeState.allowedLetters
+            : allowedLettersForStep(treeState.step, treeState.phase));
+
+    /** After step 1 (playing) or after step 10 (await_cashout). Not available on step 1 before A. */
+    const canCashOutAlpha =
+        treeState &&
+        (treeState.phase === "playing" || treeState.phase === "await_cashout");
+
     return (
         <Box px={{ base: '16px', md: '24px' }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
-            <Result />
+            <WinFireworksEffect
+                isVisible={cashOutWinFx.visible}
+                totalEarn={cashOutWinFx.amount}
+                subtitle={cashOutWinFx.subtitle}
+                duration={2600}
+            />
             <Grid
                 templateAreas={{
                     sm: '"panel" "game" "empty"',
@@ -26,18 +344,7 @@ export default function AlphaTreePage() {
                 w="100%"
             >
                 <GridItem area="panel" minW={"350px"}>
-                    <Card pt="30px" pb="22px" px="22px" overflow="visible" minH="450px">
-                        <Box position="absolute" top="0px" right="0px" zIndex={2}>
-                            <IconButton
-                                aria-label="Help"
-                                icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
-                                size="md"
-                                bg="transparent"
-                                color="#00d4ff"
-                                borderRadius="50%"
-                                _hover={{ bg: 'rgba(255,255,255,0.1)', color: '#00D4FF' }}
-                            />
-                        </Box>
+                    <Card pt="30px" pb="22px" px="22px" overflow="visible" minH="450px" position="relative">
                         <CardHeader mb="20px">
                             <Flex direction="column" alignSelf="flex-start">
                                 <Text fontSize='lg' color='#fff' fontWeight='bold' mb='6px' display="flex" alignItems="center" justifyContent="center">
@@ -45,6 +352,19 @@ export default function AlphaTreePage() {
                                 </Text>
                             </Flex>
                         </CardHeader>
+                        <Box position="absolute" top="12px" right="12px" zIndex={10}>
+                            <IconButton
+                                type="button"
+                                aria-label="Help"
+                                icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
+                                size="md"
+                                bg="transparent"
+                                color="#00d4ff"
+                                borderRadius="50%"
+                                _hover={{ bg: 'rgba(255,255,255,0.1)', color: '#00D4FF' }}
+                                onClick={() => setIsHelpModalOpen(true)}
+                            />
+                        </Box>
                         <CardBody overflow="visible" display="flex" alignItems="center" justifyContent="center" minH="100%">
                             <VStack spacing="24px" align="center" w="100%">
                                 <FormControl w="100%" maxW={{ base: "100%", sm: "300px" }}>
@@ -74,7 +394,7 @@ export default function AlphaTreePage() {
                                                 type="text"
                                                 inputMode="decimal"
                                                 min={MIN_AMOUNT}
-                                                max={maxAmount}
+                                                max={MAX_AMOUNT}
                                                 step="0.01"
                                                 value={amount}
                                                 onChange={handleAmountChange}
@@ -82,6 +402,7 @@ export default function AlphaTreePage() {
                                                 placeholder="0.10"
                                                 _focus={{ boxShadow: 'none' }}
                                                 flex="1"
+                                                disabled={amountLocked || playLoading}
                                             />
                                             <HStack spacing="0" align="stretch" h="100%">
                                                 <Button
@@ -98,9 +419,10 @@ export default function AlphaTreePage() {
                                                     _hover={{ bg: 'rgba(255,255,255,0.1)' }}
                                                     onClick={() => {
                                                         const current = parseFloat(amount || MIN_AMOUNT);
-                                                        const newValue = Math.min(maxAmount, current / 2);
+                                                        const newValue = Math.min(MAX_AMOUNT, current / 2);
                                                         setAmount(Math.max(MIN_AMOUNT, newValue).toFixed(2));
                                                     }}
+                                                    isDisabled={amountLocked || playLoading}
                                                 >
                                                     /2
                                                 </Button>
@@ -118,9 +440,10 @@ export default function AlphaTreePage() {
                                                     _hover={{ bg: 'rgba(255,255,255,0.1)' }}
                                                     onClick={() => {
                                                         const current = parseFloat(amount || MIN_AMOUNT);
-                                                        const newValue = Math.min(maxAmount, current * 2);
+                                                        const newValue = Math.min(MAX_AMOUNT, current * 2);
                                                         setAmount(newValue.toFixed(2));
                                                     }}
+                                                    isDisabled={amountLocked || playLoading}
                                                 >
                                                     ×2
                                                 </Button>
@@ -172,7 +495,7 @@ export default function AlphaTreePage() {
                                                                     <Slider
                                                                         aria-label="Amount slider"
                                                                         min={MIN_AMOUNT}
-                                                                        max={maxAmount}
+                                                                        max={MAX_AMOUNT}
                                                                         step={0.01}
                                                                         value={parseFloat(amount || MIN_AMOUNT)}
                                                                         onChange={(val) => setAmount(val.toFixed(2))}
@@ -245,7 +568,7 @@ export default function AlphaTreePage() {
                                                                     minW="30px"
                                                                     textAlign="right"
                                                                     cursor="pointer"
-                                                                    onClick={() => setAmount(maxAmount.toFixed(2))}
+                                                                    onClick={() => setAmount(MAX_AMOUNT.toFixed(2))}
                                                                 >
                                                                     Max
                                                                 </Text>
@@ -271,13 +594,9 @@ export default function AlphaTreePage() {
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
-                                            onClick={
-                                                () => {
-                                                    setBet(1)
-                                                    handleBet(1)
-                                                }
-                                            }
-                                            label="BET"
+                                            disabled={Boolean(treeState) || playLoading}
+                                            onClick={handlePlayGame}
+                                            label={playLoading ? "..." : "Play Game"}
                                         />
                                         <ClickButton
                                             w="100%"
@@ -285,27 +604,20 @@ export default function AlphaTreePage() {
                                             fontSize={{ base: 'md', sm: 'md' }}
                                             fontWeight="bold"
                                             borderRadius="20px"
-                                            bg={isMultiBetActive ? "#E74C3C" : "#00D4FF"}
+                                            bg="#00D4FF"
                                             color="#fff"
-                                            border={isMultiBetActive ? "2px solid #E74C3C" : bet === 2 ? "2px solid #00D4FF" : "1px solid rgba(0, 212, 255, 0.3)"}
+                                            border="1px solid rgba(0, 212, 255, 0.3)"
                                             _hover={{
-                                                borderColor: isMultiBetActive ? "#C0392B" : "#00D4FF",
+                                                borderColor: "#00D4FF",
                                                 transform: "translateY(-2px)",
-                                                boxShadow: isMultiBetActive ? "0 4px 12px rgba(231, 76, 60, 0.4)" : "0 4px 12px rgba(0, 212, 255, 0.3)"
+                                                boxShadow: "0 4px 12px rgba(0, 212, 255, 0.3)"
                                             }}
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
-                                            onClick={
-                                                () => {
-                                                    if (isMultiBetActive) {
-                                                        stopMultiBet();
-                                                    } else {
-                                                        startMultiBet();
-                                                    }
-                                                }
-                                            }
-                                            label={isMultiBetActive ? "STOP" : "Multi BET"}
+                                            disabled={!canCashOutAlpha || cashLoading}
+                                            onClick={handleCashOutGame}
+                                            label={cashLoading ? "..." : "Cash Out"}
                                         />
                                     </Grid>
                                 </FormControl>
@@ -315,195 +627,173 @@ export default function AlphaTreePage() {
                 </GridItem>
                 <GridItem area="game" minH={'450px'}>
                     <Card pt="30px" pb="22px" px="22px" minH="100%" alignItems="center" w="100%">
-                        <CardBody minH="100%" w={{ base: '100%' }} minW="450px" maxW="450px" mx="auto" overflow="visible" position="relative">
-                            <Box
-                                position="absolute"
-                                top="19px"
-                                left="31px"
-                                w="127px"
-                                h="289px"
-                                backgroundImage={`url(${hammer})`}
-                                backgroundSize="contain"
-                                backgroundRepeat="no-repeat"
-                                backgroundPosition="center"
-                                zIndex="5"
-                                transformOrigin="bottom center"
-                                animation={isHammerAnimating ? `${hammerStrike} 2.0s ease-in-out forwards` : 'none'}
-                                style={{ transform: isHammerAnimating ? undefined : 'rotate(10deg)' }}
-                            />
-                            {showBang && (
-                                <Text
-                                    position="absolute"
-                                    top={`${WEIGHT_BOTTOM - 20}px`}
-                                    left="305px"
-                                    fontSize="35px"
-                                    fontWeight="bold"
-                                    color="#FF7A2E"
-                                    textShadow="0 0 12px #FF7A2E"
-                                    zIndex="6"
-                                    animation={`${bangPop} 0.9s ease-out forwards`}
-                                    pointerEvents="none"
-                                >
-                                    BANG
-                                </Text>
-                            )}
-                            <Box
-                                position="absolute"
-                                top="0"
-                                right="30px"
-                                w="130px"
-                                h="400px"
-                                backgroundImage={`url(${tower})`}
-                                backgroundSize="contain"
-                                backgroundRepeat="no-repeat"
-                                backgroundPosition="center"
-                                zIndex="3"
-                            />
-                            <Text
-                                position="absolute"
-                                top="67px"
-                                right="73px"
-                                fontSize="15px"
-                                fontWeight="bold"
-                                color={winLit ? "#FF7A2E" : "whiteAlpha.600"}
-                                textShadow={winLit ? "0 0 10px #FF7A2E" : "none"}
-                                letterSpacing="1px"
-                                zIndex="4"
-                            >
-                                WIN!
+                        <CardHeader>
+                            <Text fontSize="lg" color="#fff" fontWeight="bold" textAlign="center" w="100%">
+                                Alpha Tree
                             </Text>
-                            <Box
-                                position="absolute"
-                                top="104px"
-                                right="131px"
-                                w="8px"
-                                h="75px"
-                                display="flex"
-                                flexDirection="column"
-                                justifyContent="space-between"
-                                zIndex="4"
-                            >
-                                {Array.from({ length: 9 }).map((_, index) => {
-                                    const isLit = index >= 9 - ledCount;
-                                    return (
+                        </CardHeader>
+                        <CardBody minH="100%" w={{ base: '100%' }} minW={{ base: '100%', sm: '450px' }} maxW="450px" mx="auto" overflow="visible" position="relative">
+                            {!treeState ? (
+                                <Text color="rgba(255,255,255,0.75)" textAlign="center" py="40px">
+                                    Press <Text as="span" color="#00D4FF" fontWeight="bold">Play Game</Text> to
+                                    start. Step 1: choose <Text as="span" fontWeight="bold">A</Text> (result{" "}
+                                    <Text as="span" color="#FFD700">0.6</Text>). Steps 2–9: three letters — each step
+                                    randomly assigns <Text as="span" color="#FFD700">0</Text> (bust), a value in{" "}
+                                    <Text as="span" color="#FFD700">(0, 1)</Text>, and a value in{" "}
+                                    <Text as="span" color="#FFD700">(1, max)</Text> to the letters (max = 0.6 ×
+                                    2^(step − 1)). Step 9: W, X, Y. Step 10: only{" "}
+                                    <Text as="span" fontWeight="bold">Z</Text>, fixed{" "}
+                                    <Text as="span" color="#FFD700">0.6 × 2^9</Text>.
+                                </Text>
+                            ) : (
+                                <VStack spacing="20px" w="100%" align="stretch">
+                                    <Flex justify="space-between" wrap="wrap" gap={2}>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.85)">
+                                            Step:{" "}
+                                            <Text as="span" color="#00D4FF" fontWeight="bold">
+                                                {treeState.phase === "await_cashout" ? 10 : treeState.step}
+                                            </Text>
+                                            / 10
+                                        </Text>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.85)">
+                                            Total ×:{" "}
+                                            <Text as="span" color="#FFD700" fontWeight="bold">
+                                                {Number(treeState.cumulativeMultiplier ?? 1).toFixed(2)}
+                                            </Text>
+                                        </Text>
+                                    </Flex>
+                                    {lastStepResult != null && (
                                         <Box
-                                            key={`led-${index}`}
-                                            h="10px"
-                                            w="100%"
-                                            borderRadius="2px"
-                                            bg={isLit ? ledColors[index] : "whiteAlpha.300"}
-                                            boxShadow={isLit ? `0 0 6px ${ledColors[index]}` : "none"}
-                                        />
-                                    );
-                                })}
-                            </Box>
-                            {heightMarks.map((value) => (
-                                <Box
-                                    key={`height-mark-${value}`}
-                                    position="absolute"
-                                    right="170px"
-                                    top={`${getWeightTopFromValue(value)}px`}
-                                    transform="translateY(-50%)"
-                                    zIndex="4"
-                                    display="flex"
-                                    alignItems="center"
-                                    gap="6px"
-                                >
-                                    <Text fontSize="xs" color={MARK_COLOR}>
-                                        {value}
-                                    </Text>
-                                    <Box w="10px" h="1px" bg={MARK_COLOR} />
-                                </Box>
-                            ))}
-                            <Box
-                                position="absolute"
-                                right="83px"
-                                w="20px"
-                                h="20px"
-                                backgroundImage={`url(${weight})`}
-                                backgroundSize="contain"
-                                backgroundRepeat="no-repeat"
-                                backgroundPosition="center"
-                                zIndex="4"
-                                top={`${weightPosition}px`}
-                                transition={isWeightMoving
-                                    ? (weightDirection === 'up'
-                                        ? "top 0.8s ease-out"
-                                        : "top 0.8s ease-in")
-                                    : "none"}
-                            />
-                            {Number.isFinite(Number(displayHeight)) && (
-                                <Text
-                                    position="absolute"
-                                    right="24px"
-                                    top={`${weightPosition + 9}px`}
-                                    transform="translateY(-50%)"
-                                    fontSize="xs"
-                                    color="whiteAlpha.800"
-                                    zIndex="5"
-                                    transition={isWeightMoving
-                                        ? (weightDirection === 'up'
-                                            ? "top 0.8s ease-out"
-                                            : "top 0.8s ease-in")
-                                        : "none"}
-                                >
-                                    {formatResult(displayHeight)}
-                                </Text>
-                            )}
-                            {showComparisonLabel && comparisonText && (
-                                <Text
-                                    position="absolute"
-                                    right="-12px"
-                                    top={`${getWeightTopFromValue(pumpingResult) + 9}px`}
-                                    transform="translateY(-50%)"
-                                    fontSize="xs"
-                                    color={comparisonColor}
-                                    zIndex="5"
-                                >
-                                    {comparisonText}
-                                </Text>
+                                            bg="rgba(0, 212, 255, 0.12)"
+                                            border="1px solid rgba(0, 212, 255, 0.35)"
+                                            borderRadius="12px"
+                                            py="12px"
+                                            textAlign="center"
+                                        >
+                                            <Text fontSize="xs" color="rgba(255,255,255,0.7)" mb="4px">
+                                                Last result
+                                            </Text>
+                                            <Text fontSize="2xl" fontWeight="black" color="#FFD700">
+                                                {lastStepResult}
+                                            </Text>
+                                            {lastBandLabel ? (
+                                                <Text fontSize="xs" color="rgba(255,255,255,0.65)" mt="8px">
+                                                    {lastBandLabel}
+                                                </Text>
+                                            ) : null}
+                                        </Box>
+                                    )}
+                                    {treeState.phase === "await_cashout" ? (
+                                        <Text color="#68d391" textAlign="center" fontWeight="bold">
+                                            All 10 steps done — use Cash Out in the panel to collect.
+                                        </Text>
+                                    ) : (
+                                        <>
+                                            {treeState.phase === "playing" ? (
+                                                <Text
+                                                    fontSize="sm"
+                                                    color="rgba(255,255,255,0.75)"
+                                                    textAlign="center"
+                                                >
+                                                    You can <Text as="span" fontWeight="bold">Cash Out</Text> in the
+                                                    panel after each step to lock in{" "}
+                                                    <Text as="span" color="#FFD700" fontWeight="bold">
+                                                        ≈ $
+                                                        {(
+                                                            Number(treeState.betAmount ?? 0) *
+                                                            Number(treeState.cumulativeMultiplier ?? 1)
+                                                        ).toFixed(2)}
+                                                    </Text>{" "}
+                                                    (bet × {Number(treeState.cumulativeMultiplier ?? 1).toFixed(4)}),
+                                                    or keep playing.
+                                                </Text>
+                                            ) : null}
+                                            <Flex wrap="wrap" gap="10px" justify="center">
+                                                {(lettersToShow || []).map((ch) => (
+                                                    <Button
+                                                        key={`${treeState.step}-${ch}`}
+                                                        type="button"
+                                                        minW="56px"
+                                                        h="52px"
+                                                        fontSize="xl"
+                                                        fontWeight="bold"
+                                                        color="#000"
+                                                        bg="#FFD700"
+                                                        border="2px solid #000"
+                                                        borderRadius="12px"
+                                                        boxShadow="3px 3px 0 #000"
+                                                        isLoading={pickLoading}
+                                                        isDisabled={pickLoading}
+                                                        onClick={() => handlePickLetter(ch)}
+                                                        _hover={{ bg: "#ffe066" }}
+                                                    >
+                                                        {ch}
+                                                    </Button>
+                                                ))}
+                                            </Flex>
+                                            {treeState.phase === "playing" &&
+                                            treeState.step >= 2 &&
+                                            treeState.step <= 9 &&
+                                            (lettersToShow || []).length === 3 ? (
+                                                <Text
+                                                    fontSize="xs"
+                                                    color="rgba(255,255,255,0.65)"
+                                                    textAlign="center"
+                                                    lineHeight="1.5"
+                                                    px={1}
+                                                >
+                                                    Each letter is one of:{" "}
+                                                    <Text as="span" fontWeight="semibold">
+                                                        0 (bust)
+                                                    </Text>
+                                                    ,{" "}
+                                                    <Text as="span" fontWeight="semibold">
+                                                        (0, 1)
+                                                    </Text>
+                                                    , or{" "}
+                                                    <Text as="span" fontWeight="semibold">
+                                                        (1, {treeState.nextRandomMax != null
+                                                            ? Number(treeState.nextRandomMax).toFixed(2)
+                                                            : "…"}
+                                                        )
+                                                    </Text>{" "}
+                                                    — assigned randomly to B/C/D (or this step’s letters) each step.
+                                                </Text>
+                                            ) : null}
+                                            {treeState.phase === "playing" &&
+                                            treeState.step === 10 &&
+                                            (lettersToShow || []).length === 1 ? (
+                                                <Text
+                                                    fontSize="xs"
+                                                    color="rgba(255,255,255,0.65)"
+                                                    textAlign="center"
+                                                    lineHeight="1.5"
+                                                    px={1}
+                                                >
+                                                    Z → fixed{" "}
+                                                    {treeState.nextRandomMax != null
+                                                        ? Number(treeState.nextRandomMax).toFixed(2)
+                                                        : alphaTreeMaxForRandomStep(10)?.toFixed(2) ?? "…"}{" "}
+                                                    (0.6 × 2^9)
+                                                </Text>
+                                            ) : null}
+                                        </>
+                                    )}
+                                    <AlphaTreeLetterDiagram
+                                        phase={treeState.phase}
+                                        step={treeState.step}
+                                        pathSteps={pathSteps}
+                                    />
+                                </VStack>
                             )}
                         </CardBody>
-                        <Box justifyItems="center" position="absolute" right="5px" bottom="5px">
-                            <Tooltip label="Pumping Balance Graph" >
-                                <Button
-                                    onClick={() => { onOpen() }}
-                                    width="40px"
-                                    height="40px"
-                                    borderRadius="50%"
-                                    display="flex"
-                                    justifyContent="center"
-                                    alignItems="center"
-                                    bg="#00D4FF"
-                                    color="white"
-                                    position="relative"
-                                    className="bet-graph-button"
-                                    _hover={{
-                                        bg: "white",
-                                        color: "#00D4FF",
-                                        transform: "scale(1.2)",
-                                        boxShadow: "0 0 20px #00f5ff"
-                                    }}
-                                    style={{
-                                        textShadow: "0 0 5px #00D4FF, 0 0 10px #00D4FF, 0 0 15px #00D4FF",
-                                        boxShadow: "0 0 10px #00f5ff"
-                                    }}
-                                >
-                                    <AutoGraphIcon style={{ fontSize: "16px" }} />
-                                    <div className="neon-border"></div>
-                                    <div className="neon-dot neon-dot-1"></div>
-                                    <div className="neon-dot neon-dot-2"></div>
-                                    <div className="neon-dot neon-dot-3"></div>
-                                </Button>
-                            </Tooltip>
-                        </Box>
                     </Card>
                 </GridItem>
                 <GridItem area="empty" minH="250px">
-                    <RealView />
+                    <AlphaTreeRealView />
                 </GridItem>
             </Grid>
-            <History />
+            <BetHistory />
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
                 <ModalOverlay bg="blackAlpha.700" />
                 <ModalContent
@@ -515,7 +805,7 @@ export default function AlphaTreePage() {
                     className="pumping-modal-content"
                 >
                     <ModalHeader color="white" >
-                        How to Play Pumping Game
+                        How to Play Alpha Tree Game
                     </ModalHeader>
                     <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
                     <ModalBody py="0" maxH="calc(80vh - 60px)" overflowY="auto" className="pumping-modal-body">
@@ -531,63 +821,40 @@ export default function AlphaTreePage() {
                             </TabList>
                             <TabPanels>
                                 <TabPanel py="24px">
-                                    <img width="100%" src={HelpImage} alt="Help" />
                                     <VStack spacing="16px" align="stretch">
                                         <Box>
                                             <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                1. Set Your Target
+                                                1. Bet and start
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Choose a target number (min: 1.01, max: 1000.00) using the up/down arrows. This is the number you're betting on.
+                                                Enter your stake and press Play Game. Step 1 is only the letter A — it
+                                                always applies multiplier 0.6 to your running total.
                                             </Text>
                                         </Box>
                                         <Box>
                                             <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                2. Set Your Bet Amount
+                                                2. Steps 2–9 and step 10
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Enter your bet amount (min: 0.10). Maximum bet based on membership: Free (1), Plus (1000), Pro (your balance). Use the slider or Min/Max buttons for quick adjustment.
+                                                Steps 2–9 show three letters. Each step,{" "}
+                                                <Text as="span" fontWeight="bold">0</Text> (bust),{" "}
+                                                <Text as="span" fontWeight="bold">(0, 1)</Text>, and{" "}
+                                                <Text as="span" fontWeight="bold">(1, max)</Text> with max = 0.6 ×
+                                                2^(step−1) are <Text as="span" fontWeight="bold">randomly assigned</Text>{" "}
+                                                to those three letters (order changes every step). Step 9: W, X, Y. Step
+                                                10: only <Text as="span" fontWeight="bold">Z</Text> — fixed{" "}
+                                                <Text as="span" fontWeight="bold">0.6 × 2^9</Text>.
                                             </Text>
                                         </Box>
                                         <Box>
                                             <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                3. High Strike By Harmmer
+                                                3. Cash out
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Press the BET button to heat the iron ball with the hammer. The ball will rise, and when it reaches the highest point, the result will be displayed.
+                                                After completing step 1, you can Cash Out anytime to collect your bet ×
+                                                the current cumulative multiplier, or keep going to step 10. After the
+                                                final step you must Cash Out to collect.
                                             </Text>
-                                        </Box>
-
-                                        <Box>
-                                            <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                5. Multi BET
-                                            </Text>
-                                            <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                By clicking the 'Multi BET' button, you can place bets on multiple games simultaneously. This feature allows you to select several game outcomes at once, giving you the opportunity to maximize your chances of winning with multiple bets in one go.
-                                            </Text>
-                                        </Box>
-                                        <Box>
-                                            <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                6. Keyboard Shortcuts
-                                            </Text>
-                                            <VStack spacing="4px" align="stretch" fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                <HStack spacing="2" wrap="wrap">
-                                                    <KeyCap>W</KeyCap>
-                                                    <Text as="span">/</Text>
-                                                    <KeyCap>S</KeyCap>
-                                                    <Text as="span">Increase/Decrease target by 2x</Text>
-                                                </HStack>
-                                                <HStack spacing="2" wrap="wrap">
-                                                    <KeyCap>D</KeyCap>
-                                                    <Text as="span">/</Text>
-                                                    <KeyCap>A</KeyCap>
-                                                    <Text as="span">Increase/Decrease amount by 2x</Text>
-                                                </HStack>
-                                                <HStack spacing="2" wrap="wrap">
-                                                    <KeyCap minW="48px">Space</KeyCap>
-                                                    <Text as="span">Place bet (click BET button)</Text>
-                                                </HStack>
-                                            </VStack>
                                         </Box>
                                     </VStack>
                                 </TabPanel>
@@ -596,14 +863,6 @@ export default function AlphaTreePage() {
                     </ModalBody>
                 </ModalContent>
             </Modal>
-            <Dialog
-                isOpen={isOpen}
-                onClose={onClose}
-                top={"15%"}
-                width={{ sm: "90%", '2lg': "1280px", '2xl': "1600px" }}
-                isFooter
-                content={<PumpingBalanceGraph />}
-            />
         </Box>
     );
 }

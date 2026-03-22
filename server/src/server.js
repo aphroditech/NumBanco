@@ -20,11 +20,13 @@ import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
 import { startCloudSpreadGameLoop } from "./services/cloudSpread/cloudSpreadGame.service.js";
+import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
 import {rocketBot} from "./services/rocket/rocketBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
+import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
 dotenv.config();
 
@@ -39,6 +41,9 @@ connectDB().then(async () => {
     // Cloud Spread is DB-only (no Ably); must start here so /api/cloud-spread/state has a round.
     startCloudSpreadGameLoop().catch((err) => {
         console.error("[cloud-spread] failed to start game loop:", err);
+    });
+    cloudSpreadBot().catch((err) => {
+        console.error("[cloud-spread] bot failed to start:", err);
     });
 
     // Check and create yesterday's wallet if it doesn't exist
@@ -79,6 +84,7 @@ connectDB().then(async () => {
         // fishingBot(ably);
         // startGravityGameLoop(ably);
         // cocoBot(ably);
+        // alphaTreeBot(ably);
         // doveBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();
