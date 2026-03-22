@@ -61,58 +61,128 @@ export default function CloudSpreadCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return undefined;
 
-    /** Polished “glossy marble” ball: radial shading, highlights, rim. */
-    const drawPremiumBall = (c, bx, by, R) => {
+    /**
+     * Jewel / glass marble: contact shadow, layered depth, specular stack, subtle shimmer.
+     */
+    const drawPremiumBall = (c, bx, by, R, opts = {}) => {
+      const { inFlight = false } = opts;
+      const t = performance.now() * 0.0022;
+      const shimmer = 0.72 + 0.28 * Math.sin(t);
+      const flightGlow = inFlight ? 0.35 : 0;
+
       c.save();
       c.translate(bx, by);
 
-      const body = c.createRadialGradient(-R * 0.38, -R * 0.42, R * 0.08, 0, 0, R * 1.05);
-      body.addColorStop(0, "#fff8e8");
-      body.addColorStop(0.12, "#ffe566");
-      body.addColorStop(0.35, "#ffc53d");
-      body.addColorStop(0.55, "#ff9f1a");
-      body.addColorStop(0.78, "#e87000");
-      body.addColorStop(1, "#a84a08");
+      // Soft ground contact shadow (ellipse below sphere)
+      c.save();
+      c.translate(0, R * 0.72);
+      c.scale(1.35, 0.38);
+      c.beginPath();
+      c.arc(0, 0, R * 0.92, 0, Math.PI * 2);
+      const sh = c.createRadialGradient(0, 0, 0, 0, 0, R * 0.92);
+      sh.addColorStop(0, "rgba(15, 40, 80, 0.42)");
+      sh.addColorStop(0.55, "rgba(15, 40, 80, 0.14)");
+      sh.addColorStop(1, "rgba(15, 40, 80, 0)");
+      c.fillStyle = sh;
+      c.fill();
+      c.restore();
+
+      // Outer soft bloom (glass edge)
+      c.beginPath();
+      c.arc(0, 0, R + 2.2, 0, Math.PI * 2);
+      const bloom = c.createRadialGradient(0, 0, R * 0.4, 0, 0, R + 2.5);
+      bloom.addColorStop(0, `rgba(255, 248, 220, ${0.12 + flightGlow * 0.15})`);
+      bloom.addColorStop(0.65, "rgba(255, 200, 120, 0.06)");
+      bloom.addColorStop(1, "rgba(255, 200, 100, 0)");
+      c.fillStyle = bloom;
+      c.fill();
+
+      // Main body — pearl center → rich amber → deep warm shadow
+      const body = c.createRadialGradient(-R * 0.42, -R * 0.46, R * 0.06, R * 0.08, R * 0.12, R * 1.12);
+      body.addColorStop(0, "#ffffff");
+      body.addColorStop(0.08, "#fff8f0");
+      body.addColorStop(0.22, "#ffe9a8");
+      body.addColorStop(0.42, "#ffc53d");
+      body.addColorStop(0.62, "#ff9a1a");
+      body.addColorStop(0.82, "#d96a00");
+      body.addColorStop(1, "#7a3a0a");
 
       c.beginPath();
       c.arc(0, 0, R, 0, Math.PI * 2);
       c.fillStyle = body;
       c.fill();
 
+      // Ambient occlusion — darker zone bottom-right (clipped)
+      c.save();
+      c.beginPath();
+      c.arc(0, 0, R - 0.5, 0, Math.PI * 2);
+      c.clip();
+      const ao = c.createRadialGradient(R * 0.35, R * 0.55, 0, R * 0.2, R * 0.35, R * 1.1);
+      ao.addColorStop(0, "rgba(60, 25, 0, 0)");
+      ao.addColorStop(0.55, "rgba(80, 35, 0, 0.22)");
+      ao.addColorStop(1, "rgba(40, 15, 0, 0.38)");
+      c.fillStyle = ao;
+      c.fillRect(-R * 2, -R * 2, R * 4, R * 4);
+      c.restore();
+
+      // Cool sky bounce-light + speculars (single clip)
+      c.save();
       c.beginPath();
       c.arc(0, 0, R, 0, Math.PI * 2);
-      c.strokeStyle = "rgba(255, 255, 255, 0.42)";
-      c.lineWidth = 1.25;
-      c.stroke();
+      c.clip();
+      const cool = c.createLinearGradient(-R, R * 0.2, R * 0.9, -R * 0.3);
+      cool.addColorStop(0, "rgba(180, 230, 255, 0.22)");
+      cool.addColorStop(0.45, "rgba(255, 255, 255, 0)");
+      c.fillStyle = cool;
+      c.fillRect(-R * 2, -R * 2, R * 4, R * 4);
 
-      c.beginPath();
-      c.arc(0, 0, R - 1.1, 0, Math.PI * 2);
-      c.strokeStyle = "rgba(0, 0, 0, 0.12)";
-      c.lineWidth = 1;
-      c.stroke();
-
-      const hi = c.createRadialGradient(-R * 0.55, -R * 0.58, 0, -R * 0.35, -R * 0.4, R * 0.65);
-      hi.addColorStop(0, "rgba(255, 255, 255, 0.92)");
-      hi.addColorStop(0.35, "rgba(255, 255, 255, 0.35)");
-      hi.addColorStop(0.7, "rgba(255, 255, 255, 0.05)");
+      const hi = c.createRadialGradient(-R * 0.52, -R * 0.58, 0, -R * 0.38, -R * 0.44, R * 0.72);
+      hi.addColorStop(0, `rgba(255, 255, 255, ${0.94 * shimmer})`);
+      hi.addColorStop(0.28, `rgba(255, 252, 240, ${0.45 * shimmer})`);
+      hi.addColorStop(0.55, "rgba(255, 255, 255, 0.12)");
       hi.addColorStop(1, "rgba(255, 255, 255, 0)");
       c.beginPath();
-      c.arc(-R * 0.32, -R * 0.36, R * 0.42, 0, Math.PI * 2);
+      c.arc(-R * 0.28, -R * 0.34, R * 0.48, 0, Math.PI * 2);
       c.fillStyle = hi;
       c.fill();
 
       c.beginPath();
-      c.arc(-R * 0.12, -R * 0.52, R * 0.14, 0, Math.PI * 2);
-      c.fillStyle = "rgba(255, 255, 255, 0.75)";
+      c.arc(-R * 0.38, -R * 0.48, R * 0.11, 0, Math.PI * 2);
+      c.fillStyle = `rgba(255, 255, 255, ${0.88 * shimmer})`;
+      c.fill();
+      c.beginPath();
+      c.arc(-R * 0.44, -R * 0.54, R * 0.045, 0, Math.PI * 2);
+      c.fillStyle = "rgba(255, 255, 255, 0.95)";
       c.fill();
 
       c.beginPath();
-      c.arc(R * 0.35, R * 0.38, R * 0.55, 0, Math.PI * 2);
-      const rim = c.createRadialGradient(R * 0.35, R * 0.38, 0, R * 0.35, R * 0.38, R * 0.55);
-      rim.addColorStop(0, "rgba(255, 200, 120, 0.35)");
+      c.arc(R * 0.42, R * 0.38, R * 0.52, 0, Math.PI * 2);
+      const rim = c.createRadialGradient(R * 0.42, R * 0.38, 0, R * 0.42, R * 0.38, R * 0.52);
+      rim.addColorStop(0, "rgba(255, 210, 140, 0.45)");
       rim.addColorStop(1, "rgba(255, 140, 40, 0)");
       c.fillStyle = rim;
       c.fill();
+      c.restore();
+
+      // Crisp outer rim light + inner edge (no clip)
+      c.beginPath();
+      c.arc(0, 0, R, 0, Math.PI * 2);
+      c.strokeStyle = "rgba(255, 255, 255, 0.55)";
+      c.lineWidth = 1.35;
+      c.stroke();
+      c.beginPath();
+      c.arc(0, 0, R - 1.15, 0, Math.PI * 2);
+      c.strokeStyle = "rgba(0, 0, 0, 0.14)";
+      c.lineWidth = 1;
+      c.stroke();
+
+      if (inFlight) {
+        c.beginPath();
+        c.arc(0, R * 0.15, R * 1.15, Math.PI * 1.15, Math.PI * 1.85);
+        c.strokeStyle = "rgba(255, 220, 160, 0.35)";
+        c.lineWidth = 2;
+        c.stroke();
+      }
 
       c.restore();
     };
@@ -196,7 +266,10 @@ export default function CloudSpreadCanvas({
     };
 
     const draw = () => {
-      const width = widthRef.current;
+      const wrapEl = wrapRef.current;
+      const measured = wrapEl ? Math.floor(wrapEl.clientWidth) : widthRef.current;
+      const width = Math.max(280, measured || widthRef.current);
+      widthRef.current = width;
       const dpr = window.devicePixelRatio || 1;
       canvas.width = width * dpr;
       canvas.height = height * dpr;
@@ -204,8 +277,10 @@ export default function CloudSpreadCanvas({
 
       const w = width;
       const h = height;
+      /** Scales clouds / ball / HUD with viewport so wide layouts aren’t “tiny”. */
+      const layoutScale = Math.min(1.5, Math.max(0.72, w / 520));
       /** Ball sits this many px lower so it overlaps the active multiplier. */
-      const CLOUD_BALL_VERT_NUDGE = 12;
+      const CLOUD_BALL_VERT_NUDGE = 12 * layoutScale;
       const step = Number(stepRef.current || 0);
       const cloudCount = Math.max(0, step * cloudsPerStep);
       // Keep cloud field fully visible: disable zoom growth that can push clouds off-screen.
@@ -228,15 +303,15 @@ export default function CloudSpreadCanvas({
       ctx.translate(-w / 2, -h / 2);
 
       const cloudCenters = [];
-      const padX = 44;
-      const padTop = 52;
-      const padBottom = 72;
+      const padX = Math.max(14, w * 0.045);
+      const padTop = Math.max(32, h * 0.09);
+      const padBottom = Math.max(52, h * 0.17);
       const usableW = Math.max(40, w - padX * 2);
       const usableH = Math.max(40, h - padTop - padBottom);
       for (let i = 0; i < cloudCount; i += 1) {
         const xRaw = padX + detRand(i, 11) * usableW;
         const yRaw = padTop + detRand(i, 29) * usableH;
-        const r = 12 + detRand(i, 47) * 10;
+        const r = (12 + detRand(i, 47) * 10) * layoutScale;
         const x = Math.max(r + 6, Math.min(w - (r + 6), xRaw));
         const y = Math.max(r + 6, Math.min(h - (r + 46), yRaw));
         const variant = Math.floor(detRand(i, 99) * 8);
@@ -259,7 +334,8 @@ export default function CloudSpreadCanvas({
         selNum > 0;
 
       if (pickedSet.size > 0) {
-        ctx.font = "800 12px Arial";
+        const mulFont = Math.max(10, Math.round(12 * layoutScale));
+        ctx.font = `800 ${mulFont}px Arial`;
         ctx.fillStyle = "rgba(28, 43, 71, 0.95)";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -289,15 +365,15 @@ export default function CloudSpreadCanvas({
         ballRef.current.flightEndX = null;
         ballRef.current.flightEndY = null;
         ballRef.current.flightStartMs = 0;
-        ballRef.current.x = 34;
-        ballRef.current.y = 34;
+        ballRef.current.x = w * 0.06;
+        ballRef.current.y = h * 0.1;
         multHitRef.current = { pulse: 0, prevIdle: 0 };
       }
 
       const targetCloud = showBall ? cloudCenters.find((c) => c.i === selected) : undefined;
       if (targetCloud) {
         const targetX = targetCloud.x;
-        const targetY = targetCloud.y - targetCloud.r - 10 + CLOUD_BALL_VERT_NUDGE;
+        const targetY = targetCloud.y - targetCloud.r - 10 * layoutScale + CLOUD_BALL_VERT_NUDGE;
 
         if (ballRef.current.targetIndex !== selected) {
           ballRef.current.targetIndex = selected;
@@ -314,8 +390,11 @@ export default function CloudSpreadCanvas({
         }
 
         const FLIGHT_MS = 1120;
-        const endX = ballRef.current.flightEndX ?? targetX;
-        const endY = ballRef.current.flightEndY ?? targetY;
+        // Keep landing point in sync when the container width changes (clouds reflow).
+        ballRef.current.flightEndX = targetX;
+        ballRef.current.flightEndY = targetY;
+        const endX = targetX;
+        const endY = targetY;
 
         if (ballRef.current.progress < 1) {
           const elapsed = Date.now() - (ballRef.current.flightStartMs || Date.now());
@@ -328,7 +407,7 @@ export default function CloudSpreadCanvas({
           const dx = bx - ax;
           const dy = by - ay;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const arcPeak = Math.min(95, 26 + dist * 0.34);
+          const arcPeak = Math.min(95 * layoutScale, 26 * layoutScale + dist * 0.34);
           const midX = (ax + bx) / 2;
           const midY = (ay + by) / 2;
           const qx = midX;
@@ -345,13 +424,11 @@ export default function CloudSpreadCanvas({
             multHitRef.current.prevIdle = 0;
           }
         } else {
-          const restX = ballRef.current.restX ?? targetX;
-          const restY = ballRef.current.restY ?? targetY;
-          ballRef.current.x = restX;
           const tMs = ballRef.current.landedAt > 0 ? Date.now() - ballRef.current.landedAt : 0;
-          const IDLE_AMP = 12;
+          const IDLE_AMP = 12 * layoutScale;
           const idle = Math.abs(Math.sin(tMs * 0.009)) * IDLE_AMP;
-          ballRef.current.y = restY - idle;
+          ballRef.current.x = targetX;
+          ballRef.current.y = targetY - idle;
           const hitTh = IDLE_AMP * 0.9;
           if (idle >= hitTh && multHitRef.current.prevIdle < hitTh) {
             multHitRef.current.pulse = 0.5;
@@ -366,8 +443,10 @@ export default function CloudSpreadCanvas({
       }
 
       if (showBall && targetCloud) {
-        const R = 9.5;
-        drawPremiumBall(ctx, ballRef.current.x, ballRef.current.y, R);
+        const R = 11.2 * layoutScale;
+        drawPremiumBall(ctx, ballRef.current.x, ballRef.current.y, R, {
+          inFlight: ballRef.current.progress < 1,
+        });
 
         if (ballRef.current.progress >= 1) {
           const mul = Number(cloudMultipliers?.[selected - 1] ?? 0);
@@ -377,7 +456,7 @@ export default function CloudSpreadCanvas({
           const ly = targetCloud.y;
           const pulse = Math.min(1, multHitRef.current.pulse);
           const scale = 1 + 0.1 * pulse;
-          const fontPx = 12 + 1.2 * pulse;
+          const fontPx = Math.max(10, 12 * layoutScale + 1.2 * pulse);
 
           ctx.save();
           ctx.translate(lx, ly);
@@ -386,10 +465,10 @@ export default function CloudSpreadCanvas({
           ctx.textBaseline = "middle";
           ctx.font = `800 ${fontPx}px Arial`;
 
-          const ring = pulse * 10;
+          const ring = pulse * 10 * layoutScale;
           if (ring > 0.2) {
             ctx.beginPath();
-            ctx.arc(0, 0, 15 + ring, 0, Math.PI * 2);
+            ctx.arc(0, 0, 15 * layoutScale + ring, 0, Math.PI * 2);
             ctx.strokeStyle = `rgba(255, 210, 130, ${0.18 * pulse})`;
             ctx.lineWidth = 1;
             ctx.stroke();
@@ -409,11 +488,15 @@ export default function CloudSpreadCanvas({
 
       ctx.restore();
 
-      ctx.fillStyle = "rgba(8,26,54,0.8)";
-      ctx.font = "700 20px Arial";
+      const hudFont = Math.max(11, Math.round(14 * layoutScale));
+      const hudPadX = Math.max(12, w * 0.028);
+      const hudLine1Y = h - Math.max(38, h * 0.12);
+      const hudLine2Y = h - Math.max(18, h * 0.05);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+      ctx.font = `700 ${hudFont}px Arial`;
       ctx.textAlign = "left";
-      ctx.fillText(`Step ${step}/${totalSteps}`, 20, h - 46);
-      ctx.fillText(`Clouds: ${cloudCount}`, 20, h - 20);
+      ctx.fillText(`Step ${step}/${totalSteps}`, hudPadX, hudLine1Y);
+      ctx.fillText(`Clouds: ${cloudCount}`, hudPadX, hudLine2Y);
 
       rafRef.current = requestAnimationFrame(draw);
     };

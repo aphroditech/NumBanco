@@ -36,6 +36,11 @@ app.locals.ably = ably;
 connectDB().then(async () => {
     await initializeDatabase();
 
+    // Cloud Spread is DB-only (no Ably); must start here so /api/cloud-spread/state has a round.
+    startCloudSpreadGameLoop().catch((err) => {
+        console.error("[cloud-spread] failed to start game loop:", err);
+    });
+
     // Check and create yesterday's wallet if it doesn't exist
     try {
         await ensureYesterdayWalletExists();
@@ -72,8 +77,7 @@ connectDB().then(async () => {
         // miningBot(ably);
         // rocketBot(ably);
         // fishingBot(ably);
-        // startGravityGameLoop(ably);
-        // startCloudSpreadGameLoop(ably);
+        startGravityGameLoop(ably);
         // cocoBot(ably);
         // doveBot(ably);
         // fundMergeEngine();

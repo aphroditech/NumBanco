@@ -411,7 +411,6 @@ export default function GravityPage() {
               <Grid templateColumns="1fr auto 1fr" alignItems="center" mb="8px" px={{ base: "2px", md: "6px" }}>
                 <VStack spacing="0" gridColumn="1 / -1" w="100%">
                   <HStack spacing="12px" align="center" w="100%" justifyContent="center">
-                    <Text color="#61d879" fontSize={{ base: "34px", md: "48px" }} lineHeight="1" fontWeight="800">{upRate.toFixed(0)}%</Text>
                     <Box borderRadius="999px" overflow="hidden">
                       <CircularProgress
                         value={timelineCharge}
@@ -433,7 +432,6 @@ export default function GravityPage() {
                         </CircularProgressLabel>
                       </CircularProgress>
                     </Box>
-                    <Text color="#ff6b6b" fontSize={{ base: "34px", md: "48px" }} lineHeight="1" fontWeight="800">{downRate.toFixed(0)}%</Text>
                   </HStack>
                 </VStack>
 
@@ -444,14 +442,10 @@ export default function GravityPage() {
                 borderRadius="16px"
                 overflow="hidden"
                 border="1px solid rgba(0,255,150,0.2)"
-                bg="radial-gradient(circle at 50% 0%, rgba(0,255,150,0.25), transparent 55%), 
-                radial-gradient(circle at 50% 100%, rgba(255,80,80,0.15), transparent 60%), 
-                #05070a"
-                boxShadow="0 0 80px rgba(0,255,150,0.15), inset 0 0 60px rgba(0,0,0,0.9)"
                 position="relative"
               >
                 <Box position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center">
-                  <Box w="96%" h="100%">
+                  <Box w="100%" h="100%">
                     <GravityCanvasChart
                       chartDataDisplay={chartData}
                       previousGraphData={[]}
@@ -463,7 +457,7 @@ export default function GravityPage() {
                       tradingStartSec={10}
                       roundStartAtMs={state?.roundStartAtMs}
                       roundId={state?.roundId}
-                      height={350}
+                      height={400}
                     />
                   </Box>
                 </Box>
