@@ -356,7 +356,7 @@ export default function CocoPage() {
 
     const handleSmash = async () => {
         if (!gameSessionActive) {
-            toast.info("Press Play game to start");
+            toast.info("Press Play to start");
             return;
         }
 
@@ -599,6 +599,33 @@ export default function CocoPage() {
             setStopLoading(false);
         }
     };
+
+    const handlePlayOrStopClick = () => {
+        if (gameSessionActive) {
+            handleStopGame();
+        } else {
+            handlePlayGame();
+        }
+    };
+
+    /** Single Play ↔ Stop control: disabled rules depend on current mode */
+    const playStopDisabled = gameSessionActive
+        ? Boolean(
+              loading ||
+                  playLoading ||
+                  stopLoading ||
+                  startGameFogOn ||
+                  restartCoverOn ||
+                  isBigMultiFinale
+          )
+        : Boolean(
+              playLoading ||
+                  loading ||
+                  stopLoading ||
+                  startGameFogOn ||
+                  restartCoverOn
+          );
+
     return (
         <Box minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
             {/* Same inset + grid behavior as Rocket Shot (game | realView) */}
@@ -766,19 +793,6 @@ export default function CocoPage() {
                                                     'linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.65))',
                                             }}
                                         />
-                                        {/* <div
-                                            aria-hidden="true"
-                                            style={{
-                                                position: 'relative',
-                                                color: '#FFD700',
-                                                fontWeight: 'bold',
-                                                fontSize: 18,
-                                                letterSpacing: 0.5,
-                                                textAlign: 'center',
-                                            }}
-                                        >
-                                            New game...
-                                        </div> */}
                                     </Box>
                                     {/* SKY IMAGE (crossfade to sky1 when chicken lands on big multi) */}
                                     <div style={{ position: 'relative', width: '100%' }}>
@@ -1328,147 +1342,94 @@ export default function CocoPage() {
                                             flexWrap="wrap"
                                             justifyContent="center"
                                         >
+                                            {/* Toggles: Play game (green) ↔ Stop (red) */}
                                             <button
                                                 type="button"
-                                                aria-label="Play game"
-                                                onClick={handlePlayGame}
-                                                disabled={
-                                                    gameSessionActive ||
-                                                    playLoading ||
-                                                    loading ||
-                                                    stopLoading ||
-                                                    startGameFogOn ||
-                                                    restartCoverOn
+                                                aria-label={
+                                                    gameSessionActive
+                                                        ? 'Stop game'
+                                                        : 'Play game'
                                                 }
+                                                onClick={handlePlayOrStopClick}
+                                                disabled={playStopDisabled}
                                                 style={{
-                                                    minWidth: 100,
+                                                    minWidth: 110,
                                                     whiteSpace: 'nowrap',
                                                     padding: '8px 14px',
                                                     fontSize: 14,
                                                     fontWeight: 'bold',
                                                     color: '#fff',
+                                                    background: playStopDisabled
+                                                        ? '#9ca3af'
+                                                        : gameSessionActive
+                                                          ? '#e53935'
+                                                          : '#16a34a',
+                                                    border:
+                                                        playStopDisabled && gameSessionActive
+                                                            ? '2px solid #000'
+                                                            : gameSessionActive
+                                                              ? '2px solid #7f1d1d'
+                                                              : '2px solid #000',
+                                                    borderRadius: 10,
+                                                    cursor: playStopDisabled
+                                                        ? 'not-allowed'
+                                                        : 'pointer',
+                                                    boxShadow: '2px 2px 0 #000',
+                                                }}
+                                            >
+                                                {playLoading || stopLoading
+                                                    ? '...'
+                                                    : gameSessionActive
+                                                      ? 'Stop'
+                                                      : 'Play game'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-label="Smash"
+                                                onClick={handleSmash}
+                                                disabled={
+                                                    !gameSessionActive ||
+                                                    loading ||
+                                                    playLoading ||
+                                                    stopLoading ||
+                                                    startGameFogOn ||
+                                                    restartCoverOn ||
+                                                    isBigMultiFinale
+                                                }
+                                                style={{
+                                                    minWidth: 90,
+                                                    whiteSpace: 'nowrap',
+                                                    padding: '8px 16px',
+                                                    fontSize: 14,
+                                                    fontWeight: 'bold',
+                                                    color: '#000',
                                                     background:
-                                                        gameSessionActive ||
-                                                        playLoading ||
+                                                        !gameSessionActive ||
                                                         loading ||
+                                                        playLoading ||
                                                         stopLoading ||
                                                         startGameFogOn ||
-                                                        restartCoverOn
-                                                            ? '#9ca3af'
-                                                            : '#16a34a',
+                                                        restartCoverOn ||
+                                                        isBigMultiFinale
+                                                            ? '#ccc'
+                                                            : '#FFD700',
                                                     border: '2px solid #000',
                                                     borderRadius: 10,
                                                     cursor:
-                                                        gameSessionActive ||
-                                                        playLoading ||
+                                                        !gameSessionActive ||
                                                         loading ||
+                                                        playLoading ||
                                                         stopLoading ||
                                                         startGameFogOn ||
-                                                        restartCoverOn
+                                                        restartCoverOn ||
+                                                        isBigMultiFinale
                                                             ? 'not-allowed'
                                                             : 'pointer',
                                                     boxShadow: '2px 2px 0 #000',
                                                 }}
                                             >
-                                                {playLoading ? '...' : 'Play game'}
+                                                {loading ? '...' : 'SMASH'}
                                             </button>
-                                            {/* SMASH + Stop side by side (red Stop next to gold SMASH) */}
-                                            <Flex align="center" gap={2} flexWrap="nowrap">
-                                                <button
-                                                    type="button"
-                                                    aria-label="Smash"
-                                                    onClick={handleSmash}
-                                                    disabled={
-                                                        !gameSessionActive ||
-                                                        loading ||
-                                                        playLoading ||
-                                                        stopLoading ||
-                                                        startGameFogOn ||
-                                                        restartCoverOn ||
-                                                        isBigMultiFinale
-                                                    }
-                                                    style={{
-                                                        minWidth: 90,
-                                                        whiteSpace: 'nowrap',
-                                                        padding: '8px 16px',
-                                                        fontSize: 14,
-                                                        fontWeight: 'bold',
-                                                        color: '#000',
-                                                        background:
-                                                            !gameSessionActive ||
-                                                            loading ||
-                                                            playLoading ||
-                                                            stopLoading ||
-                                                            startGameFogOn ||
-                                                            restartCoverOn ||
-                                                            isBigMultiFinale
-                                                                ? '#ccc'
-                                                                : '#FFD700',
-                                                        border: '2px solid #000',
-                                                        borderRadius: 10,
-                                                        cursor:
-                                                            !gameSessionActive ||
-                                                            loading ||
-                                                            playLoading ||
-                                                            stopLoading ||
-                                                            startGameFogOn ||
-                                                            restartCoverOn ||
-                                                            isBigMultiFinale
-                                                                ? 'not-allowed'
-                                                                : 'pointer',
-                                                        boxShadow: '2px 2px 0 #000',
-                                                    }}
-                                                >
-                                                    {loading ? '...' : 'SMASH'}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    aria-label="Stop game"
-                                                    onClick={handleStopGame}
-                                                    disabled={
-                                                        !gameSessionActive ||
-                                                        loading ||
-                                                        playLoading ||
-                                                        stopLoading ||
-                                                        startGameFogOn ||
-                                                        restartCoverOn ||
-                                                        isBigMultiFinale
-                                                    }
-                                                    style={{
-                                                        minWidth: 86,
-                                                        whiteSpace: 'nowrap',
-                                                        padding: '8px 14px',
-                                                        fontSize: 14,
-                                                        fontWeight: 'bold',
-                                                        color: '#fff',
-                                                        background:
-                                                            !gameSessionActive ||
-                                                            loading ||
-                                                            playLoading ||
-                                                            stopLoading ||
-                                                            startGameFogOn ||
-                                                            restartCoverOn ||
-                                                            isBigMultiFinale
-                                                                ? '#9ca3af'
-                                                                : '#e53935',
-                                                        border: '2px solid #7f1d1d',
-                                                        borderRadius: 10,
-                                                        cursor:
-                                                            !gameSessionActive ||
-                                                            loading ||
-                                                            playLoading ||
-                                                            stopLoading ||
-                                                            startGameFogOn ||
-                                                            restartCoverOn ||
-                                                            isBigMultiFinale
-                                                                ? 'not-allowed'
-                                                                : 'pointer',
-                                                        boxShadow: '2px 2px 0 #000',
-                                                    }}
-                                                >
-                                                    {stopLoading ? '...' : 'Stop'}
-                                                </button>
-                                            </Flex>
                                         </Flex>
 
                                         {/* <button

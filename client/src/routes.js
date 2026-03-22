@@ -47,14 +47,14 @@ import FishingPage from "views/Fishing/FishingPage";
 import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
 import MinesPage from "views/Mines/MinesPage";
-
+import AlphaTreePage from "views/AlphaTree/AlphaTree";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
 import Coco from "views/Coco/CocoPage";
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import AToZPage from "views/AToZ/AToZ";
-
+import ForestIcon from '@mui/icons-material/Forest';
 
 import {
   DocumentIcon,
@@ -171,6 +171,14 @@ var dashRoutes = [
     name: "ROCKET SHOT",
     icon: <RocketLaunchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: RocketShotPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/alpha-tree",
+    name: "ALPHA TREE",
+    icon: <ForestIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: AlphaTreePage,
     layout: "/game",
   },
   {
