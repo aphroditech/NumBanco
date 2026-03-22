@@ -50,6 +50,7 @@ export const bet = async (req, res) => {
             multiplier *= 1200;
             multiplier /= 1000;  
         }
+        console.log("multiplier", multiplier, "level", level);
         return res.json({ balance: user.balance, multiplier: multiplier });
 
     } catch (error) {

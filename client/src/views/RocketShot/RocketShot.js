@@ -35,10 +35,35 @@ const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 /** Match Dove Cross step increments for +/- controls */
 const AMOUNT_STEP = 0.5;
+/** Minimum time between bets (Fire stays disabled after a successful click). */
+const FIRE_COOLDOWN_MS = 860;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
 
-async function fireJavelinWhenReady(maxFrames = 40) {
-    for (let i = 0; i < maxFrames; i += 1) {
+/** One “tick” of wait — MUST resolve even if rAF is paused (background tab) or never fires. */
+function waitNextFrameOrTimeout(ms = 48) {
+    return Promise.race([
+        new Promise((resolve) => {
+            if (typeof requestAnimationFrame !== 'undefined') {
+                requestAnimationFrame(() => resolve());
+            } else {
+                setTimeout(resolve, 16);
+            }
+        }),
+        new Promise((resolve) => setTimeout(resolve, ms)),
+    ]);
+}
+
+/**
+ * Retry until Phaser starts a shot or we time out.
+ * Never block only on rAF — that can hang forever when the tab is throttled.
+ */
+async function fireJavelinWhenReady(maxMs = 3500) {
+    const now = () =>
+        typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+    const start = now();
+    while (true) {
+        const elapsed = now() - start;
+        if (elapsed > maxMs) break;
         if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
             try {
                 if (window.fireJavelin() === true) return true;
@@ -46,7 +71,7 @@ async function fireJavelinWhenReady(maxFrames = 40) {
                 console.error(e);
             }
         }
-        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await waitNextFrameOrTimeout(48);
     }
     return false;
 }
@@ -65,6 +90,10 @@ export default function RocketShotPage() {
     const [isFiring, setIsFiring] = useState(false);
     /** True while /rocket/bet request is in flight — prevents double-submit without relying on isFiring alone. */
     const [isBetPending, setIsBetPending] = useState(false);
+    /** True for FIRE_COOLDOWN_MS after each accepted Fire / canvas bet (rate limit). */
+    const [isFireCooldown, setIsFireCooldown] = useState(false);
+    const fireCooldownUntilRef = useRef(0);
+    const fireCooldownTimerRef = useRef(null);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [mode, setMode] = useState("easy");
     /** "flat" = flat win display, "multiplier" = multiplier display (UI; extend payout logic if needed) */
@@ -82,11 +111,38 @@ export default function RocketShotPage() {
             window.__rocketPendingBetAmount = null;
         }
     }, []);
+
+    const beginFireCooldown = useCallback(() => {
+        fireCooldownUntilRef.current = Date.now() + FIRE_COOLDOWN_MS;
+        setIsFireCooldown(true);
+        if (fireCooldownTimerRef.current) {
+            window.clearTimeout(fireCooldownTimerRef.current);
+        }
+        fireCooldownTimerRef.current = window.setTimeout(() => {
+            fireCooldownUntilRef.current = 0;
+            setIsFireCooldown(false);
+            fireCooldownTimerRef.current = null;
+        }, FIRE_COOLDOWN_MS);
+    }, []);
+
+    useEffect(
+        () => () => {
+            if (fireCooldownTimerRef.current) {
+                window.clearTimeout(fireCooldownTimerRef.current);
+                fireCooldownTimerRef.current = null;
+            }
+        },
+        [],
+    );
     
     const user = useSelector((state) => state.user.userInfo) || {};
     const rocketMultiplier = useSelector((state) => state.rocket?.multiplier ?? 0);
     const walletBalance = user.balance;
-    const maxAmount = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalance));
+    const walletBalanceNum = Number(walletBalance);
+    const hasKnownBalance = Number.isFinite(walletBalanceNum) && walletBalanceNum >= 0;
+    const maxAmount = hasKnownBalance
+        ? Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalanceNum))
+        : MAX_AMOUNT;
     const [isNarrowLayout] = useMediaQuery("(max-width: 1799px)");
 
     const handleAmountChange = (e) => {
@@ -98,7 +154,9 @@ export default function RocketShotPage() {
     };
 
     const handleRocketBet = async (amount, mode, selectedWinMode) => {
+        if (Date.now() < fireCooldownUntilRef.current) return;
         if (firingLockRef.current) return;
+        beginFireCooldown();
         firingLockRef.current = true;
         setIsBetPending(true);
         // Do NOT set isFiring until bet succeeds — avoids UI stuck "firing" during slow/failed API.
@@ -114,19 +172,22 @@ export default function RocketShotPage() {
                 level: mode,
             };
             const multiplier = await rocketBet(data, dispatch, history);
-            setIsBetPending(false);
-            // Store multiplier for the current shot.
+            // Store multiplier for the current shot (Phaser reads it inside `fire()`).
             if (typeof window !== 'undefined') {
                 window.__rocketPendingMultiplier = multiplier;
             }
+            // Keep isBetPending true until Phaser actually accepts the shot — prevents double-submit
+            // and avoids isFiring=true when nothing launched (old bug: setIsFiring before fire()).
             if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
-                setIsFiring(true);
                 const fired = await fireJavelinWhenReady();
-                // If Phaser didn't start a shot, unlock immediately (avoids Fire stuck disabled).
-                if (!fired) {
+                setIsBetPending(false);
+                if (fired) {
+                    setIsFiring(true);
+                } else {
                     unlockShooting();
                 }
             } else {
+                setIsBetPending(false);
                 unlockShooting();
             }
         } catch (error) {
@@ -167,11 +228,12 @@ export default function RocketShotPage() {
         if (typeof window === "undefined") return;
 
         const tryFireFromCanvas = () => {
+            if (Date.now() < fireCooldownUntilRef.current) return;
             if (firingLockRef.current) return;
             const bet = parseFloat(amount);
             if (Number.isNaN(bet) || bet < MIN_AMOUNT) return;
             if (bet > maxAmount) return;
-            if (walletBalance < bet) return;
+            if (hasKnownBalance && bet > walletBalanceNum) return;
             handleRocketBet(bet, mode, winMode);
         };
 
@@ -179,7 +241,7 @@ export default function RocketShotPage() {
         return () => {
             if (window.onRocketShotBet === tryFireFromCanvas) window.onRocketShotBet = undefined;
         };
-    }, [amount, mode, winMode, maxAmount, walletBalance]);
+    }, [amount, mode, winMode, maxAmount, hasKnownBalance, walletBalanceNum, beginFireCooldown]);
 
     // Miss handler: always clear firing lock (onJavelinShotEnd runs first in GameScene, but this is idempotent).
     useEffect(() => {
@@ -470,11 +532,12 @@ export default function RocketShotPage() {
                                         }}
                                         _active={{ transform: 'translateY(0)' }}
                                         isDisabled={
+                                            isFireCooldown ||
                                             isFiring ||
                                             isBetPending ||
                                             amount < MIN_AMOUNT ||
                                             amount > maxAmount ||
-                                            amount > walletBalance
+                                            (hasKnownBalance && amount > walletBalanceNum)
                                         }
                                         title={
                                             amount < MIN_AMOUNT
