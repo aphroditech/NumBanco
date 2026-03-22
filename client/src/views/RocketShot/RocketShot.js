@@ -140,14 +140,14 @@ export default function RocketShotPage() {
     }, []);
 
     // If Phaser never calls onJavelinShotEnd (edge case), unlock so the user can play again.
-    // useEffect(() => {
-    //     if (!isFiring) return;
-    //     const failSafe = window.setTimeout(() => {
-    //         firingLockRef.current = false;
-    //         setIsFiring(false);
-    //     }, 45000);
-    //     return () => window.clearTimeout(failSafe);
-    // }, [isFiring]);
+    useEffect(() => {
+        if (!isFiring) return;
+        const failSafe = window.setTimeout(() => {
+            firingLockRef.current = false;
+            setIsFiring(false);
+        }, 45000);
+        return () => window.clearTimeout(failSafe);
+    }, [isFiring]);
 
     // Unlock the Fire button only when the current rocket shot is fully done
     // (hit or miss). This prevents overwriting the pending multiplier.

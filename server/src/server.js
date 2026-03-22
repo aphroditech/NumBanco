@@ -73,7 +73,7 @@ connectDB().then(async () => {
         // fishingBot(ably);
         // startGravityGameLoop(ably);
         // cocoBot(ably);
-        doveBot(ably);
+        // doveBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();
         // getWithdrawWallet();
