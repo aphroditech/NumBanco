@@ -19,6 +19,8 @@ import { useSelector } from 'react-redux';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 
+import RealTimeHistory from './AToZItems/RealTimeHistory';
+
 /** Match Rocket Shot bet range and step */
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
@@ -34,8 +36,6 @@ export default function AToZPage() {
 
     const [amount, setAmount] = useState(MIN_AMOUNT);
     const [isSpinning, setIsSpinning] = useState(false);
-    const [lastResult, setLastResult] = useState(null);
-    const [historyRows, setHistoryRows] = useState([]);
 
     const handleAmountChange = (e) => {
         const raw = e.target.value;
@@ -56,8 +56,8 @@ export default function AToZPage() {
     useEffect(() => {
         window.onAToZSpinComplete = (result) => {
             setIsSpinning(false);
-            setLastResult(result);
-            setHistoryRows((prev) => [result, ...prev].slice(0, 20));
+            console.log("result", result);
+            // `result`: { betAmount, word, letters } — send to your API for odds / payout.
         };
 
         return () => {
@@ -233,7 +233,7 @@ export default function AToZPage() {
 
                                     <HStack spacing="10px" align="center" flexWrap="wrap" justify="center" w="100%">
                                         <Button
-                                            h="36px"
+                                            h="56px"
                                             w="100%"
                                             maxW="300px"
                                             fontSize="md"
@@ -259,7 +259,7 @@ export default function AToZPage() {
                                             }
                                             onClick={handleSpin}
                                         >
-                                            {isSpinning ? 'Spinning...' : 'Bet / Spin'}
+                                            {isSpinning ? 'Spinning...' : 'BET'}
                                         </Button>
                                     </HStack>
                                 </VStack>
@@ -269,45 +269,7 @@ export default function AToZPage() {
                 </GridItem>
 
                 {/* History Area */}
-                <GridItem area="side">
-                    <Card minH={{ base: '320px', md: '640px' }} h="100%">
-                        <CardHeader pb="8px">
-                            <Text color="#fff" fontWeight="700" fontSize="md">History</Text>
-                        </CardHeader>
-                        <CardBody pt="0" maxH={{ base: '320px', md: '580px' }} overflowY="auto">
-                            <VStack align="stretch" spacing="8px">
-                                {historyRows.length === 0 && (
-                                    <Text color="whiteAlpha.600" fontSize="sm">
-                                        No rounds yet.
-                                    </Text>
-                                )}
-                                {historyRows.map((row, i) => (
-                                    <Box
-                                        key={`${row.word}-${i}`}
-                                        p="8px"
-                                        borderRadius="8px"
-                                        bg="rgba(255,255,255,0.05)"
-                                        border="1px solid rgba(255,255,255,0.08)"
-                                    >
-                                        <HStack justify="space-between">
-                                            <Text color="#fff" fontWeight="700" fontSize="sm">{row.word}</Text>
-                                            <Text
-                                                fontSize="xs"
-                                                fontWeight="700"
-                                                color={row.isWin ? '#23F6A7' : '#FF6A7E'}
-                                            >
-                                                {row.isWin ? `WIN x${row.multiplier}` : 'LOSE'}
-                                            </Text>
-                                        </HStack>
-                                        <Text color="whiteAlpha.700" fontSize="xs" mt="2px">
-                                            Bet: ${Number(row.betAmount || 0).toFixed(2)} | Win: ${Number(row.winAmount || 0).toFixed(2)}
-                                        </Text>
-                                    </Box>
-                                ))}
-                            </VStack>
-                        </CardBody>
-                    </Card>
-                </GridItem>
+                <RealTimeHistory />
             </Grid>
         </Box>
     );
