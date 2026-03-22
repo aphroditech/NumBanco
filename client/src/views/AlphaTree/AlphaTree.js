@@ -49,6 +49,7 @@ import {
     alphaTreeCashOut,
     getAlphaTreeState,
 } from "action/AlphaTreeActions";
+import { onlineUser, offlineUser } from "action/BetActions";
 import { allowedLettersForStep } from "constants/alphaTreeSteps";
 import AlphaTreeRealView from "./AlphaTreeItem/AlphaTreeView";
 import BetHistory from "./AlphaTreeItem/BetHistory";
@@ -64,6 +65,7 @@ function alphaTreeMaxForRandomStep(step) {
 }
 
 export default function AlphaTreePage() {
+
     const dispatch = useDispatch();
     const history = useHistory();
     const [amount, setAmount] = useState("0.1");
@@ -85,7 +87,12 @@ export default function AlphaTreePage() {
     useEffect(() => {
         amountRef.current = amount;
     }, [amount]);
-
+    useEffect(() => {
+        onlineUser(13);
+        return () => {
+            offlineUser(13);
+        };
+    }, []);
 
     const handleAmountChange = (e) => {
         const value = e.target.value;
