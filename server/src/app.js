@@ -29,6 +29,7 @@ import cocoRoutes from "./routes/cocoRoutes.js";
 import fishingRoutes from "./routes/fishingRoutes.js";
 import minesRoutes from "./routes/minesRoutes.js";
 import gravityRoutes from "./routes/gravityRoutes.js";
+import cloudSpreadRoutes from "./routes/cloudSpreadRoutes.js";
 import moralisWebhook from "./webhooks/moralisWebhook.js";
 dotenv.config();
 
@@ -73,6 +74,7 @@ app.use("/api/coco", cocoRoutes);
 app.use("/api/fishing", fishingRoutes);
 app.use("/api/mines", minesRoutes);
 app.use("/api/gravity", gravityRoutes);
+app.use("/api/cloud-spread", cloudSpreadRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },

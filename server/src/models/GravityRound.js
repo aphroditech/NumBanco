@@ -8,6 +8,19 @@ const gravityPointSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const gravityBetSchema = new mongoose.Schema(
+  {
+    betId: { type: String, required: true },
+    userId: { type: String, required: true },
+    userName: { type: String, required: true },
+    avatar: { type: String, default: "" },
+    direction: { type: String, enum: ["up", "down"], required: true },
+    betAmount: { type: Number, required: true },
+    isBot: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
 const GravityRoundSchema = new mongoose.Schema({
   roundId: { type: Number, required: true, unique: true, index: true },
   phase: {
@@ -22,6 +35,7 @@ const GravityRoundSchema = new mongoose.Schema({
   endValue: { type: Number },
   result: { type: String, enum: ["up", "down"] },
   graphPoints: { type: [gravityPointSchema], default: [] },
+  users: { type: [gravityBetSchema], default: [] },
   upTotalBet: { type: Number, default: 0 },
   downTotalBet: { type: Number, default: 0 },
 });

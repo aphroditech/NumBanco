@@ -15,6 +15,7 @@ import RubicPage from "views/Rubic/RubicPage";
 import PumpingPage from "views/Pumping/PumpingPage";
 import FishingPage from "views/Fishing/FishingPage";
 import GravityPage from "views/Gravity/GravityPage";
+import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
@@ -28,6 +29,8 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
+import CloudQueueIcon from "@mui/icons-material/CloudQueue";
+
 
 export const TierA = {
     path: "/tierA",
@@ -126,6 +129,14 @@ export const Gravity = {
     name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: GravityPage,
+    layout: "/game",
+}
+
+export const CloudSpread = {
+    path: "/cloud-spread",
+    name: "CLOUD SPREAD",
+    icon: <CloudQueueIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CloudSpreadPage,
     layout: "/game",
 }
 

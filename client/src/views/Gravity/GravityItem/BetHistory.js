@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Box, Button, Flex, HStack, Select, Table, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -14,12 +14,6 @@ export default function GravityBetHistory({ results = [] }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const formatMoney = (val) => {
-    const n = Number(val || 0);
-    const abs = Math.abs(n).toFixed(2);
-    return n < 0 ? `-$${abs}` : `$${abs}`;
-  };
-
   const reversedResults = useMemo(() => [...results].reverse(), [results]);
   const totalPages = useMemo(
     () => Math.ceil(reversedResults.length / itemsPerPage),
@@ -30,6 +24,19 @@ export default function GravityBetHistory({ results = [] }) {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return reversedResults.slice(startIndex, startIndex + itemsPerPage);
   }, [reversedResults, currentPage, itemsPerPage]);
+
+  // When results/itemsPerPage change (ex: refresh), ensure currentPage is valid.
+  useEffect(() => {
+    setCurrentPage((p) => {
+      if (p > totalPages) return totalPages || 1;
+      return p;
+    });
+  }, [totalPages]);
+
+  useEffect(() => {
+    // Jump back to the first page whenever we receive a new results list.
+    setCurrentPage(1);
+  }, [results]);
 
   return (
     <Box mt="24px" w="100%">
@@ -119,12 +126,12 @@ export default function GravityBetHistory({ results = [] }) {
                         <Td border={lastItem ? "none" : null} borderBottomColor="#56577A" color={result.direction === "up" ? "#68d391" : "#f56565"}>
                           {(result.direction || "-").toUpperCase()}
                         </Td>
-                        <Td border={lastItem ? "none" : null} borderBottomColor="#56577A">{formatMoney(result.betAmount || 0)}</Td>
+                        <Td border={lastItem ? "none" : null} borderBottomColor="#56577A">$ {Number(result.betAmount || 0).toFixed(2)}</Td>
                         <Td border={lastItem ? "none" : null} borderBottomColor="#56577A" color={Number(result.winAmount || 0) > 0 ? "#68d391" : "#f56565"}>
-                          {formatMoney(result.winAmount || 0)}
+                          $ {Number(result.winAmount || 0).toFixed(2)}
                         </Td>
                         <Td border={lastItem ? "none" : null} borderBottomColor="#56577A" color={profit > 0 ? "#68d391" : "#f56565"}>
-                          {formatMoney(profit)}
+                          $ {profit.toFixed(2)}
                         </Td>
                         <Td border={lastItem ? "none" : null} borderBottomColor="#56577A" color="rgba(255,255,255,0.7)">
                           {new Date(result.createdAt).toLocaleDateString()}, {new Date(result.createdAt).toLocaleTimeString()}
@@ -179,6 +186,7 @@ export default function GravityBetHistory({ results = [] }) {
                       <option value={5}>5</option>
                       <option value={10}>10</option>
                       <option value={20}>20</option>
+                      <option value={50}>50</option>
                     </Select>
                   </GradientBorder>
                 </Flex>
