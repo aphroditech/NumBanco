@@ -7,8 +7,10 @@ import CalendarRocket from "../models/CalendarRocket.js";
 export const bet = async (req, res) => {
     try {
         const { bet, level } = req.body;
-        const user = await User.findById(req.user._id);
-        const rocketSettings = await RocketSettings.findOne();
+        const [user, rocketSettings] = await Promise.all([
+            User.findById(req.user._id),
+            RocketSettings.findOne()
+        ]);
         if (!rocketSettings) {
             return res.status(404).json({ error: "Rocket settings not found" });
         }
@@ -16,16 +18,18 @@ export const bet = async (req, res) => {
         if(bet > user.balance ) {
             return res.status(400).json({message: "You don't have engough money to fire."})
         }
+        const normalToHard = await checkNormalToHard(user.rocketAmount, user.rocketWinAmount, rocketSettings.limitNormalToHard);
+        const hardToNormal = await checkHardToNormal(user.rocketAmount, user.rocketWinAmount, rocketSettings.limitHardToNormal);
         // mode check and change
-        if(user.rocketMode === 0 && await checkNormalToHard(user.rocketAmount, user.rocketWinAmount)) {
+        if(user.rocketMode === 0 && normalToHard) {
             user.rocketMode = 1;
-        } else if(user.rocketMode === 1 && await checkHardToNormal(user.rocketAmount, user.rocketWinAmount)) {
+        } else if(user.rocketMode === 1 && hardToNormal) {
             user.rocketMode = 0;
         }
         await user.save();
 
         // get multiplier via mode
-        let multiplier = await getMultiplier(user.rocketMode);
+        let multiplier = await getMultiplier(user.rocketMode, rocketSettings.normalMultiple, rocketSettings.hardMultiple);
         
         // add neccesary fields to user
         user.balance -= bet;
@@ -46,6 +50,7 @@ export const bet = async (req, res) => {
             multiplier *= 1200;
             multiplier /= 1000;  
         }
+        console.log("multiplier", multiplier, "level", level);
         return res.json({ balance: user.balance, multiplier: multiplier });
 
     } catch (error) {
@@ -54,11 +59,9 @@ export const bet = async (req, res) => {
     }
 };
 
-async function getMultiplier(mode) {
+async function getMultiplier(mode, normalMultiple, hardMultiple) {
 
-    const settings = await RocketSettings.findOne({});
-
-    const multipliers = mode === 0 ? settings.normalMultiple : settings.hardMultiple;
+    const multipliers = mode === 0 ? normalMultiple : hardMultiple;
 
     const totalWeight = multipliers.reduce((sum, m) => sum + m.probability, 0);
   
@@ -74,9 +77,7 @@ async function getMultiplier(mode) {
 }
 
 // check if the user should be in hard mode or normal mode Normal to Hard
-async function checkNormalToHard(rocketAmount, rocketWinAmount) {
-    const settings = await RocketSettings.findOne({});
-    const limitNormalToHard = settings.limitNormalToHard;
+async function checkNormalToHard(rocketAmount, rocketWinAmount, limitNormalToHard) {
     if(rocketWinAmount > rocketAmount * limitNormalToHard) {
         return true;
     }
@@ -84,14 +85,13 @@ async function checkNormalToHard(rocketAmount, rocketWinAmount) {
 }
 
 // check if the user should be in normal mode or hard mode Hard to Normal
-async function checkHardToNormal(rocketAmount, rocketWinAmount) {
-    const settings = await RocketSettings.findOne({});
-    const limitHardToNormal = settings.limitHardToNormal;
+async function checkHardToNormal(rocketAmount, rocketWinAmount, limitHardToNormal) {
     if(rocketWinAmount < rocketAmount * limitHardToNormal) {
         return true;
     }
     return false;
 }
+
 // identify win or lose
 export const shotResult = async (req, res) => {
     try {

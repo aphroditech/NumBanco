@@ -3,6 +3,8 @@ import { useDispatch } from "react-redux";
 import { getClickData } from "action/LotteryActions";
 
 export default function useDailyLootTimer(user) {
+    console.log("Daily Loot Timer Started");
+
     const dispatch = useDispatch();
     const timerRef = useRef(null);
     const userRef = useRef(user);
@@ -100,5 +102,5 @@ export default function useDailyLootTimer(user) {
                 timerRef.current = null;
             }
         };
-    }, [dispatch]);
+    }, [user,dispatch]);
 }

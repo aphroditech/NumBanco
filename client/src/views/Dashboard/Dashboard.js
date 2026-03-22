@@ -12,18 +12,10 @@ import TopBestWinner from './DashboardItem/TopBestWinner';
 import VerticalSlider from '../../components/Slider/VerticalSlider';
 import SalesChart from './DashboardItem/GraphAndTable';
 import { Box } from "@chakra-ui/react";
-import { getActiveUsers } from 'action';
-import { useDispatch } from 'react-redux';
 export default function Dashboard() {
 
-    const dispatch = useDispatch();
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1920);
-    // useEffect(() => {
-    //     const fetchActiveUsers = async () => {
-    //         await getActiveUsers(dispatch);
-    //     };
-    //     fetchActiveUsers();
-    // }, [dispatch]);
+
     useEffect(() => {
         const handleResize = () => {
             setWindowWidth(window.innerWidth);

@@ -73,7 +73,7 @@ function CocoRealViewRow(props) {
         h="16px"
         border="none"
         >
-        <Flex justify="flex-start" align="center" w="100%" h="100%">
+        <Flex justify="center" align="center" w="100%" h="100%">
             <HStack spacing="8px">
             {avatar ? (
                 <Box

@@ -20,6 +20,7 @@ import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
 import AToZPage from "views/AToZ/AToZ";
+import AlphaTreePage from "views/AlphaTree/AlphaTree";
 
 // Load Icons
 import { GiChicken, GiFishingHook } from "react-icons/gi";
@@ -30,6 +31,7 @@ import TwitterIcon from '@mui/icons-material/Twitter';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
+import ForestIcon from '@mui/icons-material/Forest';
 
 
 export const TierA = {
@@ -161,5 +163,13 @@ export const AToZGame = {
     name: "A TO Z",
     icon: <SortByAlphaIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
+    layout: "/game",
+}
+
+export const AlphaTreeGame = {
+    path: "/alpha-tree",
+    name: "ALPHA TREE",
+    icon: <ForestIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: AlphaTreePage,
     layout: "/game",
 }

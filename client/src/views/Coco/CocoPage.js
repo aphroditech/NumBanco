@@ -76,6 +76,8 @@ const CLOUD_SLOTS = [
 const COCO_SCENE_DESIGN_WIDTH = 900;
 /** Fallback height until sky.png reports natural dimensions */
 const COCO_SCENE_DEFAULT_HEIGHT = 506;
+/** Minimum time the "Starting game…" fog stays visible after Play */
+const START_GAME_FOG_MIN_MS = 900;
 
 function positiveMod(n, m) {
     return ((n % m) + m) % m;
@@ -183,6 +185,12 @@ export default function CocoPage() {
     const [latestMulti, setLatestMulti] = useState('0.00');
     const [latestCombo, setLatestCombo] = useState('0');
     const [loading, setLoading] = useState(false);
+    /** Until true, SMASH is disabled — user must press Play game first (resets each visit). */
+    const [gameSessionActive, setGameSessionActive] = useState(false);
+    /** Fog overlay while starting a round (after Play, before SMASH unlocks). */
+    const [startGameFogOn, setStartGameFogOn] = useState(false);
+    const [playLoading, setPlayLoading] = useState(false);
+    const [stopLoading, setStopLoading] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     /** Same as Rocket Shot: stacked below 1800px, side‑by‑side at 1800px+ */
     const [isNarrowLayout] = useMediaQuery('(max-width: 1799px)');
@@ -239,6 +247,17 @@ export default function CocoPage() {
         animState === "finalDown" ||
         animState === "finalStand" ||
         animState === "showMulti";
+    /** Big-multi finale: no SMASH until round ends and Play is used again. */
+    const isBigMultiFinale =
+        animState === "finalDown" ||
+        animState === "finalStand" ||
+        animState === "showMulti";
+    const amountLocked =
+        gameSessionActive ||
+        playLoading ||
+        stopLoading ||
+        startGameFogOn ||
+        restartCoverOn;
     const user = useSelector((state) => state.user.userInfo) || {};
     const cocoHistory = Array.isArray(user?.cocoHistory) ? user.cocoHistory : [];
     const balance = Number(user?.balance ?? 0);
@@ -280,7 +299,67 @@ export default function CocoPage() {
         return () => clearInterval(id);
     
     }, [animState]);
+
+    const resetLocalCocoScene = () => {
+        setAnimState("idle");
+        setEggs(Array(EGG_TOWER_COUNT).fill("normal"));
+        eggKeySeqRef.current = EGG_TOWER_COUNT;
+        setEggRowKeys(Array.from({ length: EGG_TOWER_COUNT }, (_, i) => i));
+        setTowerOffset(0);
+        setSceneRisePx(0);
+        prevSceneRiseRef.current = 0;
+        setEggStackLiftPx(0);
+        setEggBottomGapPx(0);
+        setEggGapCloseInstant(false);
+        setShakeX(0);
+        setChickenBottom(CHICKEN_BOTTOM_IDLE);
+    };
+
+    const handlePlayGame = async () => {
+        if (
+            gameSessionActive ||
+            playLoading ||
+            startGameFogOn ||
+            restartCoverOn ||
+            stopLoading
+        ) {
+            return;
+        }
+        setPlayLoading(true);
+        setStartGameFogOn(true);
+        const t0 = Date.now();
+        try {
+            resetLocalCocoScene();
+            await cocoRestart(dispatch, history);
+            setLatestWin("0.00");
+            setLatestMulti("0.00");
+            setLatestCombo("0");
+            restartCalledRef.current = false;
+            const elapsed = Date.now() - t0;
+            const waitMore = Math.max(0, START_GAME_FOG_MIN_MS - elapsed);
+            if (waitMore > 0) {
+                await new Promise((r) => setTimeout(r, waitMore));
+            }
+            setGameSessionActive(true);
+            toast.success("Game started");
+        } catch (err) {
+            const msg =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                "Could not start game";
+            toast.error(msg);
+        } finally {
+            setStartGameFogOn(false);
+            setPlayLoading(false);
+        }
+    };
+
     const handleSmash = async () => {
+        if (!gameSessionActive) {
+            toast.info("Press Play to start");
+            return;
+        }
+
         const betAmount = Number(amountRef.current);
     
         if (!betAmount || betAmount <= 0) {
@@ -469,36 +548,27 @@ export default function CocoPage() {
         }
     };
 
-    const handleRestart = async () => {
+    /** End round on server, reset scene, show end fog (big-multi auto-end or Stop). */
+    const endRoundWithFog = async (successMessage) => {
         restartCalledRef.current = false;
         if (restartCoverOn) return;
 
         setRestartCoverOn(true);
+        setGameSessionActive(false);
         try {
-            // Reset local UI immediately (eggs back to start state)
-            setAnimState("idle");
-            setEggs(Array(EGG_TOWER_COUNT).fill("normal"));
-            eggKeySeqRef.current = EGG_TOWER_COUNT;
-            setEggRowKeys(Array.from({ length: EGG_TOWER_COUNT }, (_, i) => i));
-            setTowerOffset(0);
-            setSceneRisePx(0);
-            prevSceneRiseRef.current = 0;
-            setEggStackLiftPx(0);
-            setEggBottomGapPx(0);
-            setEggGapCloseInstant(false);
-            setShakeX(0);
-
+            resetLocalCocoScene();
             await cocoRestart(dispatch, history);
             setLatestWin('0.00');
             setLatestMulti('0.00');
             setLatestCombo('0');
-            setChickenBottom(CHICKEN_BOTTOM_IDLE);
-            toast.success('New game started');
+            toast.success(successMessage);
         } catch (err) {
-            const msg = err.response?.data?.error || 'Restart failed';
+            const msg =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                'Request failed';
             toast.error(msg);
         } finally {
-            // Keep the cover visible briefly even if API returns fast.
             if (restartCoverTimerRef.current) {
                 clearTimeout(restartCoverTimerRef.current);
             }
@@ -507,6 +577,55 @@ export default function CocoPage() {
             }, 650);
         }
     };
+
+    const handleRestart = async () => {
+        await endRoundWithFog('Round finished — press Play game to start again');
+    };
+
+    const handleStopGame = async () => {
+        if (
+            !gameSessionActive ||
+            restartCoverOn ||
+            startGameFogOn ||
+            playLoading ||
+            stopLoading
+        ) {
+            return;
+        }
+        setStopLoading(true);
+        try {
+            await endRoundWithFog('Game stopped — press Play game to start again');
+        } finally {
+            setStopLoading(false);
+        }
+    };
+
+    const handlePlayOrStopClick = () => {
+        if (gameSessionActive) {
+            handleStopGame();
+        } else {
+            handlePlayGame();
+        }
+    };
+
+    /** Single Play ↔ Stop control: disabled rules depend on current mode */
+    const playStopDisabled = gameSessionActive
+        ? Boolean(
+              loading ||
+                  playLoading ||
+                  stopLoading ||
+                  startGameFogOn ||
+                  restartCoverOn ||
+                  isBigMultiFinale
+          )
+        : Boolean(
+              playLoading ||
+                  loading ||
+                  stopLoading ||
+                  startGameFogOn ||
+                  restartCoverOn
+          );
+
     return (
         <Box minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
             {/* Same inset + grid behavior as Rocket Shot (game | realView) */}
@@ -559,7 +678,82 @@ export default function CocoPage() {
                                                 willChange: 'transform',
                                             }}
                                         >
-                                    {/* Restart fog cover (limited to the sky image area) */}
+                                    <style>
+                                        {`
+                                            @keyframes cocoBigMultiGlow {
+                                                0%, 100% { opacity: 0.55; transform: scale(1); }
+                                                50% { opacity: 0.95; transform: scale(1.03); }
+                                            }
+                                            @keyframes cocoBigMultiShine {
+                                                0%, 100% { opacity: 0.7; }
+                                                50% { opacity: 1; }
+                                            }
+                                            @keyframes cocoWellDoneIn {
+                                                from { opacity: 0; transform: translateY(12px) scale(0.92); }
+                                                to { opacity: 1; transform: translateY(0) scale(1); }
+                                            }
+                                        `}
+                                    </style>
+                                    {/* Start-game fog (after Play, before SMASH unlocks) */}
+                                    <Box
+                                        position="absolute"
+                                        top={0}
+                                        left={0}
+                                        w="100%"
+                                        h="100%"
+                                        zIndex={1999}
+                                        opacity={startGameFogOn ? 1 : 0}
+                                        transform={startGameFogOn ? 'scale(1)' : 'scale(0.98)'}
+                                        transition="opacity 250ms ease, transform 250ms ease"
+                                        pointerEvents={startGameFogOn ? 'auto' : 'none'}
+                                        bg="rgba(0,0,0,0.30)"
+                                        backdropFilter={startGameFogOn ? 'blur(10px)' : 'blur(0px)'}
+                                        style={{ willChange: 'opacity, transform' }}
+                                    >
+                                        <img
+                                            src={sky}
+                                            alt=""
+                                            aria-hidden="true"
+                                            style={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                                filter: 'blur(18px)',
+                                                transform: 'scale(1.05)',
+                                                opacity: 0.35,
+                                            }}
+                                        />
+                                        <div
+                                            aria-hidden="true"
+                                            style={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                background:
+                                                    'linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.65))',
+                                            }}
+                                        />
+                                        <div
+                                            aria-hidden="true"
+                                            style={{
+                                                position: 'relative',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                minHeight: 120,
+                                                color: '#FFD700',
+                                                fontWeight: 'bold',
+                                                fontSize: 18,
+                                                letterSpacing: 0.5,
+                                                textAlign: 'center',
+                                                padding: 16,
+                                            }}
+                                        >
+                                            Starting game…
+                                        </div>
+                                    </Box>
+                                    {/* End-of-round fog (after big multi — Play again, SMASH locked) */}
                                     <Box
                                         position="absolute"
                                         top={0}
@@ -599,19 +793,6 @@ export default function CocoPage() {
                                                     'linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.65))',
                                             }}
                                         />
-                                        <div
-                                            aria-hidden="true"
-                                            style={{
-                                                position: 'relative',
-                                                color: '#FFD700',
-                                                fontWeight: 'bold',
-                                                fontSize: 18,
-                                                letterSpacing: 0.5,
-                                                textAlign: 'center',
-                                            }}
-                                        >
-                                            Restarting...
-                                        </div>
                                     </Box>
                                     {/* SKY IMAGE (crossfade to sky1 when chicken lands on big multi) */}
                                     <div style={{ position: 'relative', width: '100%' }}>
@@ -945,6 +1126,107 @@ export default function CocoPage() {
                                         }}
                                     />
 
+                                    {/* Big multi: glow + multiplier while finale plays; "Well done" when chicken has landed */}
+                                    {isBigMultiFinale && (
+                                        <div
+                                            aria-live="polite"
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                height: '68%',
+                                                zIndex: 6,
+                                                pointerEvents: 'none',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'flex-start',
+                                                paddingTop: '10%',
+                                            }}
+                                        >
+                                            <div
+                                                aria-hidden
+                                                style={{
+                                                    position: 'absolute',
+                                                    inset: 0,
+                                                    background:
+                                                        'radial-gradient(ellipse 85% 55% at 50% 28%, rgba(255, 215, 0, 0.55) 0%, rgba(255, 140, 0, 0.2) 40%, transparent 70%)',
+                                                    animation:
+                                                        'cocoBigMultiGlow 1.2s ease-in-out infinite',
+                                                }}
+                                            />
+                                            <div
+                                                aria-hidden
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '12%',
+                                                    left: '50%',
+                                                    width: '120%',
+                                                    height: '55%',
+                                                    transform: 'translateX(-50%)',
+                                                    background:
+                                                        'conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,255,200,0.12) 40deg, transparent 80deg, rgba(255,255,200,0.1) 160deg, transparent 220deg)',
+                                                    opacity: 0.85,
+                                                    animation:
+                                                        'cocoBigMultiShine 2s ease-in-out infinite',
+                                                }}
+                                            />
+                                            <div
+                                                style={{
+                                                    position: 'relative',
+                                                    zIndex: 1,
+                                                    textAlign: 'center',
+                                                    padding: '0 16px',
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        fontSize: 26,
+                                                        fontWeight: 900,
+                                                        color: '#FFD700',
+                                                        letterSpacing: 4,
+                                                        textShadow:
+                                                            '0 0 18px rgba(255,200,0,0.95), 0 2px 0 #000, 0 0 40px rgba(255,140,0,0.6)',
+                                                    }}
+                                                >
+                                                    BIG MULTI
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        marginTop: 4,
+                                                        fontSize: 56,
+                                                        fontWeight: 900,
+                                                        lineHeight: 1,
+                                                        color: '#fff',
+                                                        textShadow:
+                                                            '0 0 28px rgba(255, 152, 0, 0.95), 0 3px 0 #000',
+                                                    }}
+                                                >
+                                                    {latestMulti}x
+                                                </div>
+                                                {(animState === 'finalStand' ||
+                                                    animState === 'showMulti') && (
+                                                    <div
+                                                        style={{
+                                                            marginTop: 20,
+                                                            fontSize: 28,
+                                                            fontWeight: 800,
+                                                            color: '#b7f7c8',
+                                                            letterSpacing: 2,
+                                                            textShadow:
+                                                                '0 0 20px rgba(0,255,128,0.6), 0 2px 8px #000',
+                                                            animation:
+                                                                'cocoWellDoneIn 0.55s ease-out forwards',
+                                                        }}
+                                                    >
+                                                        Well done!
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Bottom controls inside sky image */}
                                     <div
                                         style={{
@@ -978,6 +1260,7 @@ export default function CocoPage() {
                                             <button
                                                 type="button"
                                                 aria-label="Previous amount"
+                                                disabled={amountLocked || loading}
                                                 onClick={() => {
                                                     const val = parseFloat(amountRef.current) || 0;
                                                     const next = Math.max(0, val - 0.2).toFixed(2);
@@ -989,9 +1272,14 @@ export default function CocoPage() {
                                                     justifyContent: 'center',
                                                     background: 'transparent',
                                                     border: 'none',
-                                                    cursor: 'pointer',
+                                                    cursor:
+                                                        amountLocked || loading
+                                                            ? 'not-allowed'
+                                                            : 'pointer',
                                                     padding: 4,
                                                     color: '#fff',
+                                                    opacity:
+                                                        amountLocked || loading ? 0.45 : 1,
                                                 }}
                                             >
                                                 ‹
@@ -1001,7 +1289,7 @@ export default function CocoPage() {
                                                 type="text"
                                                 inputMode="decimal"
                                                 value={amount}
-                                                disabled={loading}
+                                                disabled={amountLocked || loading}
                                                 onChange={(e) =>
                                                     handleAmountInputChange(e.target.value)
                                                 }
@@ -1022,6 +1310,7 @@ export default function CocoPage() {
                                             <button
                                                 type="button"
                                                 aria-label="Next amount"
+                                                disabled={amountLocked || loading}
                                                 onClick={() => {
                                                     const val = parseFloat(amountRef.current) || 0;
                                                     const next = Math.min(20, val + 0.2).toFixed(2);
@@ -1033,36 +1322,115 @@ export default function CocoPage() {
                                                     justifyContent: 'center',
                                                     background: 'transparent',
                                                     border: 'none',
-                                                    cursor: 'pointer',
+                                                    cursor:
+                                                        amountLocked || loading
+                                                            ? 'not-allowed'
+                                                            : 'pointer',
                                                     padding: 4,
                                                     color: '#fff',
+                                                    opacity:
+                                                        amountLocked || loading ? 0.45 : 1,
                                                 }}
                                             >
                                                 ›
                                             </button>
                                         </div>
 
-                                        <button
-                                            onClick={handleSmash}
-                                            disabled={loading}
-                                            style={{
-                                                // Keep button width stable when toggling between
-                                                // "SMASH" and "..." during loading.
-                                                minWidth: 90,
-                                                whiteSpace: 'nowrap',
-                                                padding: '8px 16px',
-                                                fontSize: 14,
-                                                fontWeight: 'bold',
-                                                color: '#000',
-                                                background: loading ? '#ccc' : '#FFD700',
-                                                border: '2px solid #000',
-                                                borderRadius: 10,
-                                                cursor: loading ? 'not-allowed' : 'pointer',
-                                                boxShadow: '2px 2px 0 #000',
-                                            }}
+                                        <Flex
+                                            align="center"
+                                            gap={2}
+                                            flexWrap="wrap"
+                                            justifyContent="center"
                                         >
-                                            {loading ? '...' : 'SMASH'}
-                                        </button>
+                                            {/* Toggles: Play game (green) ↔ Stop (red) */}
+                                            <button
+                                                type="button"
+                                                aria-label={
+                                                    gameSessionActive
+                                                        ? 'Stop game'
+                                                        : 'Play game'
+                                                }
+                                                onClick={handlePlayOrStopClick}
+                                                disabled={playStopDisabled}
+                                                style={{
+                                                    minWidth: 110,
+                                                    whiteSpace: 'nowrap',
+                                                    padding: '8px 14px',
+                                                    fontSize: 14,
+                                                    fontWeight: 'bold',
+                                                    color: '#fff',
+                                                    background: playStopDisabled
+                                                        ? '#9ca3af'
+                                                        : gameSessionActive
+                                                          ? '#e53935'
+                                                          : '#16a34a',
+                                                    border:
+                                                        playStopDisabled && gameSessionActive
+                                                            ? '2px solid #000'
+                                                            : gameSessionActive
+                                                              ? '2px solid #7f1d1d'
+                                                              : '2px solid #000',
+                                                    borderRadius: 10,
+                                                    cursor: playStopDisabled
+                                                        ? 'not-allowed'
+                                                        : 'pointer',
+                                                    boxShadow: '2px 2px 0 #000',
+                                                }}
+                                            >
+                                                {playLoading || stopLoading
+                                                    ? '...'
+                                                    : gameSessionActive
+                                                      ? 'Stop'
+                                                      : 'Play game'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-label="Smash"
+                                                onClick={handleSmash}
+                                                disabled={
+                                                    !gameSessionActive ||
+                                                    loading ||
+                                                    playLoading ||
+                                                    stopLoading ||
+                                                    startGameFogOn ||
+                                                    restartCoverOn ||
+                                                    isBigMultiFinale
+                                                }
+                                                style={{
+                                                    minWidth: 90,
+                                                    whiteSpace: 'nowrap',
+                                                    padding: '8px 16px',
+                                                    fontSize: 14,
+                                                    fontWeight: 'bold',
+                                                    color: '#000',
+                                                    background:
+                                                        !gameSessionActive ||
+                                                        loading ||
+                                                        playLoading ||
+                                                        stopLoading ||
+                                                        startGameFogOn ||
+                                                        restartCoverOn ||
+                                                        isBigMultiFinale
+                                                            ? '#ccc'
+                                                            : '#FFD700',
+                                                    border: '2px solid #000',
+                                                    borderRadius: 10,
+                                                    cursor:
+                                                        !gameSessionActive ||
+                                                        loading ||
+                                                        playLoading ||
+                                                        stopLoading ||
+                                                        startGameFogOn ||
+                                                        restartCoverOn ||
+                                                        isBigMultiFinale
+                                                            ? 'not-allowed'
+                                                            : 'pointer',
+                                                    boxShadow: '2px 2px 0 #000',
+                                                }}
+                                            >
+                                                {loading ? '...' : 'SMASH'}
+                                            </button>
+                                        </Flex>
 
                                         {/* <button
                                             onClick={handleRestart}

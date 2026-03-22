@@ -70,7 +70,6 @@ export const register = async (req, res) => {
                 rubicMode: 0,
                 partnerId: 0,
                 partnerActivity: 0,
-                lastClickDate: 0,
             }
         );
 
@@ -104,7 +103,6 @@ export const login = async (req, res) => {
                 rubicMode: 0,
                 partnerId: 0,
                 partnerActivity: 0,
-                lastClickDate: 0,
             }
         );
 
@@ -197,7 +195,6 @@ export const verify2fa = async (req, res) => {
                 rubicMode: 0,
                 partnerId: 0,
                 partnerActivity: 0,
-                lastClickDate: 0,
             }
         );
         if (!user) return res.status(400).json({ message: "User not found" });
