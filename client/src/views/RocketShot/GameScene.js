@@ -332,7 +332,15 @@ export default class GameScene extends Phaser.Scene {
     // 🚀 FIRE rocket (the large rocket on the pad becomes the projectile)
     /** @returns {boolean} true if a shot actually started */
     fire() {
-        if (this.isFiring) return false;
+        // Use flying projectiles as source of truth — not `this.isFiring` alone.
+        // React unlocks the Fire button from `onJavelinWin` / `onJavelinShotEnd` a frame before
+        // Phaser’s `update()` clears `isFiring`, so the flag can falsely block the next shot.
+        const anyProjectileActive = this.balls.getChildren().some((b) => b && b.active);
+        if (anyProjectileActive) {
+            return false;
+        }
+        this.isFiring = false;
+
         // Pad can be missing briefly after a shot (same frame as respawn) or if state desynced.
         if (!this.rocketOnPad) {
             this.spawnRocketOnPad();
