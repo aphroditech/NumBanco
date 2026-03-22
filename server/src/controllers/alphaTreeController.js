@@ -195,7 +195,13 @@ export const pickLetter = async (req, res) => {
 
             return sendUserResponse(res, "", user, {
                 alphaTree: formatState(state.toObject()),
-                lastDraw: { step: 1, value: BASE, kind: "fixed_a" },
+                lastDraw: {
+                    step: 1,
+                    value: BASE,
+                    kind: "fixed_a",
+                    letter: "A",
+                    letterResults: { A: BASE },
+                },
             });
         }
 
@@ -234,6 +240,7 @@ export const pickLetter = async (req, res) => {
                     band: "fixed",
                     busted: false,
                     letter: "Z",
+                    letterResults: { Z: r },
                 },
             });
         }
@@ -246,7 +253,14 @@ export const pickLetter = async (req, res) => {
         }
         const band = perm[letterIndex];
 
-        const r = Math.round(drawForBand(stepIndex, band) * 1e8) / 1e8;
+        /** All three outcomes this step (same permutation; independent draws per band). */
+        const letterResults = {};
+        for (let i = 0; i < 3; i++) {
+            const b = perm[i];
+            letterResults[allowed[i]] = Math.round(drawForBand(stepIndex, b) * 1e8) / 1e8;
+        }
+
+        const r = letterResults[letter];
 
         if (r <= EPS) {
             const lostBet = state.betAmount;
@@ -275,7 +289,7 @@ export const pickLetter = async (req, res) => {
 
             setTimeout(() => {
                 broadcastAlphaTreeView(req);
-            }, 8000);
+            }, 3000);
 
             return sendUserResponse(res, "", user, {
                 alphaTree: null,
@@ -285,6 +299,8 @@ export const pickLetter = async (req, res) => {
                     band: "zero",
                     busted: true,
                     lostBet,
+                    letter,
+                    letterResults,
                 },
             });
         }
@@ -307,6 +323,7 @@ export const pickLetter = async (req, res) => {
                 band,
                 busted: false,
                 letter,
+                letterResults,
             },
         });
     } catch (error) {
@@ -380,7 +397,7 @@ export const cashOut = async (req, res) => {
 
         setTimeout(() => {
             broadcastAlphaTreeView(req);
-        }, 8000);
+        }, 3000);
 
         return sendUserResponse(res, "", user, {
             alphaTree: null,
@@ -439,7 +456,7 @@ export const getAlphaTreeView = async (req, res) => {
         const views = await AlphaTreeView.find()
             .sort({ createdAt: -1 })
             .limit(VIEW_LIMIT);
-        const data = await enrichAlphaTreeViewsWithUser(views);
+        const data = await enrichAlphaTreeViewsWithUser(views); 
         return res.status(200).json({ data });
     } catch (error) {
         console.error("[alphaTree] getAlphaTreeView", error);

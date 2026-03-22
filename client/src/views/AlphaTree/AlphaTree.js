@@ -53,6 +53,8 @@ import { onlineUser, offlineUser } from "action/BetActions";
 import { allowedLettersForStep } from "constants/alphaTreeSteps";
 import AlphaTreeRealView from "./AlphaTreeItem/AlphaTreeView";
 import BetHistory from "./AlphaTreeItem/BetHistory";
+import AlphaTreeLetterDiagram from "./AlphaTreeItem/AlphaTreeLetterDiagram";
+import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 
 const MIN_AMOUNT = 0.1;
 const MAX_AMOUNT = 20;
@@ -79,6 +81,15 @@ export default function AlphaTreePage() {
     const [lastStepResult, setLastStepResult] = useState(null);
     /** Band label for last pick (from server lastDraw.band) */
     const [lastBandLabel, setLastBandLabel] = useState(null);
+    /** Completed picks for diagram path: lines + per-letter results */
+    const [pathSteps, setPathSteps] = useState([]);
+    /** Full-screen win FX after cash out (matches Mines / Lottery). */
+    const [cashOutWinFx, setCashOutWinFx] = useState({
+        visible: false,
+        amount: "0.00",
+        subtitle: "",
+    });
+    const cashOutFxTimeoutRef = useRef(null);
     const amountRef = useRef('0.10');
     const updateAmount = (value) => {
         setAmount(value);
@@ -91,6 +102,10 @@ export default function AlphaTreePage() {
         onlineUser(13);
         return () => {
             offlineUser(13);
+            if (cashOutFxTimeoutRef.current) {
+                clearTimeout(cashOutFxTimeoutRef.current);
+                cashOutFxTimeoutRef.current = null;
+            }
         };
     }, []);
 
@@ -146,6 +161,7 @@ export default function AlphaTreePage() {
         setPlayLoading(true);
         setLastStepResult(null);
         setLastBandLabel(null);
+        setPathSteps([]);
         try {
             const data = await alphaTreeStart({ betAmount: bet }, dispatch, history);
             setTreeState(data.alphaTree ?? null);
@@ -190,8 +206,50 @@ export default function AlphaTreePage() {
                 setTreeState(null);
                 setLastStepResult("0");
                 setLastBandLabel("0 (bust)");
+                setPathSteps([]);
                 toast.error("Round ended — result was 0");
                 return;
+            }
+            if (ld?.kind === "fixed_a") {
+                setPathSteps([
+                    {
+                        step: 1,
+                        letter: "A",
+                        value: 0.6,
+                        letterResults: ld.letterResults || { A: 0.6 },
+                    },
+                ]);
+            } else if (ld?.kind === "fixed_z" && typeof ld.value === "number") {
+                setPathSteps((prev) => [
+                    ...prev,
+                    {
+                        step: 10,
+                        letter: "Z",
+                        value: ld.value,
+                        letterResults: ld.letterResults || { Z: ld.value },
+                    },
+                ]);
+            } else if (ld && typeof ld.value === "number" && ld.letter) {
+                const L = String(ld.letter).toUpperCase();
+                const lr = ld.letterResults;
+                const letterResults =
+                    lr && typeof lr === "object"
+                        ? Object.fromEntries(
+                              Object.entries(lr).map(([k, v]) => [
+                                  String(k).toUpperCase(),
+                                  v,
+                              ])
+                          )
+                        : undefined;
+                setPathSteps((prev) => [
+                    ...prev,
+                    {
+                        step: ld.step,
+                        letter: L,
+                        value: ld.value,
+                        letterResults,
+                    },
+                ]);
             }
             setTreeState(data.alphaTree ?? null);
         } catch (err) {
@@ -210,12 +268,32 @@ export default function AlphaTreePage() {
         try {
             const data = await alphaTreeCashOut(dispatch, history);
             const win = data.cashout?.win;
+            const totalMult = data.cashout?.totalMultiplier;
             setTreeState(null);
             setLastStepResult(null);
             setLastBandLabel(null);
-            toast.success(
-                win != null ? `Cashed out $${Number(win).toFixed(2)}` : "Cashed out"
-            );
+            setPathSteps([]);
+            const amountStr =
+                win != null && Number.isFinite(Number(win))
+                    ? Number(win).toFixed(2)
+                    : "0.00";
+            const subtitle =
+                totalMult != null && Number.isFinite(Number(totalMult))
+                    ? `Total multiplier ×${Number(totalMult).toFixed(2)}`
+                    : "";
+            setCashOutWinFx({
+                visible: true,
+                amount: amountStr,
+                subtitle,
+            });
+            if (cashOutFxTimeoutRef.current) {
+                clearTimeout(cashOutFxTimeoutRef.current);
+            }
+            const fxMs = 2600;
+            cashOutFxTimeoutRef.current = setTimeout(() => {
+                setCashOutWinFx((s) => ({ ...s, visible: false }));
+                cashOutFxTimeoutRef.current = null;
+            }, fxMs);
         } catch (err) {
             const msg =
                 err.response?.data?.message ||
@@ -240,6 +318,12 @@ export default function AlphaTreePage() {
 
     return (
         <Box px={{ base: '16px', md: '24px' }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
+            <WinFireworksEffect
+                isVisible={cashOutWinFx.visible}
+                totalEarn={cashOutWinFx.amount}
+                subtitle={cashOutWinFx.subtitle}
+                duration={2600}
+            />
             <Grid
                 templateAreas={{
                     sm: '"panel" "game" "empty"',
@@ -574,7 +658,7 @@ export default function AlphaTreePage() {
                                         <Text fontSize="sm" color="rgba(255,255,255,0.85)">
                                             Total ×:{" "}
                                             <Text as="span" color="#FFD700" fontWeight="bold">
-                                                {Number(treeState.cumulativeMultiplier ?? 1).toFixed(4)}
+                                                {Number(treeState.cumulativeMultiplier ?? 1).toFixed(2)}
                                             </Text>
                                         </Text>
                                     </Flex>
@@ -695,6 +779,11 @@ export default function AlphaTreePage() {
                                             ) : null}
                                         </>
                                     )}
+                                    <AlphaTreeLetterDiagram
+                                        phase={treeState.phase}
+                                        step={treeState.step}
+                                        pathSteps={pathSteps}
+                                    />
                                 </VStack>
                             )}
                         </CardBody>
