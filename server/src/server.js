@@ -26,6 +26,7 @@ import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
 import {rocketBot} from "./services/rocket/rocketBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
+import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
 dotenv.config();
 
@@ -79,10 +80,11 @@ connectDB().then(async () => {
         // rubicBot(ably);
         // pumpingBot(ably);
         // miningBot(ably);
-        // rocketBot(ably);
+        rocketBot(ably);
         // fishingBot(ably);
         startGravityGameLoop(ably);
         // cocoBot(ably);
+        // alphaTreeBot(ably);
         // doveBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();

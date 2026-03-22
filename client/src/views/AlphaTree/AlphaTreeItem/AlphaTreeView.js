@@ -11,34 +11,41 @@ import {
 import Card from 'components/Card/Card.js';
 import CardHeader from 'components/Card/CardHeader';
 import React, { useEffect, useState, useRef } from 'react';
-import RocketRealViewRow from 'components/Tables/RocketRealViewRow';
+import AlphaTreeRealViewRow from 'components/Tables/AlphaTreeRealViewRow';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
-import { getRocketResults } from 'action/RocketActions';
-import { useAblyRocketResult } from 'hooks/useAblyRocketResult';
+import { getAlphaTreeView } from 'action/AlphaTreeActions';
+import { useAblyAlphaTreeUpdates } from 'hooks/useAblyAlphaTreeUpdates';
 import { useHistory } from 'react-router-dom';
-import Loading from 'components/Loading/Loading';
 
-function RealView() {
-    const { rocketResults, setRocketResults } = useAblyRocketResult();
+function AlphaTreeRealView() {
+    const { alphaTreeView, setAlphaTreeView } = useAblyAlphaTreeUpdates();
     const [newRowIds, setNewRowIds] = useState(new Set());
     const prevRowIdsRef = useRef(new Set());
     const hasInitializedRef = useRef(false);
-    const [isLoading, setIsLoading] = useState(true);
     const history = useHistory();
     const getRowId = (row) => {
         if (!row) return "";
-        return row._id || row.id || `${row.altas || "user"}-${row.bet || 0}-${row.win || 0}`;
+        return row._id || row.id || `${row.altas || "user"}-${Number(row.result).toFixed(2)}-${row.win || 0}`;
     };
 
     useEffect(() => {
-        if (!rocketResults || rocketResults.length === 0) {
+        getAlphaTreeView(history).then((res) => {
+            if (res?.data && Array.isArray(res.data)) {
+                setAlphaTreeView(res.data);
+            }
+        });
+    }, [history]);
+
+    // Detect new rows and apply animation
+    useEffect(() => {
+        if (!alphaTreeView || alphaTreeView.length === 0) {
             prevRowIdsRef.current = new Set();
             setNewRowIds(new Set());
             hasInitializedRef.current = true;
             return;
         }
 
-        const currentIds = new Set(rocketResults.map(getRowId));
+        const currentIds = new Set(alphaTreeView.map(getRowId));
 
         if (!hasInitializedRef.current) {
             prevRowIdsRef.current = currentIds;
@@ -61,39 +68,15 @@ function RealView() {
             }, 1700);
             return () => clearTimeout(timeoutId);
         }
-    }, [rocketResults]);
+    }, [alphaTreeView]);
 
-    useEffect(async () => {
-        try {
-            const data = await getRocketResults(history)();
-            setRocketResults(data);
-            setIsLoading(false);
-        } catch(err) {
-            console.log(err);
-            setIsLoading(false);
-        }
-    }, []);
-
-    const maxRows = 23;
-    const baseRows = Array.isArray(rocketResults) ? rocketResults : [];
+    const maxRows = 20;
+    const baseRows = Array.isArray(alphaTreeView) ? alphaTreeView : [];
     const rowsToRender = baseRows.slice(0, maxRows);
-
-    if (isLoading) {
-        return <Loading />;
-    }
     
     return (
-        <Card
-            p="24px"
-            pt="30px"
-            overflow="hidden"
-            display="flex"
-            flexDirection="column"
-            h="100%"
-            minH="0"
-            flex="1"
-        >
-            <Box overflowX="hidden" width="100%" flex="1" minH="0" overflowY="auto">
+        <Card p="24px" pt="30px" overflowX="hidden" height="100%" display="flex" flexDirection="column">
+            <Box overflowX="hidden" width="100%" overflowY="auto" flex="1" minH="0">
                 <Table
                 variant="unstyled"
                 color="#fff"
@@ -117,11 +100,11 @@ function RealView() {
                     {rowsToRender.map((row, index) => {
                         const rowId = getRowId(row);
                         return (
-                            <RocketRealViewRow
-                                key={index}
-                                altas={row.userName}
+                            <AlphaTreeRealViewRow
+                                key={rowId || index}
+                                altas={row.altas}
                                 avatar={row.avatar}
-                                result={row.multiplier}
+                                result={Number(row.result).toFixed(2)}
                                 win={row.win}
                                 isNew={newRowIds.has(rowId)}
                             />
@@ -134,4 +117,4 @@ function RealView() {
     );
 }
 
-export default RealView;
+export default AlphaTreeRealView;

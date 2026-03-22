@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const wheelSettingsSchema = new mongoose.Schema({
+    wordSet : {
+        type: [String],
+        required: true,
+        default: []
+    },
     botWiningProbability: {
         type: Number,
         required: true,

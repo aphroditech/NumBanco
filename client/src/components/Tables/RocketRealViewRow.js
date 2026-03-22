@@ -61,7 +61,7 @@ if (typeof document !== 'undefined') {
 }
 
 function RocketRealViewRow(props) {
-    const { altas, avatar, bet, win } = props;
+    const { altas, avatar, result, win } = props;
     const winColor = win > 0 ? "#6DC64B" : "#E74C3C";
     const displayName = altas;
 
@@ -107,7 +107,7 @@ function RocketRealViewRow(props) {
                 overflow="visible"
             >
                 <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-                    {bet}
+                    {result}x
                 </Text>
             </Td>
             <Td
@@ -118,7 +118,7 @@ function RocketRealViewRow(props) {
                 overflow="visible"
             >
                 <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-                    {truncateToTwo(win)}
+                    ${truncateToTwo(win)}
                 </Text>
             </Td>
         </Tr>

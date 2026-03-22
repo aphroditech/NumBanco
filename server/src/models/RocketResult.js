@@ -13,6 +13,10 @@ const RocketResultSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    multiplier: {
+        type: Number,
+        required: false,
+    },
     isWin: {
         type: Boolean,
         required: false,

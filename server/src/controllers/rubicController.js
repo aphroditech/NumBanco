@@ -58,6 +58,7 @@ export const handleRubicBet = async (req, res) => {
             userName: user.altas,
             avatar: user.avatar,
             isWin: isWin,
+            multiplier: isWin ? multiplier : 0,
             betAmount: betAmount,
             winAmount: winAmount,
         });
@@ -79,6 +80,7 @@ export const handleRubicBet = async (req, res) => {
                 userName: user.altas,
                 avatar: user.avatar,
                 isWin: isWin,
+                multiplier: isWin ? multiplier : 0,
                 betAmount: betAmount,
                 winAmount: winAmount,
             };

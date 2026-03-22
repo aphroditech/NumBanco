@@ -111,6 +111,7 @@ export const resultGameMining = async (req, res) => {
             avatar: user.avatar,
             bet: betAmt,
             isWin: isWin,
+            multiplier: isWin ? multiplier : 0,
             turn: turn,
             win: profit,
             date: new Date()
@@ -127,6 +128,7 @@ export const resultGameMining = async (req, res) => {
                 avatar: user.avatar,
                 isWin: isWin,
                 bet: betAmt,
+                multiplier: isWin ? multiplier : 0,
                 turn: turn,
                 win: profit,
                 date: new Date()

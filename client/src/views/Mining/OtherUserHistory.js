@@ -75,10 +75,10 @@ export default function OtherUserHistory() {
                                     User
                                 </Th>
                                 <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                    Bet($)
+                                    Result
                                 </Th>
                                 <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                    Win($)
+                                    Win
                                 </Th>
                             </Tr>
                         </Thead>
@@ -134,7 +134,7 @@ export default function OtherUserHistory() {
                                                 overflow="visible"
                                             >
                                                 <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-                                                    {row.bet != null ? row.bet : '—'}
+                                                    {row.multiplier != null ? row.multiplier + 'x' : '—'}
                                                 </Text>
                                             </Td>
                                             <Td
@@ -145,7 +145,7 @@ export default function OtherUserHistory() {
                                                 overflow="visible"
                                             >
                                                 <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-                                                    {row.win != null ? truncateToTwo(row.win) : '—'}
+                                                    ${row.win != null ? truncateToTwo(row.win) : '—'}
                                                 </Text>
                                             </Td>
                                         </Tr>
