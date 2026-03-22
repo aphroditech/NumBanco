@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import Phaser from "phaser";
 import GameScene from "./GameScene"; // make sure path is correct
-import { rocketShotResult } from "action/RocketActions";
 
 export default function JavelinGame({ onWin, mode }) {
     const gameRef = useRef(null);
@@ -105,7 +104,7 @@ export default function JavelinGame({ onWin, mode }) {
         // Do an extra resize on the next frame to catch "initial layout" timing.
         scheduleResize();
 
-        // 🔗 Connect React → Phaser (fire javelin)
+        // 🔗 Connect React → Phaser (fire rocket)
         // Returns whether Phaser actually started a shot (React unlocks UI if false).
         window.fireJavelin = () => {
             if (!game || !game.scene) return false;
@@ -117,7 +116,7 @@ export default function JavelinGame({ onWin, mode }) {
             return scene.fire() === true;
         };
 
-        // 🔗 Connect Phaser → React (win callback) only when provided (don't clobber page globals).
+        // Win callback: only wire when parent passes onWin (RocketShot sets window.onJavelinWin in useEffect).
         let winHandler;
         if (typeof onWin === "function") {
             winHandler = (value) => onWin(value);

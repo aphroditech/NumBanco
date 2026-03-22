@@ -2,6 +2,8 @@ import { layout } from "@chakra-ui/system"
 import tierA from "assets/badge/tierA.png";
 import tierB from "assets/badge/tierB.png";
 import tierC from "assets/badge/tierC.png";
+
+// Load Games
 import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 import TodayIcon from '@mui/icons-material/Today';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
@@ -16,12 +18,16 @@ import GravityPage from "views/Gravity/GravityPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
+import AToZPage from "views/AToZ/AToZ";
+
+// Load Icons
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import CasinoIcon from '@mui/icons-material/Casino';
 import GavelIcon from '@mui/icons-material/Gavel';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import DiamondIcon from '@mui/icons-material/Diamond';
+import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 
 export const TierA = {
     path: "/tierA",
@@ -136,5 +142,13 @@ export const CocoGame = {
     name: "COCO TAP CRASH",
     icon: <GiChicken style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Coco,
+    layout: "/game",
+}
+
+export const AToZGame = {
+    path: "/a-to-z",
+    name: "A TO Z",
+    icon: <SortByAlphaIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: AToZPage,
     layout: "/game",
 }
