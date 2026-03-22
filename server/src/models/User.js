@@ -551,6 +551,11 @@ const userSchema = new mongoose.Schema({
           type: Number,
           required: true
         },
+        /** Same as `multiplier` — roll / outcome for this smash (kept for clarity with RealView / exports). */
+        result: {
+          type: Number,
+          default: 0
+        },
         profit: {
           type: Number,
           default: 0
