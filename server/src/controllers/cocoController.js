@@ -222,6 +222,7 @@ export const smash = async (req, res) => {
                 userId: req.user.userId,
                 bet: state.bet,
                 win,
+                result: finalMulti,
                 isUser: req.user.partnerLevel > 0 ? 1 : 0,
             });
 
@@ -274,6 +275,7 @@ export const smash = async (req, res) => {
                 userId: req.user.userId,
                 bet: state.bet,
                 win: 0,
+                result: 0,
                 isUser: req.user.partnerLevel > 0 ? 1 : 0,
             });
 
@@ -349,6 +351,7 @@ export const smash = async (req, res) => {
             userId: req.user.userId,
             bet: state.bet,
             win,
+            result: state.currentMultiplier,
             isUser: req.user.partnerLevel > 0 ? 1 : 0,
         });
 
