@@ -4,6 +4,12 @@ import {
     Grid,
     GridItem,
     Text,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalCloseButton,
     VStack,
     HStack,
     Flex,
@@ -19,12 +25,18 @@ import { useSelector } from 'react-redux';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 
+import RealTimeHistory from './AToZItems/RealTimeHistory';
+import UserBetHistory from './AToZItems/UserBetHistory';
+
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+
 /** Match Rocket Shot bet range and step */
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 const AMOUNT_STEP = 0.5;
 
 export default function AToZPage() {
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const user = useSelector((state) => state.user.userInfo) || {};
     const walletBalance = user.balance;
     const balanceNum = Number(walletBalance);
@@ -34,8 +46,6 @@ export default function AToZPage() {
 
     const [amount, setAmount] = useState(MIN_AMOUNT);
     const [isSpinning, setIsSpinning] = useState(false);
-    const [lastResult, setLastResult] = useState(null);
-    const [historyRows, setHistoryRows] = useState([]);
 
     const handleAmountChange = (e) => {
         const raw = e.target.value;
@@ -56,8 +66,8 @@ export default function AToZPage() {
     useEffect(() => {
         window.onAToZSpinComplete = (result) => {
             setIsSpinning(false);
-            setLastResult(result);
-            setHistoryRows((prev) => [result, ...prev].slice(0, 20));
+            console.log("result", result);
+            // `result`: { betAmount, word, letters } — send to your API for odds / payout.
         };
 
         return () => {
@@ -127,7 +137,20 @@ export default function AToZPage() {
                                 pb="14px"
                                 bg="linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 100%)"
                                 borderTop="1px solid rgba(0, 212, 255, 0.3)"
+                                position="relative"
                             >
+                                <IconButton
+                                    aria-label="Help"
+                                    position="absolute"
+                                    top="5px"
+                                    right="5px"
+                                    icon={<HelpOutlineIcon style={{ fontSize: 22 }} />}
+                                    size="sm"
+                                    variant="ghost"
+                                    color="#00d4ff"
+                                    _hover={{ bg: 'rgba(255,255,255,0.08)', color: '#00D4FF' }}
+                                    onClick={() => setIsHelpModalOpen(true)}
+                                />
                                 <VStack spacing="14px" align="center" w="100%" maxW="560px" mx="auto" px="16px">
                                     {/* Bet amount — same pattern as Rocket Shot */}
                                     <Flex align="center" justify="center" gap="6px" flexWrap="wrap" w="100%">
@@ -233,7 +256,7 @@ export default function AToZPage() {
 
                                     <HStack spacing="10px" align="center" flexWrap="wrap" justify="center" w="100%">
                                         <Button
-                                            h="36px"
+                                            h="56px"
                                             w="100%"
                                             maxW="300px"
                                             fontSize="md"
@@ -259,7 +282,7 @@ export default function AToZPage() {
                                             }
                                             onClick={handleSpin}
                                         >
-                                            {isSpinning ? 'Spinning...' : 'Bet / Spin'}
+                                            {isSpinning ? 'Spinning...' : 'BET'}
                                         </Button>
                                     </HStack>
                                 </VStack>
@@ -269,46 +292,32 @@ export default function AToZPage() {
                 </GridItem>
 
                 {/* History Area */}
-                <GridItem area="side">
-                    <Card minH={{ base: '320px', md: '640px' }} h="100%">
-                        <CardHeader pb="8px">
-                            <Text color="#fff" fontWeight="700" fontSize="md">History</Text>
-                        </CardHeader>
-                        <CardBody pt="0" maxH={{ base: '320px', md: '580px' }} overflowY="auto">
-                            <VStack align="stretch" spacing="8px">
-                                {historyRows.length === 0 && (
-                                    <Text color="whiteAlpha.600" fontSize="sm">
-                                        No rounds yet.
-                                    </Text>
-                                )}
-                                {historyRows.map((row, i) => (
-                                    <Box
-                                        key={`${row.word}-${i}`}
-                                        p="8px"
-                                        borderRadius="8px"
-                                        bg="rgba(255,255,255,0.05)"
-                                        border="1px solid rgba(255,255,255,0.08)"
-                                    >
-                                        <HStack justify="space-between">
-                                            <Text color="#fff" fontWeight="700" fontSize="sm">{row.word}</Text>
-                                            <Text
-                                                fontSize="xs"
-                                                fontWeight="700"
-                                                color={row.isWin ? '#23F6A7' : '#FF6A7E'}
-                                            >
-                                                {row.isWin ? `WIN x${row.multiplier}` : 'LOSE'}
-                                            </Text>
-                                        </HStack>
-                                        <Text color="whiteAlpha.700" fontSize="xs" mt="2px">
-                                            Bet: ${Number(row.betAmount || 0).toFixed(2)} | Win: ${Number(row.winAmount || 0).toFixed(2)}
-                                        </Text>
-                                    </Box>
-                                ))}
-                            </VStack>
-                        </CardBody>
-                    </Card>
-                </GridItem>
+                <RealTimeHistory />
             </Grid>
+            <UserBetHistory />
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+                <ModalOverlay bg="blackAlpha.700" />
+                <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
+                    <ModalHeader color="white" >
+                        *How to Play AToZ Game
+                    </ModalHeader>
+                    <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
+                    <ModalBody py={4}>
+                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
+                            AToZ Game is a word guessing game where you have to guess the word that is hidden in the spinning wheel.
+                        </Text>
+                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
+                            You can bet on any word in the alphabet.
+                        </Text>
+                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
+                            The word is hidden in the spinning wheel and you have to guess the word that is hidden in the spinning wheel.
+                        </Text>
+                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
+                            The word is hidden in the spinning wheel and you have to guess the word that is hidden in the spinning wheel.
+                        </Text>
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
         </Box>
     );
 }

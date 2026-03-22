@@ -6,7 +6,6 @@ import {
   getCloudSpreadUserHistory,
   maybeBustSettleCloudSpread,
   placeCloudSpreadBet,
-  publishCloudSpreadBetEvent,
 } from "../services/cloudSpread/cloudSpreadGame.service.js";
 
 export async function getCloudSpreadState(req, res) {
@@ -45,9 +44,7 @@ export async function createCloudSpreadBet(req, res) {
       amount,
       targetStep,
     });
-    const ably = req.app.locals.ably;
-    await publishCloudSpreadBetEvent(ably, row, round);
-    await maybeBustSettleCloudSpread(ably, selectedCloudMultiplier);
+    await maybeBustSettleCloudSpread(selectedCloudMultiplier);
     return res.status(200).json({
       user,
       roundId: round.roundId,
@@ -93,11 +90,14 @@ export async function getLiveCloudSpreadHistory(req, res) {
 
 export async function cashOutCloudSpread(req, res) {
   try {
-    const ably = req.app.locals.ably;
-    const state = await cashOutCloudSpreadRound(ably);
-    return res.status(200).json({ message: "Round cashed out", state });
+    const { state, alreadySettled } = await cashOutCloudSpreadRound();
+    return res.status(200).json({
+      message: alreadySettled ? "Round already ended" : "Round cashed out",
+      state,
+      alreadySettled: !!alreadySettled,
+    });
   } catch (error) {
-    const status = /already|ready/i.test(error.message) ? 400 : 500;
+    const status = /Round is not ready/i.test(error.message) ? 503 : 500;
     return res.status(status).json({ message: error.message || "Server Error" });
   }
 }

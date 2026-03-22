@@ -31,6 +31,7 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useHistory } from 'react-router-dom';
 
+
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 /** Match Dove Cross step increments for +/- controls */
@@ -514,7 +515,7 @@ export default function RocketShotPage() {
                                         </HStack>
 
                                     </VStack>
-                                    <Button
+                                    {/* <Button
                                         h="66px"
                                         w="100%"
                                         maxW="300px"
@@ -551,7 +552,56 @@ export default function RocketShotPage() {
                                         }}
                                     >
                                         Fire
-                                    </Button>
+                                    </Button> */}
+                                    <Button
+                                        h="66px"
+                                        w="100%"
+                                        maxW="280px"       // slightly smaller so "FIRE" looks centered
+                                        fontSize="xl"      // bigger font for impact
+                                        fontWeight="extrabold"
+                                        letterSpacing="1.5px"
+                                        borderRadius="30px"  // rounder pill shape
+                                        bg="linear-gradient(90deg, #00D4FF, #00AFFF)"  // subtle gradient
+                                        color="#FFFFFF"
+                                        border="2px solid #00D4FF"
+                                        textTransform="uppercase"
+                                        _hover={{
+                                            bg: "linear-gradient(90deg, #00F0FF, #00BFFF)",
+                                            borderColor: "#00F0FF",
+                                            transform: "translateY(-3px)",
+                                            boxShadow: "0 8px 20px rgba(0, 212, 255, 0.5)",
+                                        }}
+                                        _active={{
+                                            transform: "translateY(0)",
+                                            boxShadow: "0 4px 8px rgba(0, 212, 255, 0.3)",
+                                        }}
+                                        _disabled={{
+                                            bg: "#00D4FF80",      // slightly faded
+                                            borderColor: "#00D4FF80",
+                                            cursor: "not-allowed",
+                                            boxShadow: "none",
+                                        }}
+                                        isDisabled={
+                                            isFireCooldown ||
+                                            isFiring ||
+                                            isBetPending ||
+                                            amount < MIN_AMOUNT ||
+                                            amount > maxAmount ||
+                                            (hasKnownBalance && amount > walletBalanceNum)
+                                        }
+                                        title={
+                                            amount < MIN_AMOUNT
+                                            ? `Enter at least ${MIN_AMOUNT}`
+                                            : amount > maxAmount
+                                            ? `Max bet is ${maxAmount}`
+                                            : ""
+                                        }
+                                        onClick={() => {
+                                            handleRocketBet(parseFloat(amount), mode, winMode);
+                                        }}
+                                        >
+                                        FIRE
+                                        </Button>
                                 </HStack>
                             </Box>
                         </CardBody>

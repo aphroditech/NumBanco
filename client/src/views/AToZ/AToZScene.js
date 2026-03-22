@@ -1,18 +1,6 @@
 import Phaser from "phaser";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-const WORD_SET = new Set([
-    "ACE", "ACT", "AGE", "AIR", "AND", "ANT", "ANY", "APE", "APP", "ARM",
-    "ART", "ASK", "BAD", "BAG", "BAR", "BAT", "BED", "BEE", "BET", "BOX",
-    "BOY", "BUS", "CAN", "CAP", "CAR", "CAT", "COW", "CUP", "DAY", "DOG",
-    "EAR", "EAT", "EGG", "END", "EYE", "FAN", "FAR", "FAT", "FIT", "FLY",
-    "FUN", "GAS", "GOD", "GUN", "HAT", "HEN", "HOT", "ICE", "INK", "JAR",
-    "JET", "JOY", "KEY", "KID", "LEG", "LET", "LIP", "LOG", "MAN", "MAP",
-    "MIX", "NET", "NEW", "NOD", "NOT", "NOW", "OIL", "OLD", "ONE", "OWL",
-    "PAN", "PEN", "PIG", "PIN", "POT", "RED", "RIM", "RUN", "SEA", "SET",
-    "SIX", "SKY", "SON", "SUN", "TAX", "TEN", "TOP", "TOY", "USE", "WAR",
-    "WAY", "WEB", "WIN", "YES", "YOU", "ZIP",
-]);
 
 /** Exactly 3 visible rows per column: top / middle / bottom */
 const VISIBLE_ROWS = 3;
@@ -28,12 +16,21 @@ export default class AToZScene extends Phaser.Scene {
         this.gameH = height;
 
         this.reelCount = 3;
-        this.cellH = Math.round(Math.min(64, Math.max(48, height * 0.09)));
-        this.reelW = Math.min(118, Math.max(92, Math.round(width * 0.14)));
         this.windowRows = VISIBLE_ROWS;
-        this.windowH = this.windowRows * this.cellH;
-        this.reelGap = Math.min(18, Math.max(10, Math.round(width * 0.018)));
-        this.centerLineY = height * 0.46;
+        // Large, readable reels: ~60–70% of the playfield (matches “fill the stage” layout).
+        this.reelGap = Math.min(28, Math.max(12, Math.round(width * 0.022)));
+        const framePadding = 28; // matches stroke box inset below
+        const targetBandW = width * 0.72;
+        // Never wider than the canvas; no fixed floor that breaks narrow phones.
+        const innerColsW = Math.min(targetBandW - framePadding, width - 36);
+        this.reelW = Math.floor((innerColsW - (this.reelCount - 1) * this.reelGap) / this.reelCount);
+        this.reelW = Math.max(48, this.reelW);
+
+        this.windowH = Math.round(height * 0.62);
+        this.cellH = Math.round(this.windowH / this.windowRows);
+        this.windowH = this.cellH * this.windowRows; // keep integer multiple for crisp layout
+
+        this.centerLineY = height * 0.5;
         this.reels = [];
         this.isSpinning = false;
         this.pendingResult = null;
@@ -204,29 +201,6 @@ export default class AToZScene extends Phaser.Scene {
         }
     }
 
-    evaluateLetters(letters) {
-        const word = letters.join("");
-        const allSame = letters[0] === letters[1] && letters[1] === letters[2];
-        const seq = letters[1].charCodeAt(0) === letters[0].charCodeAt(0) + 1
-            && letters[2].charCodeAt(0) === letters[1].charCodeAt(0) + 1;
-        const isWord = WORD_SET.has(word);
-
-        let reason = "lose";
-        let multiplier = 0;
-        if (allSame) {
-            reason = "same";
-            multiplier = 8;
-        } else if (seq) {
-            reason = "sequence";
-            multiplier = 3;
-        } else if (isWord) {
-            reason = "word";
-            multiplier = 2;
-        }
-
-        return { word, isWin: multiplier > 0, reason, multiplier };
-    }
-
     spin() {
         if (this.isSpinning) return false;
         this.isSpinning = true;
@@ -245,15 +219,14 @@ export default class AToZScene extends Phaser.Scene {
         this.time.delayedCall(1720, () => {
             this.stopReel(2, targetIndexes[2], () => {
                 this.isSpinning = false;
-                const evalResult = this.evaluateLetters(resultLetters);
                 const bet = Number(window.__atozBetAmount || 0);
-                const winAmount = evalResult.isWin ? bet * evalResult.multiplier : 0;
+                const word = resultLetters.join("");
 
+                // Win/loss and multiplier are computed on the backend; UI only sends the draw.
                 this.pendingResult = {
-                    letters: resultLetters,
-                    ...evalResult,
                     betAmount: bet,
-                    winAmount,
+                    word,
+                    letters: resultLetters,
                 };
 
                 if (typeof window.onAToZSpinComplete === "function") {

@@ -151,6 +151,7 @@ export const rubicBot = async (ably) => {
                 isWin,
                 betAmount,
                 winAmount,
+                multiplier,
                 createAt: new Date(),
             });
             const recent = await RubicResult.find()
@@ -173,6 +174,7 @@ export const rubicBot = async (ably) => {
                     isWin,
                     betAmount,
                     winAmount,
+                    multiplier,
                     createAt: new Date(),
                 };
                 await channel.publish("RUBIC_RESULT", data);
