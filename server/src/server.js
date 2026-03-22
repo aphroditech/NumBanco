@@ -20,6 +20,7 @@ import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
 import { startCloudSpreadGameLoop } from "./services/cloudSpread/cloudSpreadGame.service.js";
+import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
@@ -39,6 +40,9 @@ connectDB().then(async () => {
     // Cloud Spread is DB-only (no Ably); must start here so /api/cloud-spread/state has a round.
     startCloudSpreadGameLoop().catch((err) => {
         console.error("[cloud-spread] failed to start game loop:", err);
+    });
+    cloudSpreadBot().catch((err) => {
+        console.error("[cloud-spread] bot failed to start:", err);
     });
 
     // Check and create yesterday's wallet if it doesn't exist

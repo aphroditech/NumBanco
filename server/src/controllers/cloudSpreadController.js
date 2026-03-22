@@ -10,12 +10,9 @@ import {
 
 export async function getCloudSpreadState(req, res) {
   try {
-    let forUserId = null;
-    if (req.user?.userAuthId) {
-      const u = await User.findOne({ userAuthId: req.user.userAuthId });
-      if (u) forUserId = u.userId;
-    }
-    const state = await getCloudSpreadStateSnapshot(forUserId);
+    const u = req.user;
+    if (!u?.userId) return res.status(401).json({ message: "Unauthorized" });
+    const state = await getCloudSpreadStateSnapshot(u.userId);
     if (!state) return res.status(503).json({ message: "Cloud Spread round is not ready" });
     return res.status(200).json(state);
   } catch (error) {
@@ -30,7 +27,6 @@ export async function createCloudSpreadBet(req, res) {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const {
-      row,
       round,
       betId,
       betAmount,
@@ -44,7 +40,7 @@ export async function createCloudSpreadBet(req, res) {
       amount,
       targetStep,
     });
-    await maybeBustSettleCloudSpread(selectedCloudMultiplier);
+    await maybeBustSettleCloudSpread(selectedCloudMultiplier, user.userId);
     return res.status(200).json({
       user,
       roundId: round.roundId,
@@ -81,7 +77,7 @@ export async function getMyCloudSpreadHistory(req, res) {
 
 export async function getLiveCloudSpreadHistory(req, res) {
   try {
-    const data = await getCloudSpreadRoundHistory(30);
+    const data = await getCloudSpreadRoundHistory(50, { liveOnly: true });
     return res.status(200).json(data);
   } catch (error) {
     return res.status(500).json({ message: "Server Error", error: error.message });
@@ -90,14 +86,37 @@ export async function getLiveCloudSpreadHistory(req, res) {
 
 export async function cashOutCloudSpread(req, res) {
   try {
-    const { state, alreadySettled } = await cashOutCloudSpreadRound();
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const { state, alreadySettled } = await cashOutCloudSpreadRound(userId);
+    const user = await User.findOne(
+      { userId },
+      {
+        "wallets.eth.privateKey": 0,
+        "wallets.bsc.privateKey": 0,
+        "wallets.tron.privateKey": 0,
+        password: 0,
+        country: 0,
+        pumpingMode: 0,
+        rubicMode: 0,
+        partnerId: 0,
+        partnerActivity: 0,
+        lastClickDate: 0,
+        canWithdraw: 0,
+      }
+    );
     return res.status(200).json({
       message: alreadySettled ? "Round already ended" : "Round cashed out",
       state,
       alreadySettled: !!alreadySettled,
+      user: user || undefined,
     });
   } catch (error) {
-    const status = /Round is not ready/i.test(error.message) ? 503 : 500;
+    const status = /Round is not ready/i.test(error.message)
+      ? 503
+      : /Pay and play|before cash out/i.test(error.message)
+        ? 400
+        : 500;
     return res.status(status).json({ message: error.message || "Server Error" });
   }
 }

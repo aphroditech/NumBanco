@@ -614,6 +614,43 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  /** Cloud Spread — round summaries (like rubicHistory / pumpingHistory). */
+  cloudSpreadHistory: {
+    type: [
+      {
+        roundId: {
+          type: Number,
+          required: true
+        },
+        totalBet: {
+          type: Number,
+          required: true
+        },
+        win: {
+          type: Number,
+          default: 0
+        },
+        crashStep: {
+          type: Number,
+          default: 0
+        },
+        finalClouds: {
+          type: Number,
+          default: 0
+        },
+        multProduct: {
+          type: Number,
+          default: 1
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
   rubicMode: {
     type: Number,
     default: 1 // 0: easy, 1: normal, 2: hard
