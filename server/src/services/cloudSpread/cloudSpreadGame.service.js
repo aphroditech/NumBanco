@@ -9,11 +9,6 @@ const MAX_CLOUDS = TOTAL_STEPS * CLOUDS_PER_STEP;
 const ROUND_TIMEOUT_MS = 45000;
 const RESULT_MS = 3000;
 
-const CHANNEL_NAME = "cloudSpreadGame";
-const EVENT_STATE = "CLOUD_SPREAD_STATE";
-const EVENT_NEW_BET = "CLOUD_SPREAD_NEW_BET";
-const EVENT_RESULT = "CLOUD_SPREAD_RESULT";
-
 let timer = null;
 let currentRound = null;
 let liveUsers = [];
@@ -104,12 +99,6 @@ async function ensureCloudSpreadHistoryIndexes() {
   }
 }
 
-async function publish(ably, event, data) {
-  if (!ably) return;
-  const channel = ably.channels.get(CHANNEL_NAME);
-  await channel.publish(event, data);
-}
-
 async function createRound() {
   const latest = await CloudSpreadRound.findOne({}).sort({ roundId: -1 });
   const roundId = latest?.roundId ? latest.roundId + 1 : 1;
@@ -140,7 +129,7 @@ async function createRound() {
   return round;
 }
 
-async function settleRound(ably) {
+async function settleRound() {
   if (!currentRound || settled) return;
   settled = true;
   settledAtMs = Date.now();
@@ -179,17 +168,6 @@ async function settleRound(ably) {
       }
     }
   }
-
-  await publish(ably, EVENT_RESULT, {
-    roundId: currentRound.roundId,
-    phase: "result",
-    finalStep,
-    finalClouds,
-    crashStep: finalStep,
-    liveUsers,
-    selectedClouds: selectedCloudTrail,
-    cloudMultipliers: currentCloudMultipliers,
-  });
 }
 
 export async function getCloudSpreadStateSnapshot(forUserId = null) {
@@ -360,21 +338,17 @@ export async function getCloudSpreadRoundHistory(limit = 30) {
   return CloudSpreadHistory.find({}).sort({ createdAt: -1 }).limit(limit);
 }
 
-export async function startCloudSpreadGameLoop(ably) {
+export async function startCloudSpreadGameLoop() {
   if (timer) return;
   await ensureCloudSpreadHistoryIndexes();
   currentRound = await createRound();
-  await publish(ably, EVENT_STATE, await getCloudSpreadStateSnapshot());
 
   timer = setInterval(async () => {
     try {
       if (!currentRound) return;
 
-      await publish(ably, EVENT_STATE, await getCloudSpreadStateSnapshot());
-
       if (settled && settledAtMs > 0 && Date.now() - settledAtMs >= RESULT_MS) {
         currentRound = await createRound();
-        await publish(ably, EVENT_STATE, await getCloudSpreadStateSnapshot());
       }
     } catch (err) {
       console.error("[cloudSpreadGame] loop error:", err);
@@ -382,32 +356,22 @@ export async function startCloudSpreadGameLoop(ably) {
   }, 1000);
 }
 
-export async function publishCloudSpreadBetEvent(ably, row, round) {
-  await publish(ably, EVENT_NEW_BET, {
-    ...row,
-    roundId: round.roundId,
-    totalBet: round.totalBet || 0,
-    currentClouds,
-    currentStep: getCurrentStepFromClouds(currentClouds),
-    selectedClouds: selectedCloudTrail,
-    cloudMultipliers: currentCloudMultipliers,
-    userBetCount: countUserBetsInRound(row.userId),
-  });
-}
-
-export async function cashOutCloudSpreadRound(ably) {
+export async function cashOutCloudSpreadRound() {
   if (!currentRound) throw new Error("Round is not ready");
-  if (currentRound.phase !== "betting") throw new Error("Round already settled");
-  await settleRound(ably);
-  await publish(ably, EVENT_STATE, await getCloudSpreadStateSnapshot());
-  return getCloudSpreadStateSnapshot();
+  // Idempotent: bust / prior cash-out already moved to "result" — still return current state (no 400).
+  if (currentRound.phase !== "betting") {
+    const state = await getCloudSpreadStateSnapshot();
+    return { state, alreadySettled: true };
+  }
+  await settleRound();
+  const state = await getCloudSpreadStateSnapshot();
+  return { state, alreadySettled: false };
 }
 
 /** End round when selected cloud multiplier is 0 (0.0x bust). */
-export async function maybeBustSettleCloudSpread(ably, selectedCloudMultiplier) {
+export async function maybeBustSettleCloudSpread(selectedCloudMultiplier) {
   const m = Number(selectedCloudMultiplier);
-  if (!ably || settled || !currentRound || currentRound.phase !== "betting") return;
+  if (settled || !currentRound || currentRound.phase !== "betting") return;
   if (!Number.isFinite(m) || m > 0) return;
-  await settleRound(ably);
-  await publish(ably, EVENT_STATE, await getCloudSpreadStateSnapshot());
+  await settleRound();
 }

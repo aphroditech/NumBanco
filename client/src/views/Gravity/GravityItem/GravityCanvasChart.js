@@ -93,6 +93,8 @@ export default function GravityUltimateChartCanvas({
       // Build an adjusted Y range so the first point always renders at the vertical middle
       // without clipping other values.
       // Cache it so backend updates to only the endpoint don't cause a full curve rescale.
+      // Extra margin on the price range: quadraticCurveTo can bulge outside point bounds;
+      // lineWidth + shadowBlur also extend past the path (parent may use overflow:hidden).
       let minY;
       let range;
       if (yScaleRef.current) {
@@ -103,19 +105,31 @@ export default function GravityUltimateChartCanvas({
         const maxP = Math.max(...data.map((d) => d.price));
         const firstP = data[0].price;
         const maxDist = Math.max(firstP - minP, maxP - firstP) || 1;
-        minY = firstP - maxDist;
-        const maxY = firstP + maxDist;
+        // Generous margin: quadraticCurveTo bulges outside segments; stroke + shadow extend past path.
+        const bump = Math.max(maxDist * 0.28, 2.2);
+        let minY0 = firstP - maxDist - bump;
+        let maxY0 = firstP + maxDist + bump;
+        // Extra headroom so the curve never hugs the plot edge (avoids bottom/top clip).
+        const span0 = maxY0 - minY0 || 1;
+        const padFrac = 0.14;
+        minY = minY0 - span0 * padFrac;
+        const maxY = maxY0 + span0 * padFrac;
         range = maxY - minY || 1;
         yScaleRef.current = { minY, range };
       }
 
       const pad = 18;
-      const plotW = Math.max(1, w - pad * 2);
-      const plotH = Math.max(1, h - pad * 2);
-      const plotBottom = pad + plotH;
+      // Inner inset so glow (shadowBlur up to 16), stroke, and endpoint dot stay inside overflow:hidden card
+      const LINE_PAD_X = 16;
+      const LINE_PAD_Y = 44;
 
-      const getX = (t) => pad + (t / graphDurationSec) * plotW;
-      const getY = (p) => pad + (1 - (p - minY) / range) * plotH;
+      const plotW = Math.max(1, w - pad * 2 - LINE_PAD_X * 2);
+      const plotH = Math.max(1, h - pad * 2 - LINE_PAD_Y * 2);
+      const plotTop = pad + LINE_PAD_Y;
+      const plotBottom = plotTop + plotH;
+
+      const getX = (t) => pad + LINE_PAD_X + (t / graphDurationSec) * plotW;
+      const getY = (p) => plotTop + (1 - (p - minY) / range) * plotH;
 
       const now = Date.now();
       const start = startRef.current || now;
@@ -255,14 +269,20 @@ export default function GravityUltimateChartCanvas({
       ctx.fill();
 
       // Live value tooltip (canvas-following, no React re-render).
+      // Clamp anchor X so translate(-50%, …) doesn't clip at left/right edges (parent overflow:hidden).
       if (tooltipRef.current) {
         const el = tooltipRef.current;
         el.style.display = "block";
-        el.style.left = `${prevX}px`;
+        el.textContent = `Value: ${Number(prevPrice).toFixed(2)}`;
+        const measured = el.offsetWidth || 0;
+        const halfW = measured > 0 ? measured / 2 : 68;
+        const edgePad = 10;
+        const clampedX = Math.max(halfW + edgePad, Math.min(w - halfW - edgePad, prevX));
+        el.style.left = `${clampedX}px`;
+        el.style.zIndex = 10000;
         el.style.top = `${prevY}px`;
         el.style.borderColor = endpointColor;
         el.style.boxShadow = `0 0 22px ${endpointAbove ? "rgba(0,255,150,0.25)" : "rgba(255,77,77,0.25)"}`;
-        el.textContent = `Value: ${Number(prevPrice).toFixed(2)}`;
       }
 
       // 🔥 Result text
@@ -294,7 +314,7 @@ export default function GravityUltimateChartCanvas({
   }, [width, height, chartMin, chartMax, graphDurationSec]);
 
   return (
-    <div ref={wrapRef} style={{ width: "100%", height, position: "relative" }}>
+    <div ref={wrapRef} style={{ width: "100%", height, position: "relative", overflow: "visible" }}>
       <div
         ref={tooltipRef}
         style={{
