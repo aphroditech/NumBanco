@@ -581,6 +581,22 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  alphaTreeHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
   updownHistory: {
     type: [
       {

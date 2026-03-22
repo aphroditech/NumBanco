@@ -30,6 +30,7 @@ import fishingRoutes from "./routes/fishingRoutes.js";
 import minesRoutes from "./routes/minesRoutes.js";
 import gravityRoutes from "./routes/gravityRoutes.js";
 import cloudSpreadRoutes from "./routes/cloudSpreadRoutes.js";
+import alphaTreeRoutes from "./routes/alphaTreeRoutes.js";
 import moralisWebhook from "./webhooks/moralisWebhook.js";
 dotenv.config();
 
@@ -75,6 +76,7 @@ app.use("/api/fishing", fishingRoutes);
 app.use("/api/mines", minesRoutes);
 app.use("/api/gravity", gravityRoutes);
 app.use("/api/cloud-spread", cloudSpreadRoutes);
+app.use("/api/alpha-tree", alphaTreeRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },
