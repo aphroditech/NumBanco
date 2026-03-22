@@ -2,7 +2,6 @@ import User from "../models/User.js";
 
 export const userActive = async () => {
     try {
-        console.log("Fetching active users...");
         const users = await User.find({});
 
         const offlineUsers = users.filter(user => (user.active === 0)).length;
