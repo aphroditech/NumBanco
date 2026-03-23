@@ -11,6 +11,7 @@ export const getClickData = async (data, dispatch, flag, history = null) => {
             return res.data;
         }
         setUserRedux(res, dispatch);
+        return res.data;
     } catch (err) {
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");

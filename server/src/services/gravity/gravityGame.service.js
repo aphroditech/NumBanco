@@ -20,6 +20,9 @@ let liveUsers = [];
 let settled = false;
 let lastBroadcastPhase = null;
 let lockedRoundResult = null;
+let settlePromise = null;
+let settlingRoundId = null;
+let loopInFlight = false;
 
 function buildUserNotification(message, status = "success", from = "Gravity", to = "") {
   return {
@@ -291,93 +294,103 @@ async function settleRound(ably) {
   if (!currentRound || settled) return;
   settled = true;
 
-  const points = currentRound.graphPoints || [];
-  const first = points[0]?.value ?? 50;
+  const round = currentRound;
+  settlingRoundId = round.roundId;
 
-  // Decide result based on total bets (contrarian):
-  // - if UP bet amount is bigger -> DOWN wins
-  // - if DOWN bet amount is bigger -> UP wins
-  // - if equal -> random 50/50
-  const upTotalBet = Number(currentRound.upTotalBet || 0);
-  const downTotalBet = Number(currentRound.downTotalBet || 0);
+  // Expose in-flight settlement so we never save the same GravityRound doc twice in parallel.
+  settlePromise = (async () => {
+    const points = round.graphPoints || [];
+    const first = points[0]?.value ?? 50;
 
-  // Decide result based on total bets (contrarian):
-  // - if UP bet amount is bigger -> DOWN wins
-  // - if DOWN bet amount is bigger -> UP wins
-  // - if equal -> random 50/50
-  let result = lockedRoundResult || decideContrarianResult(upTotalBet, downTotalBet);
+    // Decide result based on total bets (contrarian):
+    // - if UP bet amount is bigger -> DOWN wins
+    // - if DOWN bet amount is bigger -> UP wins
+    // - if equal -> random 50/50
+    const upTotalBet = Number(round.upTotalBet || 0);
+    const downTotalBet = Number(round.downTotalBet || 0);
 
-  // Keep graph data untouched at settle time.
-  // This prevents any visible jump when flow ends.
-  const endValue = Number(points[points.length - 1]?.value ?? first);
+    let result = lockedRoundResult || decideContrarianResult(upTotalBet, downTotalBet);
 
-  currentRound.result = result;
-  currentRound.startValue = first;
-  currentRound.endValue = endValue;
-  currentRound.phase = "result";
-  await currentRound.save();
+    // Keep graph data untouched at settle time.
+    // This prevents any visible jump when flow ends.
+    const endValue = Number(points[points.length - 1]?.value ?? first);
 
-  // Settle bets from the round document (bots + real users).
-  const bets = Array.isArray(currentRound.users) ? currentRound.users : [];
-  for (const bet of bets) {
-    const isWin = bet.direction === result;
-    const winAmount = isWin ? round2(bet.betAmount * 1.95) : 0;
+    round.result = result;
+    round.startValue = first;
+    round.endValue = endValue;
+    round.phase = "result";
+    await round.save();
 
-    const user = await User.findOne({ userId: bet.userId });
-    if (user) {
-      if (!bet.isBot) {
-        // Real users: balance updates only happen on win.
-        if (winAmount > 0) {
-          user.balance = round2(user.balance + winAmount);
-          user.totalEarn = round2((user.totalEarn || 0) + winAmount);
+    // Settle bets from the round document (bots + real users).
+    const bets = Array.isArray(round.users) ? round.users : [];
+    for (const bet of bets) {
+      const isWin = bet.direction === result;
+      const winAmount = isWin ? round2(bet.betAmount * 1.95) : 0;
 
-          user.notification.push(
-            buildUserNotification(
-              `You won $${Number(winAmount).toFixed(2)} in round ${currentRound.roundId}`,
-              "success",
-              "Gravity",
-              user.userId
-            )
-          );
-        }
+      const user = await User.findOne({ userId: bet.userId });
+      if (!user) continue;
 
-        const profit = winAmount > 0 ? winAmount - bet.betAmount : -bet.betAmount;
-
-        user.totalhistory.push({
-          amount: winAmount > 0 ? winAmount : -bet.betAmount,
-          date: new Date(),
-          type: "gravity",
-        });
-        user.updownHistory.push({
-          roundId: currentRound.roundId,
-          direction: bet.direction,
-          amount: bet.betAmount,
-          result,
-          profit,
-          createAt: new Date(),
-        });
-
-        // Update GravityHistory winAmount for this real user's bet.
-        if (bet.betId) {
-          await GravityHistory.updateOne({ _id: bet.betId }, { $set: { winAmount } });
-        }
-        await user.save();
-      } else {
+      if (bet.isBot) {
         // Bots do not affect balances/history.
+        continue;
       }
-    }
-  }
 
-  await publish(ably, EVENT_RESULT, {
-    roundId: currentRound.roundId,
-    result,
-    endValue: endValue,
-    upTotalBet: currentRound.upTotalBet,
-    downTotalBet: currentRound.downTotalBet,
-    phase: "result",
-    points: currentRound.graphPoints || [],
-    startValue: currentRound.startValue,
-  });
+      // Real users: balance updates only happen on win.
+      if (winAmount > 0) {
+        user.balance = round2(user.balance + winAmount);
+        user.totalEarn = round2((user.totalEarn || 0) + winAmount);
+
+        user.notification.push(
+          buildUserNotification(
+            `You won $${Number(winAmount).toFixed(2)} in round ${round.roundId}`,
+            "success",
+            "Gravity",
+            user.userId
+          )
+        );
+      }
+
+      const profit = winAmount > 0 ? winAmount - bet.betAmount : -bet.betAmount;
+
+      user.totalhistory.push({
+        amount: winAmount > 0 ? winAmount : -bet.betAmount,
+        date: new Date(),
+        type: "gravity",
+      });
+      user.updownHistory.push({
+        roundId: round.roundId,
+        direction: bet.direction,
+        amount: bet.betAmount,
+        result,
+        profit,
+        createAt: new Date(),
+      });
+
+      // Update GravityHistory winAmount for this real user's bet.
+      if (bet.betId) {
+        await GravityHistory.updateOne({ _id: bet.betId }, { $set: { winAmount } });
+      }
+      await user.save();
+    }
+
+    await publish(ably, EVENT_RESULT, {
+      roundId: round.roundId,
+      result,
+      endValue: endValue,
+      upTotalBet: round.upTotalBet,
+      downTotalBet: round.downTotalBet,
+      phase: "result",
+      points: round.graphPoints || [],
+      startValue: round.startValue,
+    });
+  })();
+
+  try {
+    await settlePromise;
+  } finally {
+    settlePromise = null;
+    settlingRoundId = null;
+  }
 }
 
 async function createRound() {
@@ -618,9 +631,12 @@ export async function startGravityGameLoop(ably) {
     return botUserIds[idx]?.userId ?? null;
   };
   timer = setInterval(async () => {
+    if (loopInFlight) return;
+    loopInFlight = true;
     try {
       if (!currentRound) return;
-      const elapsedMs = Math.max(0, Date.now() - new Date(currentRound.startAt).getTime());
+      const roundAtTick = currentRound;
+      const elapsedMs = Math.max(0, Date.now() - new Date(roundAtTick.startAt).getTime());
       const phase = getPhase(elapsedMs);
       const nextPhase = phase === "closed" ? "result" : phase;
       if (nextPhase !== lastBroadcastPhase) {
@@ -704,6 +720,14 @@ export async function startGravityGameLoop(ably) {
       }
 
       if (elapsedMs >= ROUND_MS) {
+        // Avoid closing while settlement is still saving the same GravityRound doc.
+        if (settlePromise && settlingRoundId === roundAtTick.roundId) {
+          await settlePromise;
+        }
+        // Another tick could have rolled the round; only close if it's still the same doc.
+        if (!currentRound || String(currentRound._id) !== String(roundAtTick._id)) {
+          return;
+        }
         currentRound.phase = "closed";
         await currentRound.save();
         currentRound = await createRound();
@@ -712,6 +736,8 @@ export async function startGravityGameLoop(ably) {
       }
     } catch (err) {
       console.error("[gravityGame] loop error:", err);
+    } finally {
+      loopInFlight = false;
     }
   }, 1000);
 }

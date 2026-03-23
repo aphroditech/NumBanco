@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
     SimpleGrid,
     Box,
@@ -284,16 +284,12 @@ function LinkButtons() {
     const [isDailyOpen, setDailyOpen] = useState(false);
     const [isRewardOpen, setRewardOpen] = useState(false);
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const gridRef = useRef(null);
-    const [columns, setColumns] = useState(2);
-    const rafRef = useRef(null);
-    const prevColumnsRef = useRef(2);
-    const isMountedRef = useRef(true);
+    const isMountedRef = React.useRef(true);
     const dispatch = useDispatch();
 
     const [remainingTime, setRemainingTime] = useState(0);  
     const [isLoading, setIsLoading] = useState(true);
-    const countdownRef = useRef(null);
+    const countdownRef = React.useRef(null);
     
     // Separate typing states for each tier
     const [tierAText, setTierAText] = useState("");
@@ -385,120 +381,6 @@ function LinkButtons() {
         }
     }, [tierCText, tierCTextIndex, user?.membership]);
 
-    useEffect(() => {
-        const gridElement = gridRef.current;
-        if (!gridElement) return;
-
-        const resizeObserver = new ResizeObserver((entries) => {
-        // Cancel any pending animation frame
-            if (rafRef.current) {
-                cancelAnimationFrame(rafRef.current);
-            }
-
-            // Use requestAnimationFrame to debounce and prevent loop
-            rafRef.current = requestAnimationFrame(() => {
-                for (let entry of entries) {
-                // contentRect.width already excludes padding, so use it directly
-                const availableWidth = entry.contentRect.width;
-                
-                // Get the actual window width to check for the specific range
-                const windowWidth = window.innerWidth;
-                
-                // Force 1 column for width range 1076px to 1113px
-                if (windowWidth >= 1076 && windowWidth <= 1114) {
-                    if (prevColumnsRef.current !== 1) {
-                        prevColumnsRef.current = 1;
-                        setColumns(1);
-                    }
-                    return;
-                }
-                
-                // Get computed gap value (gap is responsive, so read actual computed value)
-                const computedStyle = window.getComputedStyle(gridElement);
-                // Try to get gap from computed style (might be in different units)
-                let gap = 24; // Default fallback
-                const gapValue = computedStyle.gap || computedStyle.columnGap;
-                if (gapValue) {
-                    const parsedGap = parseFloat(gapValue);
-                    if (!isNaN(parsedGap)) {
-                        gap = parsedGap;
-                    }
-                }
-                
-                // Minimum button width required
-                const minButtonWidth = 185.66;
-                
-                // Try 3 columns (2 rows of 3 buttons each) - preferred layout
-                const totalGapFor3Cols = gap * 2; // 2 gaps between 3 columns
-                const contentWidthFor3Cols = availableWidth - totalGapFor3Cols;
-                const buttonWidthFor3Cols = contentWidthFor3Cols / 3;
-                
-                // Try 2 columns (3 rows of 2 buttons each)
-                const totalGapFor2Cols = gap; // 1 gap between 2 columns
-                const contentWidthFor2Cols = availableWidth - totalGapFor2Cols;
-                const buttonWidthFor2Cols = contentWidthFor2Cols / 2;
-                
-                let newColumns;
-                if (buttonWidthFor2Cols >= minButtonWidth) {
-                    newColumns = 2; // 2 columns if buttons can be >= 195.66px
-                } else {
-                    newColumns = 1; // 1 column (stacked) if buttons would be < 195.66px
-                }
-                
-                // Only update if value actually changed
-                if (newColumns !== prevColumnsRef.current) {
-                    prevColumnsRef.current = newColumns;
-                    setColumns(newColumns);
-                }
-                }
-            });
-        });
-
-        resizeObserver.observe(gridElement);
-
-        // Set initial columns based on current width
-        // Check for the specific width range first (1076px to 1113px)
-        const windowWidth = window.innerWidth;
-        if (windowWidth >= 1076 && windowWidth <= 1114) {
-            setColumns(1);
-            prevColumnsRef.current = 1;
-        } else {
-            // Use getBoundingClientRect and subtract padding manually for initial calculation
-            const rect = gridElement.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(gridElement);
-            const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
-            const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
-            const availableWidth = rect.width - paddingLeft - paddingRight;
-            
-            let gap = 24; // Default fallback
-            const gapValue = computedStyle.gap || computedStyle.columnGap;
-            if (gapValue) {
-                const parsedGap = parseFloat(gapValue);
-                if (!isNaN(parsedGap)) {
-                    gap = parsedGap;
-                }
-            }
-            
-            // Calculate initial columns
-            const minButtonWidth = 185.66;
-            const totalGapFor2Cols = gap;
-            const contentWidthFor2Cols = availableWidth - totalGapFor2Cols;
-            const buttonWidthFor2Cols = contentWidthFor2Cols / 2;
-            
-            const initialColumns = buttonWidthFor2Cols >= minButtonWidth ? 2 : 1;
-            setColumns(initialColumns);
-            prevColumnsRef.current = initialColumns;
-        }
-
-        return () => {
-            if (rafRef.current) {
-                cancelAnimationFrame(rafRef.current);
-            }
-            resizeObserver.disconnect();
-        };
-    }, []);
-
-
     const format = (ms) => {
         const h = Math.floor(ms / 3600000);
         const m = Math.floor((ms % 3600000) / 60000);
@@ -514,12 +396,11 @@ function LinkButtons() {
             <SimpleGrid
                 w="100%"
                 flex="1"
-                ref={gridRef}
-                columns={columns}
-                gap={{ base: "16px", sm: "20px", md: "24px", lg: "28px" }}
+                columns={{ base: 1, md: 2, '2xl': 2 }}
+                gap={{ base: "14px", sm: "16px", md: "18px", lg: "20px" }}
                 mt="20px"
                 mb="20px"
-                px={{ base: "12px", sm: "16px", md: "20px", lg: "24px" }}
+                px={{ base: "10px", sm: "12px", md: "16px", lg: "18px" }}
                 justifyItems="stretch"
             >
                 {/* Tier A */}
