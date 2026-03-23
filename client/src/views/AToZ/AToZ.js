@@ -4,6 +4,12 @@ import {
     Grid,
     GridItem,
     Text,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalCloseButton,
     VStack,
     HStack,
     Flex,
@@ -20,6 +26,9 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 
 import RealTimeHistory from './AToZItems/RealTimeHistory';
+import UserBetHistory from './AToZItems/UserBetHistory';
+
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 /** Match Rocket Shot bet range and step */
 const MIN_AMOUNT = 0.5;
@@ -27,6 +36,7 @@ const MAX_AMOUNT = 20;
 const AMOUNT_STEP = 0.5;
 
 export default function AToZPage() {
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const user = useSelector((state) => state.user.userInfo) || {};
     const walletBalance = user.balance;
     const balanceNum = Number(walletBalance);
@@ -127,7 +137,20 @@ export default function AToZPage() {
                                 pb="14px"
                                 bg="linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 100%)"
                                 borderTop="1px solid rgba(0, 212, 255, 0.3)"
+                                position="relative"
                             >
+                                <IconButton
+                                    aria-label="Help"
+                                    position="absolute"
+                                    top="5px"
+                                    right="5px"
+                                    icon={<HelpOutlineIcon style={{ fontSize: 22 }} />}
+                                    size="sm"
+                                    variant="ghost"
+                                    color="#00d4ff"
+                                    _hover={{ bg: 'rgba(255,255,255,0.08)', color: '#00D4FF' }}
+                                    onClick={() => setIsHelpModalOpen(true)}
+                                />
                                 <VStack spacing="14px" align="center" w="100%" maxW="560px" mx="auto" px="16px">
                                     {/* Bet amount — same pattern as Rocket Shot */}
                                     <Flex align="center" justify="center" gap="6px" flexWrap="wrap" w="100%">
@@ -271,6 +294,30 @@ export default function AToZPage() {
                 {/* History Area */}
                 <RealTimeHistory />
             </Grid>
+            <UserBetHistory />
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+                <ModalOverlay bg="blackAlpha.700" />
+                <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
+                    <ModalHeader color="white" >
+                        *How to Play AToZ Game
+                    </ModalHeader>
+                    <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
+                    <ModalBody py={4}>
+                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
+                            AToZ Game is a word guessing game where you have to guess the word that is hidden in the spinning wheel.
+                        </Text>
+                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
+                            You can bet on any word in the alphabet.
+                        </Text>
+                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
+                            The word is hidden in the spinning wheel and you have to guess the word that is hidden in the spinning wheel.
+                        </Text>
+                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
+                            The word is hidden in the spinning wheel and you have to guess the word that is hidden in the spinning wheel.
+                        </Text>
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
         </Box>
     );
 }

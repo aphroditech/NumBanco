@@ -38,7 +38,7 @@ function randomLevel() {
 
 /** Same weighted pick as `getMultiplier` in rocketController */
 function pickMultiplierFromSettings(settings) {
-    const multipliers = settings?.multiple;
+    const multipliers = settings?.normalMultiple;
     if (!multipliers?.length) return 0;
 
     const totalWeight = multipliers.reduce((sum, m) => sum + m.probability, 0);
@@ -86,8 +86,7 @@ export const rocketBot = async (ably) => {
             const level = randomLevel();
             const isWin = Math.random() < rocketSettings.botWinProbability;
 
-            let multiplier = pickMultiplierFromSettings(rocketSettings);
-            multiplier = applyLevelToMultiplier(multiplier, level);
+            let multiplier = isWin ? pickMultiplierFromSettings(rocketSettings) : 0;
             const winAmount = isWin
                 ? Math.round(betAmount * multiplier * 1000) / 1000
                 : 0;
@@ -102,6 +101,7 @@ export const rocketBot = async (ably) => {
                 userName: user.altas,
                 avatar: user.avatar,
                 isWin,
+                multiplier,
                 bet: betAmount,
                 win: winAmount,
                 date: new Date(),

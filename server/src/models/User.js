@@ -364,6 +364,18 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  aToZAmount: {
+    type: Number,
+    default: 0
+  },
+  aToZWinAmount: {
+    type: Number,
+    default: 0
+  },
+  aToZMode: {
+    type: Number,
+    default: 0 // 0: normal, 1: hard
+  },
 
   pumpingHistory: {
     type: [

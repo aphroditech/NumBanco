@@ -4,7 +4,7 @@ const RubicResultSchema = new mongoose.Schema({
   userName: {
     type: String,
     required: true
-  },
+ },
   avatar: {
     type: String,
     required: true
@@ -12,6 +12,10 @@ const RubicResultSchema = new mongoose.Schema({
   isWin: {
     type: Boolean,
     required: true
+  },
+  multiplier: {
+    type: Number,
+    required: false
   },
   betAmount: {
     type: Number,

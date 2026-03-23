@@ -17,6 +17,10 @@ const MiningResultSchema = new mongoose.Schema({
         type: Boolean,
         required: false,
     },
+    multiplier: {
+        type: Number,
+        required: false,
+    },
     turn: {
         type: Number,
         required: true,
