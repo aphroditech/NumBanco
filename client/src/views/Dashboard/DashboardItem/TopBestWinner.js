@@ -76,7 +76,7 @@ function TopBestWinner() {
                 marginRight: "8px",
 
               }} />
-            Top Best 10 Winners
+            Top Best Winners
           </Text>
         </Flex>
       </CardHeader>
