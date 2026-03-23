@@ -8,6 +8,9 @@ export const DEFAULT_ALPHA_TREE_SETTINGS = {
     midPowHard: 1.28,
     highStretchEasy: 1.065,
     highStretchHard: 0.935,
+    highStretchNormal: 1,
+    // Original behavior was one-high-per-step across 3 letters → probability ~1/3.
+    highBandRate: 0.3333,
     step10MultEasy: 1.02,
     step10MultHard: 0.98,
 };

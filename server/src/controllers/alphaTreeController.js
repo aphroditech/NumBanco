@@ -64,14 +64,27 @@ function step10FixedMultiplier(mode, settings) {
     return round2(raw * mult);
 }
 
-/** Random shuffle of which letter gets bust / (0.1,1) / (1,max) this step */
-function randomBandPermutation() {
-    const arr = ["zero", "mid", "high"];
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+/**
+ * Create band assignment for 3 buttons of a step (steps 2–9).
+ * Each button is independent:
+ *  - "high" with probability = settings.highBandRate  -> (1, max)
+ *  - remaining split equally:
+ *      - "mid"  with probability = (1-highBandRate)/2 -> (0.1, 1)
+ *      - "zero" with probability = (1-highBandRate)/2 -> bust (0)
+ */
+function randomBandPermutation(settings) {
+    const hb = Number(settings?.highBandRate);
+    const highBandRate = Number.isFinite(hb) ? Math.min(1, Math.max(0, hb)) : 1 / 3;
+    const midZeroRate = (1 - highBandRate) / 2;
+
+    const drawBand = () => {
+        const u = Math.random();
+        if (u < highBandRate) return "high";
+        if (u < highBandRate + midZeroRate) return "mid";
+        return "zero";
+    };
+
+    return [drawBand(), drawBand(), drawBand()];
 }
 
 /**
@@ -109,6 +122,9 @@ function drawForBand(stepIndex, band, mode, settings) {
         r = Math.min(r, hi);
     } else if (m === 2) {
         r = 1 + (r - 1) * settings.highStretchHard;
+    } else if (m === 1) {
+        r = 1 + (r - 1) * (settings.highStretchNormal ?? 1);
+        r = Math.min(r, hi);
     }
     return r;
 }
@@ -252,7 +268,7 @@ export const pickLetter = async (req, res) => {
             state.cumulativeMultiplier = round2(state.cumulativeMultiplier * baseMult);
             state.step = 2;
             state.phase = "playing";
-            state.bandPermutation = randomBandPermutation();
+            state.bandPermutation = randomBandPermutation(settings);
             await state.save();
 
             return sendUserResponse(res, "", user, {
@@ -311,13 +327,13 @@ export const pickLetter = async (req, res) => {
         // Steps 2–9: each letter gets one of {bust, (0.1,1), (1,max)} — random permutation per step
         let perm = state.bandPermutation;
         if (!perm || perm.length !== 3) {
-            perm = randomBandPermutation();
+            perm = randomBandPermutation(settings);
             state.bandPermutation = perm;
         }
         const mode = normalizeAlphaTreeMode(user.alphaTreeMode);
         let band = perm[letterIndex];
         if (mode === 0 && band === "zero" && Math.random() < settings.easyBustRerollChance) {
-            perm = randomBandPermutation();
+            perm = randomBandPermutation(settings);
             state.bandPermutation = perm;
             band = perm[letterIndex];
         }
@@ -380,7 +396,7 @@ export const pickLetter = async (req, res) => {
         state.cumulativeMultiplier = round2(state.cumulativeMultiplier * r);
         state.step = stepIndex + 1;
         if (state.step >= 2 && state.step <= 9) {
-            state.bandPermutation = randomBandPermutation();
+            state.bandPermutation = randomBandPermutation(settings);
         } else {
             state.bandPermutation = undefined;
         }

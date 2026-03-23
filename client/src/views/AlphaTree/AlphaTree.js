@@ -664,11 +664,11 @@ export default function AlphaTreePage() {
                                     Press <Text as="span" color="#00D4FF" fontWeight="bold">Play Game</Text> to
                                     start. Step 1: choose <Text as="span" fontWeight="bold">A</Text> (result{" "}
                                     <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)}</Text>). Steps 2–9: three letters — each step
-                                    randomly assigns <Text as="span" color="#FFD700">0</Text> (bust), a value in{" "}
-                                    <Text as="span" color="#FFD700">(0.1, 1)</Text>, and a value in{" "}
-                                    <Text as="span" color="#FFD700">(1, max)</Text> to the letters (max ={" "}
+                                    each letter independently becomes <Text as="span" color="#FFD700">0</Text> (bust), a value in{" "}
+                                    <Text as="span" color="#FFD700">(0.1, 1)</Text>, or a value in{" "}
+                                    <Text as="span" color="#FFD700">(1, max)</Text> (max ={" "}
                                     <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)}</Text> ×
-                                    2^(step − 1)). Step 9: W, X, Y. Step 10: only{" "}
+                                    2^(step − 1). Probabilities controlled in Alpha Tree Settings). Step 9: W, X, Y. Step 10: only{" "}
                                     <Text as="span" fontWeight="bold">Z</Text>, fixed{" "}
                                     <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)} × 2^9</Text> (plus mode settings).
                                 </Text>
