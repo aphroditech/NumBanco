@@ -4,8 +4,7 @@ import jwt from "jsonwebtoken";
 import { sendUserResponse } from "../utils/responses.js";
 import RealTimeWinner from "../models/RealTimeWinner.js";
 import MinesHistory from "../models/MinesHistory.js";
-import DoveHistory from "../models/DoveHistory.js";
-import MiningHistory from "../models/MiningHistory.js";
+import MiningHistory from "../models/jackal/MiningHistory.js";
 import { generateUserWallets } from "../utils/walletGenerator.js";
 
 import { incrementAuthStat } from "./authStateService.js";
@@ -474,40 +473,20 @@ export const getWinners = async (req, res) => {
             }
         ]);
 
-        const doveTopWinner = await DoveHistory.aggregate([
-            {
-                $unwind: {
-                    path: "$history",
-                    preserveNullAndEmptyArrays: false
-                }
-            },
+        const doveTopWinner = await User.aggregate([
             {
                 $match: {
-                    "history.winAmt": { $gt: 0 }
-                }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "user",
-                    foreignField: "_id",
-                    as: "userDoc"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$userDoc",
-                    preserveNullAndEmptyArrays: false
+                    doveWinAmount: { $gt: 0 }
                 }
             },
             {
                 $project: {
-                    username: "$userDoc.altas",
-                    avatar: "$userDoc.avatar",
-                    membership: "$userDoc.membership",
+                    username: "$altas",
+                    avatar: 1,
+                    membership: 1,
                     gameType: { $literal: "Lucky Hop" },
-                    winAmount: "$history.winAmt",
-                    date: "$history.timestamp"
+                    winAmount: "$doveWinAmount",
+                    date: "$updatedAt"
                 }
             },
             {
