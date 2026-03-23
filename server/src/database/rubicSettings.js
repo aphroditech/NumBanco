@@ -1,4 +1,4 @@
-import RubicSetting from '../models/RubicSetting.js';
+import RubicSetting from '../models/rubic/RubicSetting.js';
 
 export const initializeRubicSettings = async () => {
     try {

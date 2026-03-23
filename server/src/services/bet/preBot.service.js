@@ -1,5 +1,5 @@
 import User from "../../models/User.js";
-import BetTicket from "../../models/BetTicket.js";
+import BetTicket from "../../models/numBanco/BetTicket.js";
 import * as Random from "../../math.randomfunctions/randomPre.js";
 import { getChannel } from "../ably.service.js";
 

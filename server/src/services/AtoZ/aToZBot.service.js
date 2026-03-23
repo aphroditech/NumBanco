@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import AToZSetting from "../../models/AToZSetting.js";
-import AToZResult from "../../models/AToZResult.js";
+import AToZSetting from "../../models/digitsSlot/AToZSetting.js";
+import AToZResult from "../../models/digitsSlot/AToZResult.js";
 
 /** Similar bet spread to `rocketBot.service.js` / Rocket Shot UI */
 const BET_AMOUNT_RANGES = [

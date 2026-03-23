@@ -1,4 +1,4 @@
-import DoveSettings from '../models/DoveSettings.js';
+import DoveSettings from '../models/dove/DoveSettings.js';
 
 export const initDoveSetting = async () => {
     try {

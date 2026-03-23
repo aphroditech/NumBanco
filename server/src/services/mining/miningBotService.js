@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import MiningSettings from "../../models/MiningSettings.js";
-import MiningResult from "../../models/MiningResult.js";
+import MiningSettings from "../../models/jackal/MiningSettings.js";
+import MiningResult from "../../models/jackal/MiningResult.js";
 
 const MIN_TURNS = 1;
 const MAX_TURNS = 8;

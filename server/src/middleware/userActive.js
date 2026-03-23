@@ -21,6 +21,8 @@ export const userActive = async () => {
         const mineUsers = users.filter(user => (user.active === 13)).length + 60;
         const fishingUsers = users.filter(user => (user.active === 14)).length + 90;
         const alphaTreeUsers = users.filter(user => (user.active === 15)).length + 60;
+        const aToZUsers = users.filter(user => (user.active === 16)).length + 100;
+        const totalActiveUsers = tierAUsers + tierBUsers + tierCUsers + rubicUsers + pumpingUsers + gravityUsers + doveUsers + cloudSpreadUsers + cocoUsers + rocketUsers + jackalUsers + mineUsers + fishingUsers + alphaTreeUsers + aToZUsers;
         return {
             offlineUsers,
             onlineUsers,
@@ -38,7 +40,9 @@ export const userActive = async () => {
             jackalUsers,
             mineUsers,
             fishingUsers,
-            alphaTreeUsers
+            alphaTreeUsers,
+            aToZUsers,
+            totalActiveUsers
         }
     } catch (err) {
         console.log("Error fetching active users:", err);

@@ -1,8 +1,8 @@
 import User from "../models/User.js";
-import AToZSetting from "../models/AToZSetting.js";
-import AToZHistory from "../models/AToZHistory.js";
-import AToZResult from "../models/AToZResult.js";
-import CalendarDigit from "../models/CalendarDigit.js";
+import AToZSetting from "../models/digitsSlot/AToZSetting.js";
+import AToZHistory from "../models/digitsSlot/AToZHistory.js";
+import AToZResult from "../models/digitsSlot/AToZResult.js";
+import CalendarDigit from "../models/digitsSlot/CalendarDigit.js";
 
 export const bet = async (req, res) => {
     try {
@@ -27,11 +27,13 @@ export const bet = async (req, res) => {
 
         user.balance -= betAmount;
         user.aToZAmount += betAmount;
+        user.refreshBet += betAmount;
+        user.lotterybet += betAmount;
         user.totalBet = (user.totalBet || 0) + betAmount;
         user.totalhistory.push({
             amount: -betAmount,
             date: new Date(),
-            type: "A To Z",
+            type: "Digits",
         });
         await user.save({ optimisticConcurrency: false });
 
@@ -260,7 +262,7 @@ export const spinComplete = async (req, res) => {
             user.totalhistory.push({
                 amount: winAmount,
                 date: new Date(),
-                type: "Digit",
+                type: "Digits",
             });
         }
 
@@ -329,7 +331,7 @@ export const spinComplete = async (req, res) => {
 
 export const getAToZResults = async (req, res) => {
     try {
-        const aToZResults = await AToZResult.find().sort({ date: -1 }).limit(25);
+        const aToZResults = await AToZResult.find().sort({ date: -1 }).limit(20);
         return res.status(200).json({ aToZResults: aToZResults || [] });
     } catch (error) {
         console.error(error);

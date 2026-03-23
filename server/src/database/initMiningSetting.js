@@ -1,4 +1,4 @@
-import MiningSettings from '../models/MiningSettings.js';
+import MiningSettings from '../models/jackal/MiningSettings.js';
 
 export const initMiningSetting = async () => {
     try {

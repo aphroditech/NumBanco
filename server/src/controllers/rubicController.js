@@ -1,7 +1,7 @@
 import User from "../models/User.js";
-import RubicResult from "../models/RubicResult.js";
-import RubicSetting from "../models/RubicSetting.js";
-import UserRubic from "../models/UserRubic.js";
+import RubicResult from "../models/rubic/RubicResult.js";
+import RubicSetting from "../models/rubic/RubicSetting.js";
+import UserRubic from "../models/rubic/UserRubic.js";
 
 export const handleRubicBet = async (req, res) => {
     try {

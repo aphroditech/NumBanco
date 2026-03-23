@@ -1,8 +1,8 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import RubicResult from "../../models/RubicResult.js";
+import RubicResult from "../../models/rubic/RubicResult.js";
 
-import RubicSetting from "../../models/RubicSetting.js";
+import RubicSetting from "../../models/rubic/RubicSetting.js";
 
 const DICE = [1, 2, 3, 4, 5, 6];
 
