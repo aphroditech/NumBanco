@@ -102,7 +102,7 @@ export async function cashOutCloudSpread(req, res) {
         partnerId: 0,
         partnerActivity: 0,
         lastClickDate: 0,
-        canWithdraw: 0,
+        
       }
     );
     return res.status(200).json({

@@ -87,10 +87,10 @@ export default function Reward() {
             <Grid justifyContent="center" justifyItems="center" gap={6} alignItems="center" mt="10px">
                 <Text color='#fff' fontSize='20px' textAlign='center' >
                     {
-                        "Bet :  " + "$" + truncateToTwo(user.refreshBet)
+                        "Total Bet Volume :  " + "$" + truncateToTwo(user.refreshBet)
                     }
                 </Text>
-                <Text color='#fff' fontSize='20px' textAlign='center'>
+                <Text color='#F56565' fontSize='20px' textAlign='center'>
                     {
                         "Reward :  " + "$" + truncateToTwo(user.refreshBet * 0.02)
                     }

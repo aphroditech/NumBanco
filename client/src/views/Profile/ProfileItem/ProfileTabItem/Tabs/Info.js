@@ -109,14 +109,7 @@ function Info() {
                 background='transparent'
                 mt={8}
                 mb={{ base: "30px" }}>
-                <Text
-                    fontSize='xl'
-                    color={textColor}
-                    fontWeight='bold'
-                    textAlign='center'
-                    mb='22px'>
-                    User Info
-                </Text>
+                
                 <LineInput
                     length={18}
                     name="altas"

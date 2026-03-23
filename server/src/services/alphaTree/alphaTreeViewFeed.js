@@ -19,7 +19,7 @@ export async function enrichAlphaTreeViewsWithUser(views) {
                     partnerId: 0,
                     partnerActivity: 0,
                     lastClickDate: 0,
-                    canWithdraw: 0,
+                    
                 }
             );
             const obj = item.toObject();

@@ -10,7 +10,7 @@ export const HistoryReducer = (state = initialState, action) => {
         return { ...state, miningHistory: action.payload };
         case "SET_ROCKET_HISTORY":
         return { ...state, rocketHistory: action.payload };
-        case "SET_A_TO_Z_HISTORY":
+        case "SET_AToZ_HISTORY":
         return { ...state, aToZHistory: action.payload };
         default:
             return state;

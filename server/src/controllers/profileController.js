@@ -20,7 +20,7 @@ export const profileInfo = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         if(password!=="") {
@@ -62,7 +62,7 @@ export const profileUserAvatar = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         user.avatar = req.body.avatar;
@@ -92,7 +92,7 @@ export const profilePassword = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
 
@@ -127,7 +127,7 @@ export const setSecurity = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         user.twofactor = !user.twofactor

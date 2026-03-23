@@ -20,7 +20,7 @@ export const handleRubicBet = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
 
@@ -168,7 +168,7 @@ export const removeUserBalance = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         const userRubicAmount = user.rubicHistory.reduce((acc, curr) => acc + curr.betAmount, 0);
