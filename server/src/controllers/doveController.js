@@ -8,6 +8,33 @@ const MAX_BET_AMOUNT = 20;
 const VIEW_LIMIT = 22;
 const MAX_LANES = 20;
 
+function buildUserNotification(message, status = "success", from = "Lucky Hop", to = "") {
+    return {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        notification: message,
+        status,
+        from,
+        to,
+        unread: true,
+    };
+}
+
+async function pushUserNotification(userId, message, status = "success") {
+    if (!userId || !message) return;
+    try {
+        await User.updateOne(
+            { _id: userId },
+            {
+                $push: {
+                    notification: buildUserNotification(message, status, "Lucky Hop", ""),
+                },
+            }
+        );
+    } catch (e) {
+        console.warn("[dove] pushUserNotification failed:", e?.message || e);
+    }
+}
+
 function getModeParams(settings, difficulty) {
     if (difficulty === "easy") return settings?.easy || { a: 0.2, b: 0.05 };
     if (difficulty === "med") return settings?.med || { a: 0.15, b: 0.03 };
@@ -284,6 +311,15 @@ export const getDoveEarnings = async (req, res) => {
         });
         await doveView.save();
         publishDoveViewToAbly(req.app);
+
+        // Push in-app notification (appears in Notifications dropdown).
+        // This is the "cash out amount" the user asked to display.
+        const cashOutAmt = Number(winAmount) || 0;
+        await pushUserNotification(
+            userId,
+            `You cashed out $${cashOutAmt.toFixed(2)} in Lucky Hop.`,
+            "success"
+        );
 
         return res.json({ balance: user.balance });
     }
