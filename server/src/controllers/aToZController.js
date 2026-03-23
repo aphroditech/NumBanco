@@ -33,7 +33,7 @@ export const bet = async (req, res) => {
         user.totalhistory.push({
             amount: -betAmount,
             date: new Date(),
-            type: "A To Z",
+            type: "Digits",
         });
         await user.save({ optimisticConcurrency: false });
 
@@ -262,7 +262,7 @@ export const spinComplete = async (req, res) => {
             user.totalhistory.push({
                 amount: winAmount,
                 date: new Date(),
-                type: "Digit",
+                type: "Digits",
             });
         }
 
