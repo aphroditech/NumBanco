@@ -6,7 +6,7 @@ import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 
 import { useSelector, useDispatch } from "react-redux";
 import { getClickData } from "action/LotteryActions";
-import diamond from "assets/badge/377.png";
+// import diamond from "assets/badge/377.png";
 import dia from "assets/badge/diamond.png";
 import { formatTime } from "components/functions/format";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
@@ -59,7 +59,11 @@ export default function Lottery() {
     const result = lottery - parseInt(lottery);
     if(result === 0) bet = lottery;
     else bet = lottery.toFixed(1);
-    if (lottery < 0.1) lottery = 0.1;
+    if (lottery < 0.1) 
+    {
+        bet = 0.1;
+        lottery = 0.1;
+    }
     const loading = useSelector((state) => state.user.loading);
 
     // const baseNumbers = useMemo(() => {
@@ -74,8 +78,7 @@ export default function Lottery() {
 
     const baseNumbers = useMemo(() => {
         return [0.5, 500, 100, 50, 20, 15, 5, 0.2, bet];
-    }, [lottery]);
-    
+    }, []);
     useEffect(() => {
         setWheelNumbers(shuffleArray(baseNumbers));
     }, [baseNumbers]);
@@ -284,7 +287,7 @@ export default function Lottery() {
                                 d="M25 12 C19 12 13 18 13 24 C13 32 20 40 25 54 C30 40 37 32 37 24 C37 18 31 12 25 12 Z"
                                 fill="rgba(255,255,255,0.4)"
                             />
-                            <image
+                            {/* <image
                                 href={diamond}
                                 x="15"
                                 y="14"
@@ -292,7 +295,7 @@ export default function Lottery() {
                                 height="20"
                                 preserveAspectRatio="xMidYMid meet"
                                 alt="NumBanco Diamond Pointer"
-                            />
+                            /> */}
                         </Box>
                     </Box>
 
