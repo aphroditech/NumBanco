@@ -37,16 +37,13 @@ export default function UserHistory() {
                     <Table variant="unstyled" color="#fff" width="100%" sx={{ tableLayout: "fixed" }}>
                         <Thead>
                             <Tr>
-                                <Th color="rgba(255,255,255,0.9)" fontSize="xs" fontWeight="bold" px="0" py="4px" h="32px" borderBottom="none" whiteSpace="nowrap" w="20%">
+                                <Th color="rgba(255,255,255,0.9)" fontSize="xs" fontWeight="bold" px="0" py="4px" h="32px" borderBottom="none" whiteSpace="nowrap" w="30%">
                                     User
                                 </Th>
-                                <Th color="rgba(255,255,255,0.9)" fontSize="xs" fontWeight="bold" px="0" py="2px" h="32px" borderBottom="none" textAlign="center" whiteSpace="nowrap" w="20%">
-                                    Bet($)
+                                <Th color="rgba(255,255,255,0.9)" fontSize="xs" fontWeight="bold" px="0" py="4px" h="32px" borderBottom="none" textAlign="center" whiteSpace="nowrap" w="30%">
+                                    Result
                                 </Th>
-                                <Th color="rgba(255,255,255,0.9)" fontSize="xs" fontWeight="bold" px="0" py="4px" h="32px" borderBottom="none" textAlign="center" whiteSpace="nowrap" w="34%">
-                                    Multiplier
-                                </Th>
-                                <Th color="rgba(255,255,255,0.9)" fontSize="xs" fontWeight="bold" px="0" py="4px" h="32px" borderBottom="none" textAlign="center" whiteSpace="nowrap" w="26%">
+                                <Th color="rgba(255,255,255,0.9)" fontSize="xs" fontWeight="bold" px="0" py="4px" h="32px" borderBottom="none" textAlign="center" whiteSpace="nowrap" w="40%">
                                     Win($)
                                 </Th>
                             </Tr>
@@ -83,13 +80,10 @@ export default function UserHistory() {
                                                 </Flex>
                                             </Td>
                                             <Td py="4px" h="16px" border="none">
-                                                <Text fontSize="xs" color={winColor} textAlign="center" whiteSpace="nowrap">
-                                                    {row.betAmount != null ? truncateToTwo(row.betAmount) : "—"}
-                                                </Text>
-                                            </Td>
-                                            <Td py="4px" h="16px" border="none">
                                                 <Text fontSize="xs" color="rgba(255,255,255,0.85)" textAlign="center" whiteSpace="nowrap">
-                                                    {row.multiplier != null ? `${row.multiplier.toFixed ? row.multiplier.toFixed(2) : truncateToTwo(row.multiplier)}x` : "—"}
+                                                    {row.multiplier != null
+                                                        ? `${row.multiplier.toFixed ? row.multiplier.toFixed(2) : truncateToTwo(row.multiplier)}x`
+                                                        : "—"}
                                                 </Text>
                                             </Td>
                                             <Td py="4px" h="16px" border="none">
@@ -102,7 +96,7 @@ export default function UserHistory() {
                                 })
                             ) : (
                                 <Tr>
-                                    <Td colSpan={4} border="none" py="8" textAlign="center">
+                                    <Td colSpan={3} border="none" py="8" textAlign="center">
                                         <Text fontSize="xs" color="rgba(255, 255, 255, 0.5)">
                                             No real-time results yet
                                         </Text>

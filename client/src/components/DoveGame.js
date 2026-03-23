@@ -3,6 +3,9 @@ import { useDispatch } from "react-redux";
 import Phaser from "phaser";
 import DoveControlPanel from "./DoveGame/DoveControlPanel";
 import { getDovePrefix, getDifficultyKey, checkDoveWin, getDoveEarnings, reportDoveFail } from "action/DoveActions";
+import WinFireworksEffect from "components/Effects/WinFireworksEffect";
+import { toast } from "react-toastify";
+import { getUserData } from "action";
 
 const GAME_WIDTH = 1280
 const GAME_HEIGHT = 720
@@ -37,6 +40,8 @@ function DoveGame() {
     const [canMove, setCanMove] = useState(false)
     const nextStepResultRef = useRef(null)
     const difficultyRef = useRef("easy")
+    const [winFireworks, setWinFireworks] = useState({ visible: false, amount: 0 })
+    const winFireworksTimeoutRef = useRef(null)
 
     useEffect(() => {
         let mounted = true
@@ -65,6 +70,8 @@ function DoveGame() {
         let stepText
         let multiplierText
         let failedText
+        let crashedImage
+        let cashOutText
 
         let gameOver = false
         let canMove = true
@@ -101,6 +108,9 @@ function DoveGame() {
             width: GAME_WIDTH,
             height: GAME_HEIGHT,
             parent: "dove-game-container",
+            audio: {
+                noAudio: true,
+            },
             backgroundColor: "#2c2f3a",
             scale: {
                 mode: Phaser.Scale.FIT,
@@ -129,6 +139,7 @@ function DoveGame() {
             this.load.image("grass", "/assets/grass.png")
             this.load.image("bubble", "/assets/bubble.png")
             this.load.image("winbubble", "/assets/winbubble.png")
+            this.load.image("crashed", "/assets/crashed.png")
 
             this.load.image("car1", "/assets/car1.png")
             this.load.image("car2", "/assets/car2.png")
@@ -399,6 +410,28 @@ function DoveGame() {
             ).setOrigin(0.5).setScrollFactor(0)
 
             failedText.setVisible(false)
+            if (cashOutText) cashOutText.setVisible(false)
+
+            // Move up so the bottom control panel doesn't hide the crash graphic.
+            crashedImage = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120, "crashed")
+                .setOrigin(0.5)
+                .setScrollFactor(0)
+                .setDepth(200)
+            crashedImage.setScale(0.8)
+            crashedImage.setVisible(false)
+
+            cashOutText = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "",
+                {
+                    fontFamily: "Orbitron, Arial Black, sans-serif",
+                    fontSize: "48px",
+                    fontStyle: "bold",
+                    color: "#00ff88",
+                    stroke: "#000000",
+                    strokeThickness: 4,
+                    shadow: { offsetX: 2, offsetY: 2, color: "#000", blur: 6 }
+                }
+            ).setOrigin(0.5).setScrollFactor(0).setDepth(210)
+            cashOutText.setVisible(false)
 
             const barWidth = scene.scale.width / 3
             const barHeight = scene.scale.height / 18
@@ -607,7 +640,7 @@ function DoveGame() {
 
             game.triggerMove = () => moveDove()
 
-            game.handleCashOut = () => {
+            game.handleCashOut = async () => {
                 if (step < 1) return
                 gameOver = true
                 canMove = false
@@ -618,18 +651,52 @@ function DoveGame() {
                 }
                 dove.setFlipX(true)
                 dove.play("doveHappy")
-                const bet = betAmountRef.current
+                const bet = Number(betAmountRef.current || 0)
                 const { a, b } = multiplierParamsRef.current
                 const multiplier = getMultiplier(step, a, b)
-                game.getDoveEarningsFn?.({ bet, multiplier, level: step, difficulty: difficultyRef.current })
-                failedText.setText("CASH OUT!")
-                failedText.setStyle({ color: "#00ff00" })
-                failedText.setVisible(true)
-                scene.time.delayedCall(1500, () => {
-                    failedText.setText("FAILED")
-                    failedText.setStyle({ color: "#ff0000" })
-                    resetGame()
+                const cashOutAmount = bet * multiplier
+                const earned = await game.getDoveEarningsFn?.({
+                    bet,
+                    multiplier,
+                    level: step,
+                    difficulty: difficultyRef.current
                 })
+
+                if (earned == null) {
+                    toast.error("Cash out failed.");
+                } else {
+                    // Cash out should use the same "win" visuals.
+                    if (scene?.bubbles && scene?.bubbleTexts && scene.winBubbleLanes) {
+                        const idx = Math.max(0, Math.min(scene.bubbles.length - 1, step - 1))
+                        game.updateStepBar?.(step, null)
+                        scene.bubbles[idx].setTexture("winbubble")
+                        scene.winBubbleLanes.add(step)
+                        const bt = scene.bubbleTexts[idx]
+                        bt?.setStyle({
+                            fontFamily: "Orbitron, Arial Black, sans-serif",
+                            fontSize: "20px",
+                            fontStyle: "bold",
+                            color: "#ffffff",
+                            stroke: "#ffd700",
+                            strokeThickness: 3
+                        })
+                    }
+
+                    // Fireworks effect (same component used in other games).
+                    setWinFireworks({ visible: true, amount: Number(cashOutAmount.toFixed(2)) })
+                    if (winFireworksTimeoutRef.current) clearTimeout(winFireworksTimeoutRef.current)
+                    winFireworksTimeoutRef.current = setTimeout(() => {
+                        setWinFireworks({ visible: false, amount: 0 })
+                        winFireworksTimeoutRef.current = null
+                    }, 2200)
+
+                    toast.success(`Cashed out! You won $${cashOutAmount.toFixed(2)}.`);
+                    // Refresh notifications so the cash-out amount shows immediately
+                    // in the Notifications panel (like other games).
+                    getUserData(dispatchRef.current)
+                }
+
+                scene.time.delayedCall(1500, () => resetGame())
             }
 
             game.setCanMove = (val) => {
@@ -847,7 +914,6 @@ function DoveGame() {
 
                         if (Math.abs(car.y - bubbleY) < 20) {
 
-                            dove.setTint(0xff0000)
                             fail()
 
                         }
@@ -944,7 +1010,24 @@ function DoveGame() {
 
             game.updateStepBar?.(step, step)
 
-            failedText.setVisible(true)
+            failedText.setVisible(false)
+            if (crashedImage) {
+                // Instant show, then quick pop from 0.8 -> 0.9
+                crashedImage.setVisible(true)
+                scene.tweens.killTweensOf(crashedImage)
+                crashedImage.setScale(0.8)
+                scene.tweens.add({
+                    targets: crashedImage,
+                    scale: 0.9,
+                    duration: 20,
+                    ease: "Quad.easeOut",
+                })
+            }
+            dove.setVisible(false)
+            const bet = Number(betAmountRef.current || 0)
+            toast.error(`Crashed! You lost $${bet.toFixed(2)}.`)
+            if (winFireworksTimeoutRef.current) clearTimeout(winFireworksTimeoutRef.current)
+            setWinFireworks({ visible: false, amount: 0 })
             const { a, b } = multiplierParamsRef.current
             const multiplier = getMultiplier(step, a, b)
             game.reportDoveFailFn?.({
@@ -977,6 +1060,8 @@ function DoveGame() {
             canMove = true
 
             dove.clearTint()
+            dove.setVisible(true)
+            if (crashedImage) crashedImage.setVisible(false)
             dove.x = roadStartX - laneWidth / 2
             dove.y = doveY
             dove.setFlipX(true)
@@ -998,6 +1083,9 @@ function DoveGame() {
             multiplierText.setText("Multiplier:0.50x")
 
             failedText.setVisible(false)
+            if (cashOutText) cashOutText.setVisible(false)
+            if (winFireworksTimeoutRef.current) clearTimeout(winFireworksTimeoutRef.current)
+            setWinFireworks({ visible: false, amount: 0 })
 
             game.updateStepBar?.(0, null)
 
@@ -1062,6 +1150,8 @@ function DoveGame() {
             })
 
         if (!(await waitForReady())) return
+
+        toast.info(`Dove started. Bet $${betAmount.toFixed(2)}.`)
 
         const { a, b } = multiplierParamsRef.current
         const multiplier = getMultiplier(1, a, b)
@@ -1162,6 +1252,11 @@ function DoveGame() {
                 WebkitUserSelect: "none"
             }}
         >
+            <WinFireworksEffect
+                isVisible={winFireworks.visible}
+                totalEarn={winFireworks.amount}
+                duration={2200}
+            />
             {showNewRound && (
                 <div
                     style={{

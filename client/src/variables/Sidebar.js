@@ -27,11 +27,12 @@ import { GiChicken, GiFishingHook } from "react-icons/gi";
 import CasinoIcon from '@mui/icons-material/Casino';
 import GavelIcon from '@mui/icons-material/Gavel';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TwitterIcon from '@mui/icons-material/Twitter';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import NumbersIcon from '@mui/icons-material/Numbers';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import ForestIcon from '@mui/icons-material/Forest';
+import Filter9Icon from '@mui/icons-material/Filter9';
+import TrafficIcon from '@mui/icons-material/Traffic';
 
 
 export const TierA = {
@@ -144,8 +145,8 @@ export const CloudSpread = {
 
 export const DoveGame = {
     path: "/dove",
-    name: "DOVE CROSS",
-    icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    name: "LUCKY HOP",
+    icon: <TrafficIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
     layout: "/game",
 }
@@ -161,7 +162,7 @@ export const CocoGame = {
 export const AToZGame = {
     path: "/digits",
     name: "DIGITS",
-    icon: <NumbersIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
     layout: "/game",
 }

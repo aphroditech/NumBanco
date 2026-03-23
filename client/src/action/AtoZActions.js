@@ -9,7 +9,7 @@ export const aToZBet = async (data, dispatch, history) => {
         const res = await axiosInstance.post("/aToZ/bet", data);
         if (res.data?.balance != null) {
             dispatch({
-                type: "SET_BALANCE",
+                type: "UPDATE_USER_BALANCE",
                 payload: res.data.balance,
             });
         }
@@ -31,7 +31,7 @@ export const aToZSpinComplete = async (result, dispatch, history) => {
         const res = await axiosInstance.post('/aToZ/spinComplete', result);
         if(res.data.balance != null) {
             dispatch({
-                type: 'SET_BALANCE',
+                type: 'UPDATE_USER_BALANCE',
                 payload: res.data.balance
             });
         }

@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import AToZSetting from "../models/AToZSetting.js";
 import AToZHistory from "../models/AToZHistory.js";
 import AToZResult from "../models/AToZResult.js";
+import CalendarDigit from "../models/CalendarDigit.js";
 
 export const bet = async (req, res) => {
     try {
@@ -19,13 +20,13 @@ export const bet = async (req, res) => {
 
         const pickStr = String(Math.min(999, Math.max(0, Math.floor(Number(number))))).padStart(3, "0");
 
-
-        const outcomeKey = getOutcomeKey(pickStr, aToZSetting);
+        const outcomeKey = getOutcomeKey(pickStr, aToZSetting, user.aToZAmount, user.aToZWinAmount);
         const { result, multiplier } = generateResult(pickStr, outcomeKey, aToZSetting);
 
         const winAmount = betAmount * multiplier;
 
         user.balance -= betAmount;
+        user.aToZAmount += betAmount;
         user.totalBet = (user.totalBet || 0) + betAmount;
         user.totalhistory.push({
             amount: -betAmount,
@@ -41,7 +42,7 @@ export const bet = async (req, res) => {
             multiplier,
             isWin: multiplier > 0,
             winAmount,
-            balance: user.balance,
+            balance: -betAmount,
         });
     } catch (error) {
         console.error(error);
@@ -51,10 +52,14 @@ export const bet = async (req, res) => {
 
 
 // get outcome key based on probability
-function getOutcomeKey(pickStr, aToZSetting) {
+function getOutcomeKey(pickStr, aToZSetting, aToZAmount, aToZWinAmount) {
     if(!aToZSetting) return "NONE";
 
     if(pickStr[0] === pickStr[1] && pickStr[1] === pickStr[2]) {
+        return "NONE";
+    }
+
+    if(aToZAmount * 1.3 < aToZWinAmount) {
         return "NONE";
     }
 
@@ -288,6 +293,13 @@ export const spinComplete = async (req, res) => {
             });
             await newAToZHistory.save();
         }
+        await CalendarDigit.create({
+            userName: user.altas,
+            isWin: isWin,
+            betAmount: betAmount,
+            winAmount: winAmount,
+            date: new Date()
+        });
 
         const aToZResult = {
             userName: user.altas,
@@ -307,7 +319,7 @@ export const spinComplete = async (req, res) => {
             await channel.publish("A_TO_Z_RESULT", aToZResult);
         }
         const Histories = await AToZHistory.findOne({ user: req.user._id });
-        return res.status(200).json({ message: "AToZ spin complete", balance: user.balance, history: Histories?.history || [] });
+        return res.status(200).json({ message: "AToZ spin complete", balance: winAmount, history: Histories?.history || [] });
 
     } catch (error) {
         console.error(error);
@@ -317,7 +329,7 @@ export const spinComplete = async (req, res) => {
 
 export const getAToZResults = async (req, res) => {
     try {
-        const aToZResults = await AToZResult.find().sort({ date: -1 }).limit(25);
+        const aToZResults = await AToZResult.find().sort({ date: -1 }).limit(20);
         return res.status(200).json({ aToZResults: aToZResults || [] });
     } catch (error) {
         console.error(error);

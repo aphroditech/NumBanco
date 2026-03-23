@@ -38,7 +38,7 @@ function RealTimeHistory() {
             overflow="hidden"
             display="flex"
             flexDirection="column"
-            h="100%"
+            // h="100%"
             minH="0"
             flex="1"
         >

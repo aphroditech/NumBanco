@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import ablyClient from "../ably/ablyClient";
 
-const MAX_ROWS = 23;
+const MAX_ROWS = 20;
 
 export function useAblyAtoZResults() {
     const [aToZResults, setAToZResults] = useState([]);
