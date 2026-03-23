@@ -14,7 +14,7 @@ const ROW_BOT = ["", "D", "G", "J", "M", "P", "S", "V", "Y", ""];
 
 const EPS = 1e-9;
 
-/** Line color by step result: bust 0 → red | (0,1) → blue | (1, max) → yellow */
+/** Line color by step result: bust 0 → red | (0.1,1) → blue | (1, max) → yellow */
 export function lineColorForStepValue(v) {
     const x = Number(v);
     if (!Number.isFinite(x) || x <= EPS) return "#E74C3C";
@@ -156,7 +156,7 @@ export default function AlphaTreeLetterDiagram({ phase, step, pathSteps = [] }) 
                 </Text>{" "}
                 ·{" "}
                 <Text as="span" color="#00D4FF">
-                    (0,1)
+                    (0.1,1)
                 </Text>{" "}
                 ·{" "}
                 <Text as="span" color="#FFD700">
@@ -197,19 +197,16 @@ export default function AlphaTreeLetterDiagram({ phase, step, pathSteps = [] }) 
                 <Flex
                     position="relative"
                     zIndex={1}
-                    justify="center"
+                    justify="space-between"
                     align="flex-start"
-                    gap={{ base: "3px", sm: "5px" }}
+                    gap={{ base: "6px", sm: "10px" }}
                     flexWrap="nowrap"
-                    overflowX="auto"
+                    overflowX="hidden"
                     pb="4px"
                     px="2px"
                     sx={{
-                        "&::-webkit-scrollbar": { height: "4px" },
-                        "&::-webkit-scrollbar-thumb": {
-                            background: "rgba(0, 212, 255, 0.35)",
-                            borderRadius: "4px",
-                        },
+                        // No horizontal scrolling (keep A→Z visible from the start).
+                        "&::-webkit-scrollbar": { height: "0px" },
                     }}
                 >
                     {ROW_MID.map((_, colIdx) => (
@@ -242,15 +239,15 @@ function LetterColumn({ colIdx, top, mid, bot, highlight, pathSteps, setLetterRe
             direction="column"
             align="center"
             justify="space-between"
-            minW={{ base: "28px", sm: "34px" }}
+            minW={{ base: "26px", sm: "30px" }}
             minH="76px"
             px="3px"
             py="4px"
             borderRadius="8px"
-            borderWidth={highlight ? "2px" : "1px"}
-            borderColor={highlight ? "#00D4FF" : "rgba(255,255,255,0.1)"}
-            bg={highlight ? "rgba(0, 212, 255, 0.08)" : "rgba(0,0,0,0.12)"}
-            boxShadow={highlight ? "0 0 10px rgba(0, 212, 255, 0.2)" : "none"}
+            borderWidth="0px"
+            borderColor="transparent"
+            bg="transparent"
+            boxShadow="none"
         >
             <VStack spacing="1px" minH="64px" justify="space-between" w="100%">
                 <LetterSlot

@@ -348,6 +348,12 @@ const userSchema = new mongoose.Schema({
     min: 0,
     max: 2
   },
+  alphaTreeMode: {
+    type: Number,
+    default: 1, // 0=easy, 1=normal, 2=hard
+    min: 0,
+    max: 2
+  },
   doveAmount: {
     type: Number,
     default: 0

@@ -1,6 +1,6 @@
 /**
  * Step 1: A → fixed 0.6.
- * Steps 2–9: three letters per step. Each step, bust (0), (0,1), and (1, max) are assigned to the
+ * Steps 2–9: three letters per step. Each step, bust (0), (0.1,1), and (1, max) are assigned to the
  * three letters in a random order (max = 0.6 × 2^(step−1) for the high band).
  * Step 10: only Z → fixed multiplier 0.6 × 2^9.
  */

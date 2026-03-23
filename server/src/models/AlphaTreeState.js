@@ -22,7 +22,7 @@ const AlphaTreeStateSchema = new mongoose.Schema(
         active: { type: Boolean, default: true },
         /**
          * Steps 2–9 only: random permutation of zero | mid | high, same order as
-         * ALPHA_TREE_STEP_LETTERS[step − 1] (e.g. [B,C,D] ↔ which letter gets bust / (0,1) / (1,max)).
+         * ALPHA_TREE_STEP_LETTERS[step − 1] (e.g. [B,C,D] ↔ which letter gets bust / (0.1,1) / (1,max)).
          */
         bandPermutation: {
             type: [String],
@@ -30,10 +30,10 @@ const AlphaTreeStateSchema = new mongoose.Schema(
                 validator(v) {
                     if (v == null || v.length === 0) return true;
                     if (v.length !== 3) return false;
-                    const sorted = [...v].sort().join(",");
-                    return sorted === "high,mid,zero";
+                    const allowed = new Set(["zero", "mid", "high"]);
+                    return v.every((x) => allowed.has(x));
                 },
-                message: "bandPermutation must be a permutation of zero, mid, high",
+                message: "bandPermutation must contain only zero/mid/high",
             },
         },
     },

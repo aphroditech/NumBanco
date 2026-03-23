@@ -158,13 +158,13 @@ export const CocoGame = {
     layout: "/game",
 }
 
-// export const AToZGame = {
-//     path: "/a-to-z",
-//     name: "0 TO 9",
-//     icon: <NumbersIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-//     component: AToZPage,
-//     layout: "/game",
-// }
+export const AToZGame = {
+    path: "/digits",
+    name: "DIGITS",
+    icon: <NumbersIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: AToZPage,
+    layout: "/game",
+}
 
 export const AlphaTreeGame = {
     path: "/alpha-tree",

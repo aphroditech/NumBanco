@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box,
     Grid,
@@ -12,17 +12,22 @@ import {
     ModalCloseButton,
     VStack,
     HStack,
+    Table,
+    Thead,
+    Tbody,
+    Tr,
+    Th,
+    Td,
     Flex,
     Button,
     Input,
     IconButton,
     FormControl,
     FormLabel,
+    useBreakpointValue,
 } from '@chakra-ui/react';
 import Card from 'components/Card/Card';
 import CardBody from 'components/Card/CardBody';
-import CardHeader from 'components/Card/CardHeader';
-import AToZGame from './AToZGame';
 import { useSelector } from 'react-redux';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -38,7 +43,6 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MotionBox = motion(Box);
-const MotionText = motion(Text);
 /** Match Rocket Shot bet range and step */
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
@@ -49,6 +53,101 @@ function padPickDigits(n) {
     const v = Math.min(999, Math.max(0, Math.floor(Number(n))));
     if (Number.isNaN(v)) return '000';
     return String(v).padStart(3, '0');
+}
+
+/** Digits above / current / below on the 0–9 ring (for idle columns). */
+function adjacentDigitsVertical(d) {
+    const n = ((d % 10) + 10) % 10;
+    return [(n + 9) % 10, n, (n + 1) % 10];
+}
+
+const REEL_ROW_TEXT_PROPS = {
+    fontWeight: '900',
+    lineHeight: '1',
+    fontFamily: 'Orbitron, system-ui, monospace',
+};
+
+/**
+ * Vertical 0–9 strip; viewport shows 3 rows (digit above, current win line, digit below).
+ * Strip translates up so digits flow downward; middle row lands on `targetDigit`.
+ */
+function AToZReelStrip({ targetDigit, cellH, durationSec, fullCycles, onAnimationComplete }) {
+    const finalIndex = fullCycles * 10 + targetDigit;
+    /** Need strip[finalIndex-1], strip[finalIndex], strip[finalIndex+1] visible when stopped. */
+    const strip = useMemo(
+        () => Array.from({ length: finalIndex + 2 }, (_, i) => i % 10),
+        [finalIndex]
+    );
+    /** Align so middle row shows strip[finalIndex] (the result digit). */
+    const finalY = Math.max(0, finalIndex - 1) * cellH;
+    const fontPx = Math.max(22, Math.round(cellH * 0.52));
+    const viewH = 3 * cellH;
+
+    return (
+        <Box
+            overflow="hidden"
+            h={`${viewH}px`}
+            w="100%"
+            position="relative"
+            borderRadius="xl"
+            border="1px solid rgba(0, 212, 255, 0.28)"
+            bg="rgba(0, 0, 0, 0.35)"
+            sx={{
+                maskImage:
+                    'linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)',
+                WebkitMaskImage:
+                    'linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)',
+            }}
+        >
+            {/* Win-line band (middle of three rows) */}
+            <Box
+                position="absolute"
+                left={0}
+                right={0}
+                top={`${cellH}px`}
+                h={`${cellH}px`}
+                pointerEvents="none"
+                zIndex={1}
+                borderTop="1px solid rgba(0, 212, 255, 0.4)"
+                borderBottom="1px solid rgba(0, 212, 255, 0.4)"
+                bg="rgba(0, 212, 255, 0.06)"
+                boxShadow="inset 0 0 20px rgba(0, 212, 255, 0.12)"
+            />
+            <MotionBox
+                initial={{ y: 0 }}
+                animate={{ y: -finalY }}
+                transition={{
+                    duration: durationSec,
+                    ease: [0.18, 0.05, 0.12, 1],
+                }}
+                onAnimationComplete={onAnimationComplete}
+                style={{ willChange: 'transform' }}
+            >
+                {strip.map((d, i) => (
+                    <Box
+                        key={i}
+                        h={`${cellH}px`}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        flexShrink={0}
+                    >
+                        <Text
+                            fontSize={`${fontPx}px`}
+                            {...REEL_ROW_TEXT_PROPS}
+                            color="#f2fbff"
+                            sx={{
+                                textShadow:
+                                    '0 0 18px rgba(0, 212, 255, 0.35), 0 2px 0 rgba(0,0,0,0.5)',
+                            }}
+                        >
+                            {d}
+                        </Text>
+                    </Box>
+                ))}
+            </MotionBox>
+        </Box>
+    );
 }
 
 export default function AToZPage() {
@@ -70,6 +169,25 @@ export default function AToZPage() {
     /** Three digits 0–9: [hundreds, tens, ones] → 000–999 */
     const [pickDigits, setPickDigits] = useState([0, 0, 0]);
     const [isSpinning, setIsSpinning] = useState(false);
+    /** True while /bet is in flight — disables BET immediately (avoids parallel requests). */
+    const [isBetPending, setIsBetPending] = useState(false);
+    /** Synchronous guard: React state may not have re-rendered before a second click. */
+    const spinLockRef = useRef(false);
+
+    /** Last settled result digits (idle view). */
+    const [idleDigits, setIdleDigits] = useState([0, 0, 0]);
+    /** While set, vertical reel strips are animating. */
+    const [spinBundle, setSpinBundle] = useState(null);
+    const pendingSpinRef = useRef(null);
+    const spinFinalizeGuardRef = useRef(false);
+    const spinTimersRef = useRef([]);
+
+    const cellH = useBreakpointValue({ base: 58, md: 76 }) ?? 64;
+
+    const clearSpinAnim = useCallback(() => {
+        spinTimersRef.current.forEach((id) => clearTimeout(id));
+        spinTimersRef.current = [];
+    }, []);
 
     const handleAmountChange = (e) => {
         const raw = e.target.value;
@@ -81,27 +199,30 @@ export default function AToZPage() {
 
     const canSpin = useMemo(() => {
         const n = Number(amount);
-        if (!Number.isFinite(n) || isSpinning) return false;
+        if (!Number.isFinite(n) || isSpinning || isBetPending) return false;
         if (n < MIN_AMOUNT || n > maxAmount) return false;
         if (Number.isFinite(balanceNum) && n > balanceNum) return false;
         return true;
-    }, [amount, isSpinning, maxAmount, balanceNum]);
+    }, [amount, isSpinning, isBetPending, maxAmount, balanceNum]);
 
-    useEffect(() => {
-        window.onAToZSpinComplete = async (result) => {
+    const finalizeSpinRound = useCallback(
+        async (result) => {
             setIsSpinning(false);
             const { isWin, multiplier: mult, winAmount } = pendingServerWinRef.current;
             pendingServerWinRef.current = { isWin: false, multiplier: 0, winAmount: null };
 
             const data = {
-                isWin: isWin, multiplier: mult, betAmount: result.betAmount, pickNumber: result.pickNumber, result: result.word
-            }
+                isWin,
+                multiplier: mult,
+                betAmount: result.betAmount,
+                pickNumber: result.pickNumber,
+                result: result.word,
+            };
             await aToZSpinComplete(data, dispatch, history);
             if (isWin && mult > 0) {
                 if (winOverlayHideTimerRef.current) {
                     window.clearTimeout(winOverlayHideTimerRef.current);
                 }
-                // One-shot explosion burst: shards fly outward from center
                 const bursts = Array.from({ length: 56 }).map(() => ({
                     angle: Math.random() * Math.PI * 2,
                     dist: 100 + Math.random() * 160,
@@ -120,17 +241,70 @@ export default function AToZPage() {
                     winOverlayHideTimerRef.current = null;
                 }, 1600);
             }
+        },
+        [dispatch, history]
+    );
 
-        };
+    /** Full cycles of 0–9 before landing; longer on right reels = more travel, stops last. */
+    const REEL_FULL_CYCLES = [10, 13, 16];
+    /** Seconds — left stops first, then middle, then right. */
+    const REEL_DURATION_SEC = [1.05, 1.38, 1.72];
 
+    const endSpinRound = useCallback(() => {
+        if (spinFinalizeGuardRef.current) return;
+        const p = pendingSpinRef.current;
+        if (!p) return;
+        spinFinalizeGuardRef.current = true;
+        pendingSpinRef.current = null;
+        setSpinBundle(null);
+        setIdleDigits(p.targets);
+        setIsSpinning(false);
+        clearSpinAnim();
+        finalizeSpinRound({
+            betAmount: p.meta.bet,
+            word: p.word,
+            pickNumber: p.meta.pickNum,
+        });
+    }, [finalizeSpinRound, clearSpinAnim]);
+
+    const startReactReelSpin = useCallback(
+        (targetStr, meta) => {
+            clearSpinAnim();
+            const targets = targetStr.split('').map((c) => parseInt(c, 10));
+            if (targets.length !== 3 || targets.some((n) => Number.isNaN(n))) {
+                setIsSpinning(false);
+                setIsBetPending(false);
+                spinLockRef.current = false;
+                return;
+            }
+            spinFinalizeGuardRef.current = false;
+            pendingSpinRef.current = { word: targetStr, targets, meta };
+            setSpinBundle({ key: Date.now(), targets });
+
+            setIsSpinning(true);
+            setIsBetPending(false);
+            spinLockRef.current = false;
+
+            spinTimersRef.current.push(
+                window.setTimeout(() => {
+                    if (!pendingSpinRef.current) return;
+                    if (spinFinalizeGuardRef.current) return;
+                    endSpinRound();
+                }, 4800)
+            );
+        },
+        [clearSpinAnim, endSpinRound]
+    );
+
+    useEffect(() => {
         return () => {
-            if (window.onAToZSpinComplete) window.onAToZSpinComplete = undefined;
+            clearSpinAnim();
             if (winOverlayHideTimerRef.current) {
                 window.clearTimeout(winOverlayHideTimerRef.current);
                 winOverlayHideTimerRef.current = null;
             }
         };
-    }, []);
+    }, [clearSpinAnim]);
 
     // Keep amount in range when balance / max changes (same idea as Rocket Shot cap)
     useEffect(() => {
@@ -164,38 +338,51 @@ export default function AToZPage() {
 
     const handleSpin = async () => {
         if (!canSpin) return;
-        const bet = parseFloat(amount);
+        if (spinLockRef.current) return;
+        spinLockRef.current = true;
+        setIsBetPending(true);
 
+        const bet = parseFloat(amount);
         const data = {
             betAmount: bet,
             number: pickDigits[0] * 100 + pickDigits[1] * 10 + pickDigits[2],
         };
-        const res = await aToZBet(data, dispatch, history);
-        if (res == null) return;
 
-        const mult = Number(res.multiplier) || 0;
-        const won = res.isWin === true;
-        const winAmt = typeof res.winAmount === 'number' ? res.winAmount : null;
-        pendingServerWinRef.current = {
-            isWin: won,
-            multiplier: mult,
-            winAmount: winAmt,
-        };
+        let animationScheduled = false;
 
-        window.__atozBetAmount = bet;
-        const pickNum = pickDigits[0] * 100 + pickDigits[1] * 10 + pickDigits[2];
-        const pickStr = padPickDigits(pickNum);
-        window.__atozPick = pickStr;
-        window.__atozPickNumber = pickNum;
-        window.__atozPickDigits = [...pickDigits];
-        // Server-generated 3-digit result for reels (must match payout).
-        const serverResult =
-            res.result != null ? String(res.result).replace(/\D/g, '').slice(0, 3).padStart(3, '0') : null;
-        window.__atozReelResult = serverResult && /^[0-9]{3}$/.test(serverResult) ? serverResult : null;
+        try {
+            const res = await aToZBet(data, dispatch, history);
+            if (res == null) return;
 
-        if (typeof window.spinAToZ === 'function') {
-            const started = window.spinAToZ();
-            if (started) setIsSpinning(true);
+            const mult = Number(res.multiplier) || 0;
+            const won = res.isWin === true;
+            const winAmt = typeof res.winAmount === 'number' ? res.winAmount : null;
+            pendingServerWinRef.current = {
+                isWin: won,
+                multiplier: mult,
+                winAmount: winAmt,
+            };
+
+            const pickNum = pickDigits[0] * 100 + pickDigits[1] * 10 + pickDigits[2];
+            const serverResult =
+                res.result != null ? String(res.result).replace(/\D/g, '').slice(0, 3).padStart(3, '0') : null;
+            const wordForComplete =
+                serverResult && /^[0-9]{3}$/.test(serverResult)
+                    ? serverResult
+                    : String(res.result ?? '')
+                          .replace(/\D/g, '')
+                          .slice(0, 3)
+                          .padStart(3, '0');
+
+            startReactReelSpin(wordForComplete, { bet, pickNum });
+            animationScheduled = true;
+        } catch (e) {
+            console.error('[AToZ] handleSpin', e);
+        } finally {
+            if (!animationScheduled) {
+                spinLockRef.current = false;
+                setIsBetPending(false);
+            }
         }
     };
 
@@ -233,7 +420,127 @@ export default function AToZPage() {
                                 position="relative"
                                 overflow="hidden"
                             >
-                                <AToZGame />
+                                <Box
+                                    position="absolute"
+                                    inset={0}
+                                    zIndex={1}
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    px={{ base: 2, md: 6 }}
+                                    py={4}
+                                    bgGradient="linear(to-b, #05080c 0%, #0c1219 100%)"
+                                >
+                                    <Box
+                                        borderRadius="2xl"
+                                        border="2px solid"
+                                        borderColor="rgba(0, 212, 255, 0.35)"
+                                        bg="rgba(10, 16, 24, 0.92)"
+                                        px={{ base: 4, md: 10 }}
+                                        py={{ base: 6, md: 10 }}
+                                        maxW="100%"
+                                        boxShadow="0 0 40px rgba(0, 212, 255, 0.12), inset 0 0 60px rgba(0, 200, 255, 0.06)"
+                                    >
+                                        <Text
+                                            textAlign="center"
+                                            fontSize="xs"
+                                            fontWeight="extrabold"
+                                            letterSpacing="0.28em"
+                                            color="rgba(122, 240, 255, 0.72)"
+                                            mb={4}
+                                        >
+                                            RESULT
+                                        </Text>
+                                        <HStack
+                                            spacing={{ base: 2, md: 4 }}
+                                            justify="center"
+                                            align="stretch"
+                                            w="100%"
+                                        >
+                                            {[0, 1, 2].map((idx) =>
+                                                spinBundle ? (
+                                                    <Box
+                                                        key={`${spinBundle.key}-${idx}`}
+                                                        flex="1"
+                                                        minW={{ base: '72px', sm: '88px', md: '108px' }}
+                                                    >
+                                                        <AToZReelStrip
+                                                            targetDigit={spinBundle.targets[idx]}
+                                                            cellH={cellH}
+                                                            durationSec={REEL_DURATION_SEC[idx]}
+                                                            fullCycles={REEL_FULL_CYCLES[idx]}
+                                                            onAnimationComplete={
+                                                                idx === 2 ? endSpinRound : undefined
+                                                            }
+                                                        />
+                                                    </Box>
+                                                ) : (
+                                                    <Box
+                                                        key={`idle-${idx}`}
+                                                        flex="1"
+                                                        minW={{ base: '72px', sm: '88px', md: '108px' }}
+                                                        position="relative"
+                                                        borderRadius="xl"
+                                                        border="1px solid rgba(0, 212, 255, 0.28)"
+                                                        bg="rgba(0, 0, 0, 0.35)"
+                                                        h={`${3 * cellH}px`}
+                                                        overflow="hidden"
+                                                        sx={{
+                                                            maskImage:
+                                                                'linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)',
+                                                            WebkitMaskImage:
+                                                                'linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)',
+                                                        }}
+                                                    >
+                                                        <Box
+                                                            position="absolute"
+                                                            left={0}
+                                                            right={0}
+                                                            top={`${cellH}px`}
+                                                            h={`${cellH}px`}
+                                                            pointerEvents="none"
+                                                            zIndex={1}
+                                                            borderTop="1px solid rgba(0, 212, 255, 0.4)"
+                                                            borderBottom="1px solid rgba(0, 212, 255, 0.4)"
+                                                            bg="rgba(0, 212, 255, 0.06)"
+                                                            boxShadow="inset 0 0 20px rgba(0, 212, 255, 0.12)"
+                                                        />
+                                                        <VStack spacing={0} align="stretch" h="100%" justify="flex-start">
+                                                            {adjacentDigitsVertical(idleDigits[idx]).map((digit, row) => (
+                                                                <Box
+                                                                    key={row}
+                                                                    h={`${cellH}px`}
+                                                                    display="flex"
+                                                                    alignItems="center"
+                                                                    justifyContent="center"
+                                                                    flexShrink={0}
+                                                                >
+                                                                    <Text
+                                                                        fontSize={`${Math.max(22, Math.round(cellH * 0.52))}px`}
+                                                                        {...REEL_ROW_TEXT_PROPS}
+                                                                        color={
+                                                                            row === 1
+                                                                                ? '#f2fbff'
+                                                                                : 'rgba(200, 230, 240, 0.4)'
+                                                                        }
+                                                                        sx={{
+                                                                            textShadow:
+                                                                                row === 1
+                                                                                    ? '0 0 18px rgba(0, 212, 255, 0.45), 0 2px 0 rgba(0,0,0,0.5)'
+                                                                                    : '0 1px 0 rgba(0,0,0,0.55)',
+                                                                        }}
+                                                                    >
+                                                                        {digit}
+                                                                    </Text>
+                                                                </Box>
+                                                            ))}
+                                                        </VStack>
+                                                    </Box>
+                                                )
+                                            )}
+                                        </HStack>
+                                    </Box>
+                                </Box>
                                 <AnimatePresence mode="wait">
                                     {winOverlay != null && (
                                         <MotionBox
@@ -443,7 +750,7 @@ export default function AToZPage() {
                                                             color="#00D4FF"
                                                             borderRadius="8px"
                                                             _hover={{ bg: 'rgba(0, 212, 255, 0.28)' }}
-                                                            isDisabled={isSpinning || pickDigits[index] <= 0}
+                                                            isDisabled={isSpinning || isBetPending || pickDigits[index] <= 0}
                                                             onClick={() => adjustPickDigit(index, -1)}
                                                         />
                                                         <Input
@@ -463,7 +770,7 @@ export default function AToZPage() {
                                                             w="20px"
                                                             h="20px"
                                                             p="0"
-                                                            isDisabled={isSpinning}
+                                                            isDisabled={isSpinning || isBetPending}
                                                             aria-label={`${place} digit 0-9`}
                                                             _focus={{
                                                                 boxShadow: 'none',
@@ -481,7 +788,7 @@ export default function AToZPage() {
                                                             color="#00D4FF"
                                                             borderRadius="8px"
                                                             _hover={{ bg: 'rgba(0, 212, 255, 0.28)' }}
-                                                            isDisabled={isSpinning || pickDigits[index] >= 9}
+                                                            isDisabled={isSpinning || isBetPending || pickDigits[index] >= 9}
                                                             onClick={() => adjustPickDigit(index, 1)}
                                                         />
                                                     </HStack>
@@ -508,6 +815,7 @@ export default function AToZPage() {
                                             borderRadius="8px"
                                             _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
                                             onClick={() => setAmount(MIN_AMOUNT)}
+                                            isDisabled={isSpinning || isBetPending}
                                         >
                                             Min
                                         </Button>
@@ -531,7 +839,11 @@ export default function AToZPage() {
                                                 borderRadius="6px"
                                                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
                                                 onClick={() => setAmount(amount - AMOUNT_STEP)}
-                                                isDisabled={amount - AMOUNT_STEP < MIN_AMOUNT}
+                                                isDisabled={
+                                                    isSpinning ||
+                                                    isBetPending ||
+                                                    amount - AMOUNT_STEP < MIN_AMOUNT
+                                                }
                                             />
                                             <Input
                                                 type="number"
@@ -548,6 +860,7 @@ export default function AToZPage() {
                                                 bg="transparent"
                                                 border="none"
                                                 p="0"
+                                                isDisabled={isSpinning || isBetPending}
                                                 _focus={{ outline: 'none', boxShadow: 'none', border: 'none' }}
                                                 _hover={{ border: 'none' }}
                                                 sx={{
@@ -574,7 +887,11 @@ export default function AToZPage() {
                                                 borderRadius="6px"
                                                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
                                                 onClick={() => setAmount(amount + AMOUNT_STEP)}
-                                                isDisabled={amount + AMOUNT_STEP > maxAmount}
+                                                isDisabled={
+                                                    isSpinning ||
+                                                    isBetPending ||
+                                                    amount + AMOUNT_STEP > maxAmount
+                                                }
                                             />
                                         </HStack>
                                         <Button
@@ -590,6 +907,7 @@ export default function AToZPage() {
                                             borderRadius="8px"
                                             _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
                                             onClick={() => setAmount(maxAmount)}
+                                            isDisabled={isSpinning || isBetPending}
                                         >
                                             Max
                                         </Button>
@@ -623,7 +941,7 @@ export default function AToZPage() {
                                             }
                                             onClick={handleSpin}
                                         >
-                                            {isSpinning ? 'Spinning...' : 'BET'}
+                                            {isBetPending && !isSpinning ? 'Placing bet...' : isSpinning ? 'Spinning...' : 'BET'}
                                         </Button>
                                     </HStack>
                                 </VStack>
@@ -636,19 +954,71 @@ export default function AToZPage() {
                 <RealTimeHistory />
             </Grid>
             <UserBetHistory />
-            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size='3xl' minW="1000px" isCentered>
                 <ModalOverlay bg="blackAlpha.700" />
                 <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
-                    <ModalHeader color="white" >
-                        *How to Play AToZ Game
+                    <ModalHeader color="#00D4FF" >
+                         How to Play Digits Game
                     </ModalHeader>
                     <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
                     <ModalBody py={4}>
-                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
-                            AToZ is a number slot: each reel shows digits 0–9. Choose your pick from 000 to 999, place your bet, then tap BET to spin.
+                        <Text color="gray.200" lineHeight="1.65" mb={3} fontSize="sm">
+                            Digits is a 3-reel number slot (000-999). Pick your 3-digit number, set your bet, and press BET.
+                            After the reels stop, your payout depends on how many digits match and whether positions match.
                         </Text>
-                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
-                            The reels reveal a random 3-digit result. Payout rules depend on your pick and the outcome — see the game rules on the server.
+
+                        <Box
+                            border="1px solid rgba(0, 212, 255, 0.28)"
+                            borderRadius="12px"
+                            bg="rgba(6, 12, 18, 0.72)"
+                            overflowX="auto"
+                            mb={3}
+                        >
+                            <Table size="sm" variant="simple" minW="620px">
+                                <Thead>
+                                    <Tr>
+                                        <Th color="#7fefff" borderColor="rgba(255,255,255,0.1)">Match Type</Th>
+                                        <Th color="#7fefff" borderColor="rgba(255,255,255,0.1)">Description</Th>
+                                        <Th color="#7fefff" borderColor="rgba(255,255,255,0.1)" isNumeric>Multiplier</Th>
+                                    </Tr>
+                                </Thead>
+                                <Tbody>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Exact Match</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">All 3 digits match and all positions match</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x800</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Three Unordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">All 3 digits match but positions differ</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x150</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Two Ordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 2 digits match and those positions match</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x15</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Two Unordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 2 digits match but positions differ</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x7.5</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">One Ordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 1 digit matches and its position matches</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x2.4</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">One Unordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 1 digit matches but in a different position</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x1.2</Td>
+                                    </Tr>
+                                </Tbody>
+                            </Table>
+                        </Box>
+
+                        <Text color="gray.300" lineHeight="1.6" fontSize="xs">
+                            Tip: outcomes are evaluated from highest match tier to lowest, so each spin is counted once under the best matching rule.
                         </Text>
                     </ModalBody>
                 </ModalContent>

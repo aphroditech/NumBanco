@@ -25,6 +25,7 @@ import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
 import {rocketBot} from "./services/rocket/rocketBot.service.js";
+import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
@@ -35,8 +36,14 @@ const ably = createAblyClient();
 
 app.locals.ably = ably;
 
-connectDB().then(async () => {
-    await initializeDatabase();
+connectDB()
+  .then(async () => {
+    try {
+        await initializeDatabase();
+    } catch (err) {
+        console.error("❌ Database initialization failed:", err);
+        process.exit(1);
+    }
 
     // Cloud Spread game loop (per-user rounds). Live feed uses Ably after `setCloudSpreadAbly` on connect.
     startCloudSpreadGameLoop().catch((err) => {
@@ -56,14 +63,19 @@ connectDB().then(async () => {
     //     cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
     // };
 
+    /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
     http.createServer(app).listen(PORT, () => {
-        console.log(`🚀 HTTP Server running on port ${PORT}`);
+        console.log(`🚀 HTTP Server listening on ${PORT} port.`);
     });
     // https.createServer(sslOptions, app).listen(PORT, () => {
     //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
 
     // });
-    await initMoralis();
+    try {
+        await initMoralis();
+    } catch (err) {
+        console.warn("⚠️ Moralis failed to start (optional for many routes):", err?.message || err);
+    }
 
     ably.connection.once("connected", () => {
         console.log("✅ Ably connected");
@@ -78,6 +90,7 @@ connectDB().then(async () => {
         // pumpingBot(ably);
         // miningBot(ably);
         // rocketBot(ably);
+        // aToZBot(ably);
         // fishingBot(ably);
         startGravityGameLoop(ably);
         setCloudSpreadAbly(ably);
@@ -91,7 +104,6 @@ connectDB().then(async () => {
         // tankCheckEngine();
         // getWithdrawWallet();
 
-
         // startBetEngine(ably, 0);
         // startBetEngine(ably, 1);
         // startBetEngine(ably, 2);
@@ -102,4 +114,9 @@ connectDB().then(async () => {
             console.warn('Failed to start cron jobs:', err);
         }
     });
-});
+  })
+  .catch((err) => {
+    console.error("❌ Failed to start server (MongoDB or startup error):", err?.message || err);
+    console.error("Check MONGO_URI in .env and that MongoDB is running.");
+    process.exit(1);
+  });

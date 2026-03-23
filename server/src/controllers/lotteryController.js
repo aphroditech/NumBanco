@@ -21,7 +21,7 @@ export const dailyloot = async (req, res) => {
             rubicMode: 0,
             partnerId: 0,
             partnerActivity: 0,
-            canWithdraw: 0,
+            
         }
     );
     
@@ -114,7 +114,7 @@ export const reward = async (req, res) => {
             partnerId: 0,
             partnerActivity: 0,
             lastClickDate: 0,
-            canWithdraw: 0,
+            
         }
     );
     if(user) {
