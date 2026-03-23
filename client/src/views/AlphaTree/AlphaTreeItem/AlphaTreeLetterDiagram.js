@@ -240,7 +240,7 @@ function LetterColumn({ colIdx, top, mid, bot, highlight, pathSteps, setLetterRe
             align="center"
             justify="space-between"
             minW={{ base: "26px", sm: "30px" }}
-            minH="76px"
+            minH="96px"
             px="3px"
             py="4px"
             borderRadius="8px"
@@ -249,7 +249,7 @@ function LetterColumn({ colIdx, top, mid, bot, highlight, pathSteps, setLetterRe
             bg="transparent"
             boxShadow="none"
         >
-            <VStack spacing="1px" minH="64px" justify="space-between" w="100%">
+            <VStack spacing="5px" minH="80px" justify="space-between" w="100%">
                 <LetterSlot
                     ch={top}
                     stepNum={stepNum}

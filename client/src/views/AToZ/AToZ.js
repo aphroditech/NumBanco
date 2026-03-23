@@ -41,6 +41,7 @@ import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { motion, AnimatePresence } from 'framer-motion';
+import { onlineUser, offlineUser } from '../../action/BetActions';
 
 const MotionBox = motion(Box);
 /** Match Rocket Shot bet range and step */
@@ -296,6 +297,13 @@ export default function AToZPage() {
         [clearSpinAnim, endSpinRound]
     );
 
+    useEffect(() => {
+        onlineUser(14);
+        getUserData(dispatch);
+        return () => {
+            offlineUser(14);
+        };
+    }, [dispatch]);
     useEffect(() => {
         return () => {
             clearSpinAnim();

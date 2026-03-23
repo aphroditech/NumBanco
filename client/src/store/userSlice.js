@@ -15,7 +15,9 @@ const initialState = {
         mineUsers: 0,
         fishingUsers: 0,
         alphaTreeUsers: 0,
-        onlineUsers: 0
+        onlineUsers: 0,
+        aToZUsers: 0,
+        totalActiveUsers: 0
     },
     lootAvailable: false,
     lootRemainingMs: 0

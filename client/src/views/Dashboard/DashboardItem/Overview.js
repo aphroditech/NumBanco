@@ -30,7 +30,8 @@ import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import { totalActiveUsers as fetchTotalActiveUsers } from "action/BetActions";
 import { formatTime } from "components/functions/format";
-
+import HandshakeIcon from '@mui/icons-material/Handshake';
+import TodayIcon from '@mui/icons-material/Today';
 
 function Overview() {
     const remainingMs = useSelector((state) => state.user.lootRemainingMs);
@@ -39,7 +40,7 @@ function Overview() {
 
     const activeUsers = useSelector((state) => state.user.activeUsers);
 
-    const [totalActiveUsers, setTotalActiveUsers] = useState([]);
+    const [displayUsers, setDisplayUsers] = useState(0);
 
     useEffect(() => {
         let isMounted = true;
@@ -47,9 +48,6 @@ function Overview() {
         async function fetchData() {
             try {
                 const tempUsers = await fetchTotalActiveUsers();
-                if (isMounted) {
-                    setTotalActiveUsers(tempUsers);
-                }
             } catch (err) {
                 console.log(err);
             }
@@ -62,6 +60,19 @@ function Overview() {
         };
     }, []);
 
+    // Demo/visual: show Users value cycling between 0 and 10 every 2 seconds.
+    useEffect(() => {
+        const id = setInterval(() => {
+            setDisplayUsers((prev) => {
+                let delta = Math.random() < 0.5 ? -1 : 1;
+                if (prev <= 0) delta = 1;
+                if (prev >= 10) delta = -1;
+                return prev + delta;
+            });
+        }, 2000);
+        return () => clearInterval(id);
+    }, []);
+
     return (
         <Grid>
             <SimpleGrid columns={{ sm: 2, md: 3, lg: 3, xl: 3, '1625px': 6, '2xl': 6 }} spacing='24px' mb="20px" >
@@ -71,7 +82,7 @@ function Overview() {
                         <Flex flexDirection='row' align='center' justify='center' w='100%'>
                             <Stat me='auto'>
                                 <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
-                                    Bet Level
+                                    Medal
                                 </StatLabel>
                                 <Flex>
                                     <StatNumber fontSize='lg' color='#fff'>
@@ -120,7 +131,7 @@ function Overview() {
                                 </StatLabel>
                                 <Flex>
                                     <StatNumber fontSize='lg' color='#fff'>
-                                        {activeUsers?.onlineUsers == 0 ? totalActiveUsers.onlineUsers : activeUsers?.onlineUsers}
+                                    {(activeUsers?.totalActiveUsers || 0) + displayUsers}
                                     </StatNumber>
                                 </Flex>
                             </Stat>
@@ -177,7 +188,7 @@ function Overview() {
                                     </StatNumber>
                                 </Flex>
                             </Stat>
-                            <CloudDownloadRoundedIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
+                            <TodayIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
                             {/* <NeonBadge
                                 src={withdraw}
                                 size="70px"
@@ -193,7 +204,7 @@ function Overview() {
                         <Flex flexDirection='row' align='center' justify='center' w='100%'>
                             <Stat me='auto'>
                                 <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
-                                    Partner Earning
+                                    Affiliation
                                 </StatLabel>
                                 <Flex>
                                     <Text fontSize="lg" color="#00D4FF"
@@ -208,7 +219,7 @@ function Overview() {
                                     </StatNumber>
                                 </Flex>
                             </Stat>
-                            <CloudUploadRoundedIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
+                            <HandshakeIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
                             {/* <NeonBadge
                                 src={deposit}
                                 size="70px"
@@ -236,39 +247,7 @@ function Overview() {
                                     <StatNumber fontSize='lg' color='#fff' fontWeight='bold'>
                                         {user.dailyWithdraw || !user.dailyWithdraw && 0}
                                     </StatNumber>
-                                    <Text fontSize="lg" color="#00D4FF"
-                                        style={{
-                                            marginLeft: "2px", marginRight: "0px",
-
-                                        }} fontWeight="bold" m="auto">
-                                        {user.maxWithdraw == -1 ? "" : "/"}
-                                    </Text>
-                                    <Text fontSize="lg" color="#00D4FF"
-                                        style={{
-                                            marginLeft: "2px", marginRight: "2px",
-
-                                        }} fontWeight="bold" m="auto">
-                                        {user.maxWithdraw == -1 ? "" : "$"}
-                                    </Text>
-                                    <StatNumber fontSize='lg' color='#fff' fontWeight='bold'>
-                                        {user.maxWithdraw == -1 ? "" : user.maxWithdraw}
-                                    </StatNumber>
                                 </Flex>
-                                {user.maxWithdraw == -1 ?
-                                    ''
-                                    :
-                                    <Progress
-                                        bg="#323738"
-                                        borderRadius="30px"
-                                        h="5px"
-                                        value={user.dailyWithdraw / user.maxWithdraw * 100}
-                                        mt="2px"
-                                        mr="10px"
-                                        sx={{
-                                            "& > div": { background: "#00D4FF" }
-                                        }}
-                                    />
-                                }
                             </Stat>
                             <LocalFireDepartmentIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
                             {/* <NeonBadge

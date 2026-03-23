@@ -50,7 +50,7 @@ import {
     getAlphaTreeState,
 } from "action/AlphaTreeActions";
 import { onlineUser, offlineUser } from "action/BetActions";
-import { allowedLettersForStep } from "constants/alphaTreeSteps";
+import { allowedLettersForStep, ALPHA_TREE_STEP_LETTERS } from "constants/alphaTreeSteps";
 import AlphaTreeRealView from "./AlphaTreeItem/AlphaTreeView";
 import BetHistory from "./AlphaTreeItem/BetHistory";
 import AlphaTreeLetterDiagram from "./AlphaTreeItem/AlphaTreeLetterDiagram";
@@ -336,6 +336,16 @@ export default function AlphaTreePage() {
         (treeState.allowedLetters?.length
             ? treeState.allowedLetters
             : allowedLettersForStep(treeState.step, treeState.phase));
+
+    /** Letters shown for a given diagram step (1 => A, 2-9 => groups, 10 => Z). */
+    const lettersForStepNum = (stepNum) => {
+        const s = Number(stepNum);
+        if (!Number.isFinite(s)) return [];
+        if (s === 1) return ["A"];
+        if (s === 10) return ["Z"];
+        if (s >= 2 && s <= 9) return ALPHA_TREE_STEP_LETTERS[s - 1] || [];
+        return [];
+    };
 
     /** After step 1 (playing) or after step 10 (await_cashout). Not available on step 1 before A. */
     const canCashOutAlpha =
@@ -735,29 +745,156 @@ export default function AlphaTreePage() {
                                                     or keep playing.
                                                 </Text>
                                             ) : null}
-                                            <Flex wrap="wrap" gap="10px" justify="center">
-                                                {(lettersToShow || []).map((ch) => (
-                                                    <Button
-                                                        key={`${treeState.step}-${ch}`}
-                                                        type="button"
-                                                        minW="56px"
-                                                        h="52px"
-                                                        fontSize="xl"
-                                                        fontWeight="bold"
-                                                        color="#000"
-                                                        bg="#FFD700"
-                                                        border="2px solid #000"
-                                                        borderRadius="12px"
-                                                        boxShadow="3px 3px 0 #000"
-                                                        isLoading={pickLoading}
-                                                        isDisabled={pickLoading}
-                                                        onClick={() => handlePickLetter(ch)}
-                                                        _hover={{ bg: "#ffe066" }}
-                                                    >
-                                                        {ch}
-                                                    </Button>
-                                                ))}
-                                            </Flex>
+                                            {(() => {
+                                                if (!treeState) return null;
+
+                                                const lastPath =
+                                                    Array.isArray(pathSteps) && pathSteps.length
+                                                        ? pathSteps[pathSteps.length - 1]
+                                                        : null;
+
+                                                const prevLetter = lastPath?.letter || null;
+                                                const prevResultVal =
+                                                    prevLetter &&
+                                                    lastPath?.letterResults &&
+                                                    typeof lastPath.letterResults[prevLetter] === "number"
+                                                        ? lastPath.letterResults[prevLetter]
+                                                        : typeof lastPath?.value === "number"
+                                                          ? lastPath.value
+                                                          : null;
+
+                                                const isPrevBust =
+                                                    prevResultVal != null &&
+                                                    Number.isFinite(Number(prevResultVal)) &&
+                                                    Number(prevResultVal) <= 1e-12;
+
+                                                const renderResolvedButton = (ch, resultVal) => {
+                                                    const resultColor = isPrevBust
+                                                        ? "#E74C3C"
+                                                        : "#FFD700";
+                                                    return (
+                                                        <Button
+                                                            type="button"
+                                                            minW="56px"
+                                                            h="62px"
+                                                            p="0"
+                                                            bg="transparent"
+                                                            border="1px solid rgba(255,255,255,0.08)"
+                                                            borderRadius="12px"
+                                                            boxShadow="none"
+                                                            isDisabled
+                                                        >
+                                                            <Flex
+                                                                direction="column"
+                                                                justify="space-between"
+                                                                align="center"
+                                                                w="100%"
+                                                                h="100%"
+                                                                py="6px"
+                                                            >
+                                                                <Text
+                                                                    fontSize="xl"
+                                                                    fontWeight="bold"
+                                                                    color="#FFD700"
+                                                                    lineHeight="1"
+                                                                >
+                                                                    {ch}
+                                                                </Text>
+                                                                {resultVal != null ? (
+                                                                    <Text
+                                                                        fontSize="10px"
+                                                                        color={resultColor}
+                                                                        fontWeight={700}
+                                                                        lineHeight="1"
+                                                                    >
+                                                                        {Number(resultVal).toFixed(2)}
+                                                                    </Text>
+                                                                ) : (
+                                                                    <Text fontSize="10px" opacity={0}>
+                                                                        0.00
+                                                                    </Text>
+                                                                )}
+                                                            </Flex>
+                                                        </Button>
+                                                    );
+                                                };
+
+                                                if (treeState.phase === "await_a") {
+                                                    return (
+                                                        <VStack minH="132px" justify="center" align="center" spacing="10px">
+                                                            <Button
+                                                                type="button"
+                                                                minW="56px"
+                                                                h="52px"
+                                                                fontSize="xl"
+                                                                fontWeight="bold"
+                                                                color="#000"
+                                                                bg="#FFD700"
+                                                                border="2px solid #000"
+                                                                borderRadius="12px"
+                                                                boxShadow="3px 3px 0 #000"
+                                                                isLoading={pickLoading}
+                                                                isDisabled={pickLoading}
+                                                                onClick={() => handlePickLetter("A")}
+                                                                _hover={{ bg: "#ffe066" }}
+                                                            >
+                                                                A
+                                                            </Button>
+                                                        </VStack>
+                                                    );
+                                                }
+
+                                                if (treeState.phase === "playing") {
+                                                    const options = lettersForStepNum(treeState.step);
+                                                    return (
+                                                        <Flex wrap="nowrap" gap="18px" justify="center" align="flex-start">
+                                                            <VStack minW="86px" minH="132px" justify="center" align="center">
+                                                                {prevLetter
+                                                                    ? renderResolvedButton(prevLetter, prevResultVal)
+                                                                    : null}
+                                                            </VStack>
+                                                            <VStack
+                                                                minW="86px"
+                                                                minH="132px"
+                                                                justify="space-between"
+                                                                align="center"
+                                                            >
+                                                                {(options || []).map((ch) => (
+                                                                    <Button
+                                                                        key={`opt-${treeState.step}-${ch}`}
+                                                                        type="button"
+                                                                        minW="56px"
+                                                                        h="52px"
+                                                                        fontSize="xl"
+                                                                        fontWeight="bold"
+                                                                        color="#000"
+                                                                        bg="#FFD700"
+                                                                        border="2px solid #000"
+                                                                        borderRadius="12px"
+                                                                        boxShadow="3px 3px 0 #000"
+                                                                        isLoading={pickLoading}
+                                                                        isDisabled={pickLoading}
+                                                                        onClick={() => handlePickLetter(ch)}
+                                                                        _hover={{ bg: "#ffe066" }}
+                                                                    >
+                                                                        {ch}
+                                                                    </Button>
+                                                                ))}
+                                                            </VStack>
+                                                        </Flex>
+                                                    );
+                                                }
+
+                                                if (treeState.phase === "await_cashout") {
+                                                    return (
+                                                        <VStack minH="132px" justify="center" align="center" spacing="10px">
+                                                            {prevLetter ? renderResolvedButton(prevLetter, prevResultVal) : null}
+                                                        </VStack>
+                                                    );
+                                                }
+
+                                                return null;
+                                            })()}
                                             {treeState.phase === "playing" &&
                                             treeState.step >= 2 &&
                                             treeState.step <= 9 &&
