@@ -11,27 +11,60 @@ import {
     ALPHA_TREE_STEP_LETTERS,
     allowedLettersForStep,
 } from "../constants/alphaTreeSteps.js";
+import { getAlphaTreeSettingsMerged } from "../services/alphaTree/alphaTreeSettings.service.js";
 
-const BASE = 0.6;
 const MIN_BET = 0.1;
 const MAX_BET = 20;
 const EPS = 1e-10;
+/** Mid band draws in the open interval (MID_BAND_LO, MID_BAND_HI), not (0, 1). */
+const MID_BAND_LO = 0.1;
+const MID_BAND_HI = 1;
 
 function round2(n) {
     return Math.round(Number(n) * 100) / 100;
 }
 
+/** 0 = easy, 1 = normal, 2 = hard — matches admin `alphaTreeMode` */
+function normalizeAlphaTreeMode(raw) {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return 1;
+    if (n < 0) return 0;
+    if (n > 2) return 2;
+    return n;
+}
+
+/** Same rule as Coco: netProfit = total profit − total bet from game history; adjust mode at extremes only. */
+function updateAlphaTreeModeByTotalProfit(user) {
+    const history = Array.isArray(user?.alphaTreeHistory) ? user.alphaTreeHistory : [];
+    const totalProfit = history.reduce((acc, item) => {
+        const p = Number(item?.profit);
+        return acc + (Number.isFinite(p) ? p : 0);
+    }, 0);
+    const totalBet = history.reduce((acc, item) => {
+        const b = Number(item?.betAmount);
+        return acc + (Number.isFinite(b) ? b : 0);
+    }, 0);
+    const netProfit = totalProfit - totalBet;
+    if (netProfit > 100) user.alphaTreeMode = 2;
+    else if (netProfit < -10) user.alphaTreeMode = 0;
+}
+
 /** Step k ∈ [2..10]: max multiplier for the “high” band (1, max) */
-function maxForRandomStep(stepIndex) {
-    return BASE * Math.pow(2, stepIndex - 1);
+function maxForRandomStep(stepIndex, settings) {
+    const base = settings.baseMultiplier;
+    return base * Math.pow(2, stepIndex - 1);
 }
 
-/** Step 10 only: fixed multiplier 0.6 × 2^9 (same as maxForRandomStep(10)) */
-function step10FixedMultiplier() {
-    return round2(BASE * Math.pow(2, 9));
+/** Step 10 only: fixed base × 2^9, tuned by mode from settings */
+function step10FixedMultiplier(mode, settings) {
+    const m = normalizeAlphaTreeMode(mode);
+    const raw = settings.baseMultiplier * Math.pow(2, 9);
+    const mult =
+        m === 0 ? settings.step10MultEasy : m === 2 ? settings.step10MultHard : 1;
+    return round2(raw * mult);
 }
 
-/** Random shuffle of which letter gets bust / (0,1) / (1,max) this step */
+/** Random shuffle of which letter gets bust / (0.1,1) / (1,max) this step */
 function randomBandPermutation() {
     const arr = ["zero", "mid", "high"];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -43,18 +76,41 @@ function randomBandPermutation() {
 
 /**
  * Draw multiplier for step stepIndex given band kind (from permutation).
- * zero → 0 | mid → (0,1) | high → (1, max)
+ * zero → 0 | mid → (0.1, 1) | high → (1, max)
+ * Mode skews mid/high draws: easy → more favorable, hard → less.
  */
-function drawForBand(stepIndex, band) {
-    const max = maxForRandomStep(stepIndex);
+function drawMidInBand(mode, settings) {
+    const m = normalizeAlphaTreeMode(mode);
+    const width = MID_BAND_HI - MID_BAND_LO - 2 * EPS;
+    let u;
+    if (m === 0) {
+        u = Math.pow(Math.random(), settings.midPowEasy);
+    } else if (m === 2) {
+        u = Math.pow(Math.random(), settings.midPowHard);
+    } else {
+        u = Math.random();
+    }
+    return MID_BAND_LO + EPS + u * width;
+}
+
+function drawForBand(stepIndex, band, mode, settings) {
+    const m = normalizeAlphaTreeMode(mode);
+    const max = maxForRandomStep(stepIndex, settings);
     if (band === "zero") {
         return 0;
     }
     if (band === "mid") {
-        return EPS + Math.random() * (1 - 2 * EPS);
+        return drawMidInBand(mode, settings);
     }
     const hi = Math.max(max, 1 + 3 * EPS);
-    return 1 + EPS + Math.random() * (hi - 1 - 2 * EPS);
+    let r = 1 + EPS + Math.random() * (hi - 1 - 2 * EPS);
+    if (m === 0) {
+        r = 1 + (r - 1) * settings.highStretchEasy;
+        r = Math.min(r, hi);
+    } else if (m === 2) {
+        r = 1 + (r - 1) * settings.highStretchHard;
+    }
+    return r;
 }
 
 async function broadcastAlphaTreeView(req) {
@@ -133,10 +189,13 @@ export const startGame = async (req, res) => {
 
         await user.save();
 
-        const state = await AlphaTreeState.findOne({ userId }).lean();
+        const [state, settings] = await Promise.all([
+            AlphaTreeState.findOne({ userId }).lean(),
+            getAlphaTreeSettingsMerged(),
+        ]);
 
         return sendUserResponse(res, "", user, {
-            alphaTree: formatState(state),
+            alphaTree: formatState(state, settings),
         });
     } catch (error) {
         console.error("[alphaTree] startGame", error);
@@ -146,7 +205,7 @@ export const startGame = async (req, res) => {
 
 /**
  * POST /api/alpha-tree/pick
- * body: { letter } — steps 2–9: random assignment of bust / (0,1) / (1,max) to the 3 letters. Step 10: Z, fixed 0.6×2^9.
+ * body: { letter } — steps 2–9: random assignment of bust / (0.1,1) / (1,max) to the 3 letters. Step 10: Z, fixed base×2^9.
  */
 export const pickLetter = async (req, res) => {
     try {
@@ -179,7 +238,9 @@ export const pickLetter = async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Step 1: only A → fixed BASE
+        const settings = await getAlphaTreeSettingsMerged();
+
+        // Step 1: only A → fixed base multiplier from settings
         if (state.phase === "await_a") {
             if (letter !== "A") {
                 return res.status(400).json({
@@ -187,20 +248,21 @@ export const pickLetter = async (req, res) => {
                     message: "First step: press A only",
                 });
             }
-            state.cumulativeMultiplier = round2(state.cumulativeMultiplier * BASE);
+            const baseMult = settings.baseMultiplier;
+            state.cumulativeMultiplier = round2(state.cumulativeMultiplier * baseMult);
             state.step = 2;
             state.phase = "playing";
             state.bandPermutation = randomBandPermutation();
             await state.save();
 
             return sendUserResponse(res, "", user, {
-                alphaTree: formatState(state.toObject()),
+                alphaTree: formatState(state.toObject(), settings),
                 lastDraw: {
                     step: 1,
-                    value: BASE,
+                    value: baseMult,
                     kind: "fixed_a",
                     letter: "A",
-                    letterResults: { A: BASE },
+                    letterResults: { A: baseMult },
                 },
             });
         }
@@ -222,9 +284,10 @@ export const pickLetter = async (req, res) => {
         const letterIndex = allowed.indexOf(letter);
         const stepIndex = state.step;
 
-        // Step 10: only Z — fixed rate 0.6 × 2^9 (no band permutation)
+        // Step 10: only Z — fixed base × 2^9 (no band permutation)
         if (stepIndex === 10) {
-            const r = step10FixedMultiplier();
+            const mode = normalizeAlphaTreeMode(user.alphaTreeMode);
+            const r = step10FixedMultiplier(mode, settings);
             state.cumulativeMultiplier = round2(state.cumulativeMultiplier * r);
             state.step = 11;
             state.phase = "await_cashout";
@@ -232,7 +295,7 @@ export const pickLetter = async (req, res) => {
             await state.save();
 
             return sendUserResponse(res, "", user, {
-                alphaTree: formatState(state.toObject()),
+                alphaTree: formatState(state.toObject(), settings),
                 lastDraw: {
                     step: 10,
                     value: r,
@@ -245,19 +308,26 @@ export const pickLetter = async (req, res) => {
             });
         }
 
-        // Steps 2–9: each letter gets one of {bust, (0,1), (1,max)} — random permutation per step
+        // Steps 2–9: each letter gets one of {bust, (0.1,1), (1,max)} — random permutation per step
         let perm = state.bandPermutation;
         if (!perm || perm.length !== 3) {
             perm = randomBandPermutation();
             state.bandPermutation = perm;
         }
-        const band = perm[letterIndex];
+        const mode = normalizeAlphaTreeMode(user.alphaTreeMode);
+        let band = perm[letterIndex];
+        if (mode === 0 && band === "zero" && Math.random() < settings.easyBustRerollChance) {
+            perm = randomBandPermutation();
+            state.bandPermutation = perm;
+            band = perm[letterIndex];
+        }
 
         /** All three outcomes this step (same permutation; independent draws per band). */
         const letterResults = {};
         for (let i = 0; i < 3; i++) {
             const b = perm[i];
-            letterResults[allowed[i]] = Math.round(drawForBand(stepIndex, b) * 1e8) / 1e8;
+            letterResults[allowed[i]] =
+                Math.round(drawForBand(stepIndex, b, mode, settings) * 1e8) / 1e8;
         }
 
         const r = letterResults[letter];
@@ -276,6 +346,8 @@ export const pickLetter = async (req, res) => {
                 busted: true,
                 createAt: new Date(),
             });
+
+            updateAlphaTreeModeByTotalProfit(user);
 
             await AlphaTreeView.create({
                 userId: viewUserId,
@@ -316,7 +388,7 @@ export const pickLetter = async (req, res) => {
         await state.save();
 
         return sendUserResponse(res, "", user, {
-            alphaTree: formatState(state.toObject()),
+            alphaTree: formatState(state.toObject(), settings),
             lastDraw: {
                 step: stepIndex,
                 value: r,
@@ -384,6 +456,8 @@ export const cashOut = async (req, res) => {
             createAt: new Date(),
         });
 
+        updateAlphaTreeModeByTotalProfit(user);
+
         await AlphaTreeView.create({
             userId: viewUserId,
             bet: betAmount,
@@ -419,15 +493,26 @@ export const getState = async (req, res) => {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const state = await AlphaTreeState.findOne({ userId }).lean();
-        return res.json({ alphaTree: state ? formatState(state) : null });
+        const [state, userLean, settings] = await Promise.all([
+            AlphaTreeState.findOne({ userId }).lean(),
+            User.findOne({ userAuthId: req.user.userAuthId })
+                .select("alphaTreeMode")
+                .lean(),
+            getAlphaTreeSettingsMerged(),
+        ]);
+        const alphaTreeMode = normalizeAlphaTreeMode(userLean?.alphaTreeMode);
+        return res.json({
+            alphaTree: state ? formatState(state, settings) : null,
+            alphaTreeMode,
+            baseMultiplier: round2(settings.baseMultiplier),
+        });
     } catch (error) {
         console.error("[alphaTree] getState", error);
         return res.status(500).json({ error: error.message });
     }
 };
 
-function formatState(doc) {
+function formatState(doc, settings) {
     if (!doc) return null;
     return {
         betAmount: doc.betAmount,
@@ -435,13 +520,15 @@ function formatState(doc) {
         step: doc.step,
         phase: doc.phase,
         active: doc.active,
+        /** Matches admin `alphatreesettings.baseMultiplier` — client must use for UI, not hardcoded 0.6 */
+        baseMultiplier: round2(settings.baseMultiplier),
         allowedLetters: allowedLettersForStep(doc.step, doc.phase),
         /** True when the player may collect (after step 1, or after all 10 steps). */
         canCashOut: doc.phase === "playing" || doc.phase === "await_cashout",
-        /** Max for high band (steps 2–9) or fixed step-10 rate (same number: 0.6×2^(step−1)) */
+        /** Max for high band (steps 2–9) or fixed step-10 rate (base×2^(step−1)) */
         nextRandomMax:
             doc.phase === "playing" && doc.step >= 2 && doc.step <= 10
-                ? round2(maxForRandomStep(doc.step))
+                ? round2(maxForRandomStep(doc.step, settings))
                 : null,
     };
 }

@@ -1,6 +1,6 @@
 /**
  * Must match server `server/src/constants/alphaTreeSteps.js`.
- * Steps 2–9: random permutation of bust / (0,1) / (1,max) across the 3 letters. Step 10: Z, fixed 0.6×2^9.
+ * Steps 2–9: random permutation of bust / (0.1,1) / (1,max) across the 3 letters. Step 10: Z, fixed base×2^9.
  */
 export const ALPHA_TREE_STEP_LETTERS = [
     ["A"],

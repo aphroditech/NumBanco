@@ -150,7 +150,7 @@ function BetHistory() {
                                         Bet
                                     </Th>
                                     <Th color="white" className="real_th_font" w="18%">
-                                        Result
+                                        Multiplier
                                     </Th>
                                     <Th color="white" className="real_th_font" w="18%">
                                         Win
