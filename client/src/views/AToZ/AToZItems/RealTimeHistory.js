@@ -22,12 +22,14 @@ function RealTimeHistory() {
     const { aToZResults, setAToZResults } = useAblyAtoZResults();
     const history = useHistory();
 
-    useEffect(() => {
-        if (!aToZResults || aToZResults.length === 0) {
-            return;
+    useEffect( async () => {
+        let isMounted = true;
+        const res = await getAToZResults(history);
+        if (isMounted) {
+            setAToZResults(res.aToZResults);
         }
-
-    }, [aToZResults]);
+        return () => { isMounted = false; };
+    }, [history]);
     
     return (
         <Card

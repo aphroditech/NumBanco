@@ -25,6 +25,7 @@ import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
 import {rocketBot} from "./services/rocket/rocketBot.service.js";
+import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
@@ -81,6 +82,7 @@ connectDB().then(async () => {
         // pumpingBot(ably);
         // miningBot(ably);
         // rocketBot(ably);
+        // aToZBot(ably);
         // fishingBot(ably);
         // startGravityGameLoop(ably);
         // cocoBot(ably);
@@ -89,7 +91,6 @@ connectDB().then(async () => {
         // fundMergeEngine();
         // tankCheckEngine();
         // getWithdrawWallet();
-
 
         // startBetEngine(ably, 0);
         // startBetEngine(ably, 1);

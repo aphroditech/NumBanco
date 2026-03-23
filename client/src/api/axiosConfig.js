@@ -4,6 +4,7 @@ const API = "http://localhost:5000/api";
 
 const axiosInstance = axios.create({
     baseURL: API,
+    timeout: 60000,
     headers: {
         "Content-Type": "application/json",
     },

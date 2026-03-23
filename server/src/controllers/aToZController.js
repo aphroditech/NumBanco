@@ -17,7 +17,7 @@ export const bet = async (req, res) => {
             return res.status(400).json({ message: "You don't have enough balance" });
         }
 
-        const pickStr = String(Math.min(999, Math.max(0, Math.floor(Number(number))))).padStart(3, "0");
+        const pickStr = String(number);
 
         const outcomeKey = getOutcomeKey(aToZSetting);
         const { result, multiplier } = generateResult(pickStr, outcomeKey, aToZSetting);
@@ -95,41 +95,38 @@ function generateResult(userNumber, condition, aToZSetting) {
         NONE: aToZSetting.NONE.multiplier
     };
 
-    const digits = "0123456789".split('');
-    const user = userNumber.split('');
+    const user = userNumber.split('').map(Number);
 
-    function randomDigit(exclude = []) {
-        const pool = digits.filter(d => !exclude.includes(d));
-        return pool[Math.floor(Math.random() * pool.length)];
+    function randExcept(excludeList) {
+        let r;
+        do {
+            r = Math.floor(Math.random() * 10);
+        } while (excludeList.includes(r));
+        return r;
     }
 
-    function shuffle(arr) {
-        return [...arr].sort(() => Math.random() - 0.5);
-    }
-
-    function detectCondition(user, result) {
+    function detect(user, result) {
 
         let ordered = 0;
+        let total = 0;
+        let copy = [...user];
 
         for (let i = 0; i < 3; i++) {
             if (user[i] === result[i]) ordered++;
         }
 
-        let copy = [...user];
-        let totalMatches = 0;
-
         for (let r of result) {
             let idx = copy.indexOf(r);
             if (idx !== -1) {
-                totalMatches++;
+                total++;
                 copy.splice(idx, 1);
             }
         }
 
-        let unordered = totalMatches - ordered;
+        let unordered = total - ordered;
 
         if (ordered === 3) return "THREE_ORDERED";
-        if (totalMatches === 3) return "THREE_UNORDERED";
+        if (total === 3) return "THREE_UNORDERED";
         if (ordered === 2) return "TWO_ORDERED";
         if (unordered === 2) return "TWO_UNORDERED";
         if (ordered === 1) return "ONE_ORDERED";
@@ -142,127 +139,97 @@ function generateResult(userNumber, condition, aToZSetting) {
 
     do {
 
+        result = [...user];
+
         switch (condition) {
 
             case "THREE_ORDERED":
-                result = userNumber;
                 break;
 
 
             case "THREE_UNORDERED":
 
                 do {
-                    result = shuffle(user).join('');
-                } while (result === userNumber);
+                    result = [...user].sort(() => Math.random() - 0.5);
+                } while (result.join('') === userNumber);
 
                 break;
 
 
             case "TWO_ORDERED":
 
-                let indexes = shuffle([0,1,2]);
-                let keep = indexes.slice(0,2);
-                let change = indexes[2];
+                let changeIndex = Math.floor(Math.random() * 3);
 
-                let arr = [...user];
-                arr[change] = randomDigit([user[change]]);
+                result[changeIndex] = randExcept([user[changeIndex]]);
 
-                result = arr.join('');
                 break;
 
 
             case "TWO_UNORDERED":
 
                 do {
-                    let perm = shuffle(user);
-                    result = perm.join('');
-                }
-                while (
-                    detectCondition(user, result.split('')) !== "TWO_UNORDERED"
-                );
+                    result = [...user].sort(() => Math.random() - 0.5);
+                } while (detect(user, result) !== "TWO_UNORDERED");
 
                 break;
 
 
             case "ONE_ORDERED":
 
-                let matchIndex = Math.floor(Math.random()*3);
+                let keepIndex = Math.floor(Math.random() * 3);
 
-                let arr1 = [...user];
+                for (let i = 0; i < 3; i++) {
 
-                for (let i=0;i<3;i++) {
+                    if (i !== keepIndex) {
 
-                    if (i !== matchIndex) {
-
-                        arr1[i] = randomDigit([
-                            user[i],
-                            ...user.filter((_,idx)=>idx!==i)
-                        ]);
+                        result[i] = randExcept(user);
 
                     }
-
                 }
 
-                result = arr1.join('');
                 break;
 
 
             case "ONE_UNORDERED":
 
+                result = [
+                    randExcept(user),
+                    randExcept(user),
+                    randExcept(user)
+                ];
+
+                let targetDigit = user[Math.floor(Math.random()*3)];
+
+                let targetPos;
+
                 do {
+                    targetPos = Math.floor(Math.random()*3);
+                } while (user[targetPos] === targetDigit);
 
-                    let arr2 = [
-                        randomDigit(user),
-                        randomDigit(user),
-                        randomDigit(user)
-                    ];
-
-                    let pickIndex = Math.floor(Math.random()*3);
-
-                    let sourceIndex = Math.floor(Math.random()*3);
-
-                    while (pickIndex === sourceIndex)
-                        pickIndex = Math.floor(Math.random()*3);
-
-                    arr2[pickIndex] = user[sourceIndex];
-
-                    result = arr2.join('');
-
-                }
-                while (
-                    detectCondition(user, result.split('')) !== "ONE_UNORDERED"
-                );
+                result[targetPos] = targetDigit;
 
                 break;
 
 
             case "NONE":
 
-                do {
-
-                    result = [
-                        randomDigit(user),
-                        randomDigit(user),
-                        randomDigit(user)
-                    ].join('');
-
-                }
-                while (
-                    detectCondition(user, result.split('')) !== "NONE"
-                );
+                result = [
+                    randExcept(user),
+                    randExcept(user),
+                    randExcept(user)
+                ];
 
                 break;
 
         }
 
-    } while (
-        detectCondition(user, result.split('')) !== condition
-    );
+    } while (detect(user, result) !== condition);
 
     return {
-        result,
+        result: result.join(''),
         multiplier: MULTIPLIERS[condition]
     };
+
 }
 
 
@@ -336,6 +303,16 @@ export const spinComplete = async (req, res) => {
         }
         return res.status(200).json({ message: "AToZ spin complete", balance: user.balance });
 
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server Error" });
+    }
+}
+
+export const getAToZResults = async (req, res) => {
+    try {
+        const aToZResults = await AToZResult.find().sort({ date: -1 }).limit(25);
+        return res.status(200).json({ aToZResults: aToZResults || [] });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: "Server Error" });
