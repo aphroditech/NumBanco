@@ -36,8 +36,14 @@ const ably = createAblyClient();
 
 app.locals.ably = ably;
 
-connectDB().then(async () => {
-    await initializeDatabase();
+connectDB()
+  .then(async () => {
+    try {
+        await initializeDatabase();
+    } catch (err) {
+        console.error("❌ Database initialization failed:", err);
+        process.exit(1);
+    }
 
     // Cloud Spread game loop (per-user rounds). Live feed uses Ably after `setCloudSpreadAbly` on connect.
     startCloudSpreadGameLoop().catch((err) => {
@@ -57,14 +63,19 @@ connectDB().then(async () => {
     //     cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
     // };
 
-    http.createServer(app).listen(PORT, () => {
-        console.log(`🚀 HTTP Server running on port ${PORT}`);
+    /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
+    http.createServer(app).listen(PORT, "0.0.0.0", () => {
+        console.log(`🚀 HTTP Server listening on http://0.0.0.0:${PORT} (API + http://localhost:${PORT})`);
     });
     // https.createServer(sslOptions, app).listen(PORT, () => {
     //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
 
     // });
-    await initMoralis();
+    try {
+        await initMoralis();
+    } catch (err) {
+        console.warn("⚠️ Moralis failed to start (optional for many routes):", err?.message || err);
+    }
 
     ably.connection.once("connected", () => {
         console.log("✅ Ably connected");
@@ -103,4 +114,9 @@ connectDB().then(async () => {
             console.warn('Failed to start cron jobs:', err);
         }
     });
-});
+  })
+  .catch((err) => {
+    console.error("❌ Failed to start server (MongoDB or startup error):", err?.message || err);
+    console.error("Check MONGO_URI in .env and that MongoDB is running.");
+    process.exit(1);
+  });

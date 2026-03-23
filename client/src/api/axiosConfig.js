@@ -1,10 +1,13 @@
 import axios from "axios";
 
-const API = "http://localhost:5000/api";
+/** Use REACT_APP_API_URL in client/.env (e.g. http://localhost:5000/api or your LAN IP). */
+const API =
+    (typeof process !== "undefined" && process.env.REACT_APP_API_URL) ||
+    "http://localhost:5000/api";
 
 const axiosInstance = axios.create({
-    baseURL: API,
-    timeout: 60000,
+    baseURL: API.replace(/\/$/, ""),
+    timeout: 45000,
     headers: {
         "Content-Type": "application/json",
     },

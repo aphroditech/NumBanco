@@ -33,7 +33,7 @@ export const bet = async (req, res) => {
         });
         await user.save({ optimisticConcurrency: false });
 
-        console.log("outcomeKey", outcomeKey);
+        console.log("outcomeKey", outcomeKey, "result", result);
 
         return res.json({
             result,

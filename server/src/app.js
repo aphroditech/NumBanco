@@ -37,15 +37,25 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
-  origin: [
-    // "https://localhost:3000",
-    "http://localhost:3000",
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+/** Dev often uses localhost OR 127.0.0.1 — both must be allowed or the browser blocks API calls. */
+const defaultCorsOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+const extraOrigins = (process.env.CLIENT_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const corsOrigins = [...new Set([...defaultCorsOrigins, ...extraOrigins])];
+
+app.use(
+  cors({
+    origin: corsOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.options("*", cors());
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
