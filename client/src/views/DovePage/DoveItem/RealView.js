@@ -139,11 +139,8 @@ function RealView({ sceneHeight }) {
                             <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
                                 User
                             </Th>
-                            <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                Bet
-                            </Th>
                             <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                Mult
+                                Result
                             </Th>
                             <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
                                 Win
@@ -158,8 +155,7 @@ function RealView({ sceneHeight }) {
                                     key={rowId || index}
                                     altas={row.altas}
                                     avatar={row.avatar}
-                                    bet={row.bet}
-                                    multiplier={row.multiplier}
+                                    result={row.multiplier}
                                     win={row.win}
                                     isNew={newRowIds.has(rowId)}
                                 />
