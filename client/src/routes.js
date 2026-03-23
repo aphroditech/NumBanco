@@ -153,7 +153,7 @@ var dashRoutes = [
   {
     redirect: true,
     path: "/digits",
-    name: "DIGITS",
+    name: "DIGITS SLOT",
     icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
     layout: "/game",
