@@ -329,7 +329,7 @@ export const spinComplete = async (req, res) => {
 
 export const getAToZResults = async (req, res) => {
     try {
-        const aToZResults = await AToZResult.find().sort({ date: -1 }).limit(25);
+        const aToZResults = await AToZResult.find().sort({ date: -1 }).limit(20);
         return res.status(200).json({ aToZResults: aToZResults || [] });
     } catch (error) {
         console.error(error);
