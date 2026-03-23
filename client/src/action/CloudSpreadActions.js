@@ -12,11 +12,8 @@ export async function placeCloudSpreadBet(data, dispatch) {
   return res.data;
 }
 
-export async function cashOutCloudSpread(dispatch) {
+export async function cashOutCloudSpread() {
   const res = await axiosInstance.post("/cloud-spread/cashout");
-  if (dispatch && res.data?.user) {
-    dispatch({ type: "SET_USER", payload: res.data.user });
-  }
   return res.data;
 }
 

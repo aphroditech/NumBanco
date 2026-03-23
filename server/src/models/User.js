@@ -593,22 +593,6 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
-  alphaTreeHistory: {
-    type: [
-      {
-        betAmount: { type: Number, required: true },
-        totalMultiplier: { type: Number, default: 0 },
-        profit: { type: Number, default: 0 },
-        busted: { type: Boolean, default: false },
-        createAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
-    default: [],
-  },
-
   updownHistory: {
     type: [
       {
@@ -632,43 +616,6 @@ const userSchema = new mongoose.Schema({
         profit: {
           type: Number,
           default: 0
-        },
-        createAt: {
-          type: Date,
-          default: Date.now()
-        }
-      }
-    ],
-    default: []
-  },
-
-  /** Cloud Spread — round summaries (like rubicHistory / pumpingHistory). */
-  cloudSpreadHistory: {
-    type: [
-      {
-        roundId: {
-          type: Number,
-          required: true
-        },
-        totalBet: {
-          type: Number,
-          required: true
-        },
-        win: {
-          type: Number,
-          default: 0
-        },
-        crashStep: {
-          type: Number,
-          default: 0
-        },
-        finalClouds: {
-          type: Number,
-          default: 0
-        },
-        multProduct: {
-          type: Number,
-          default: 1
         },
         createAt: {
           type: Date,
