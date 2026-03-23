@@ -79,8 +79,8 @@ connectDB()
 
     ably.connection.once("connected", () => {
         console.log("✅ Ably connected");
-        // confirmDepositEngine(ably);
-        // tronEngine(ably);
+        confirmDepositEngine(ably);
+        tronEngine(ably);
         // startPartnerDepositCron(ably);
         // startWithdrawApprovalCron(ably);
         // getUserStatusChannel(ably);
@@ -92,7 +92,7 @@ connectDB()
         // rocketBot(ably);
         // aToZBot(ably);
         // fishingBot(ably);
-        // startGravityGameLoop(ably);
+        startGravityGameLoop(ably);
         setCloudSpreadAbly(ably);
         cloudSpreadBot().catch((err) => {
             console.error("[cloud-spread] bot failed to start:", err);

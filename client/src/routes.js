@@ -79,6 +79,22 @@ var dashRoutes = [
     layout: "/user",
   },
   {
+    name: "LOTTERY",
+    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    layout: "/admin",
+  },
+  {
+    path: "/affiliation",
+    name: "AFFILIATION",
+    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Partnership,
+    layout: "/user",
+  },
+  // {
+  //   name: "LOTTERY",
+  //   icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+  // },
+  {
     name: "NUMEXA",
     icon: <PixIcon style={{ fontSize: "24px", color: "#00D4FF" }} />
   },
@@ -183,24 +199,7 @@ var dashRoutes = [
     layout: "/game",
   },
   {
-    path: "/affiliation",
-    name: "AFFILIATION",
-    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    component: Partnership,
-    layout: "/user",
-  },
-  {
-    name: "LOTTERY",
-    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    layout: "/admin",
-  },
-  // {
-  //   name: "LOTTERY",
-  //   icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-  // },
-
-  {
-    // redirect: true,
+    redirect: true,
     path: "/deposit",
     name: "DEPOSIT",
     icon: <CloudUploadRoundedIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -208,7 +207,7 @@ var dashRoutes = [
     layout: "/transaction",
   },
   {
-    // redirect: true,
+    redirect: true,
     path: "/withdraw",
     name: "WITHDRAW",
     icon: <CloudDownloadRoundedIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -216,6 +215,7 @@ var dashRoutes = [
     layout: "/transaction",
   },
   {
+    redirect: true,
     path: "/myprofile",
     name: "MY PROFILE",
     icon: <PersonIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,

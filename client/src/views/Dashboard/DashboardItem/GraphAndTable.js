@@ -58,7 +58,8 @@ const SalesChart = ({ variant }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [zoomDomain, setZoomDomain] = useState(null);
-  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const [containerDimensions, setContainerDimensions] = useState({ width: 300, height: 280 });
+  const [isContainerReady, setIsContainerReady] = useState(false);
   const [tablePage, setTablePage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const chartRef = useRef(null);
@@ -130,27 +131,6 @@ const SalesChart = ({ variant }) => {
     };
   }, [data, startDate, endDate]);
 
-  // Add ResizeObserver to track container dimensions
-  useEffect(() => {
-    const observer = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        const { width, height } = entry.contentRect;
-        setContainerDimensions({ width, height });
-      }
-    });
-
-    const currentRef = chartRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, []);
-
   // Don't return null - always render the card structure
   // if (!chartData) return null;
 
@@ -177,6 +157,62 @@ const SalesChart = ({ variant }) => {
 
   // Get the data to display based on zoom
   const displayData = zoomDomain ? filteredChartData.slice(zoomDomain[0], zoomDomain[1] + 1) : filteredChartData;
+
+  const chartMinWidth = 300;
+  const chartMinHeight = isProfile ? 450 : 280;
+
+  /** Recharts ResponsiveContainer needs positive px size; % height in flex often measures as -1. */
+  useEffect(() => {
+    if (!chartRef.current) {
+      setIsContainerReady(false);
+      return;
+    }
+
+    const minW = 300;
+    const minH = isProfile ? 450 : 280;
+
+    const updateDimensions = () => {
+      const currentRef = chartRef.current;
+      if (!currentRef) return;
+
+      const rect = currentRef.getBoundingClientRect();
+      const width = Math.floor(Math.max(rect.width || 0, minW));
+      const height = Math.floor(Math.max(rect.height || 0, minH));
+
+      if (width > 0 && height > 0) {
+        setContainerDimensions({ width, height });
+        setIsContainerReady(true);
+      } else {
+        setIsContainerReady(false);
+      }
+    };
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        const validWidth = Math.floor(Math.max(width || 0, minW));
+        const validHeight = Math.floor(Math.max(height || 0, minH));
+        if (validWidth > 0 && validHeight > 0) {
+          setContainerDimensions({ width: validWidth, height: validHeight });
+          setIsContainerReady(true);
+        } else {
+          setIsContainerReady(false);
+        }
+      }
+    });
+
+    const currentRef = chartRef.current;
+    observer.observe(currentRef);
+    updateDimensions();
+    const timeoutId1 = setTimeout(updateDimensions, 50);
+    const timeoutId2 = setTimeout(updateDimensions, 200);
+
+    return () => {
+      clearTimeout(timeoutId1);
+      clearTimeout(timeoutId2);
+      observer.unobserve(currentRef);
+    };
+  }, [isProfile, filteredChartData.length]);
 
   // Handle zoom in button click
   const handleZoomIn = () => {
@@ -302,7 +338,9 @@ const SalesChart = ({ variant }) => {
             flex={isProfile ? undefined : '0 0 50%'}
             display="flex"
             flexDirection="column"
-            minH={isProfile ? '500px' : '0'}
+            minH={isProfile ? '500px' : '320px'}
+            minW={0}
+            overflow="hidden"
           >
             {filteredChartData.length > 0 &&
               <Box
@@ -310,13 +348,21 @@ const SalesChart = ({ variant }) => {
                 maxW="100%"
                 h="100%"
                 flex={isProfile ? undefined : '1'}
-                minH={isProfile ? '450px' : '0'}
-                minWidth="300px"
+                minH={`${chartMinHeight}px`}
+                minW={0}
+                minWidth={`${chartMinWidth}px`}
+                position="relative"
                 ref={chartRef}
               >
+                {isContainerReady &&
+                containerDimensions.width >= chartMinWidth &&
+                containerDimensions.height >= chartMinHeight ? (
                 <ResponsiveContainer
-                  width="100%"
-                  height={isProfile ? Math.max(containerDimensions.height || 0, 450) : '100%'}
+                  width={containerDimensions.width}
+                  height={containerDimensions.height}
+                  minWidth={chartMinWidth}
+                  minHeight={chartMinHeight}
+                  key={`chart-${containerDimensions.width}-${containerDimensions.height}`}
                 >
                   <LineChart data={displayData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
@@ -390,6 +436,11 @@ const SalesChart = ({ variant }) => {
                     />
                   </LineChart>
                 </ResponsiveContainer>
+                ) : (
+                  <Flex align="center" justify="center" h="100%" minH={`${chartMinHeight}px`} color="gray.400">
+                    <Text fontSize="sm">Loading chart…</Text>
+                  </Flex>
+                )}
               </Box>}
           </CardBody>
 

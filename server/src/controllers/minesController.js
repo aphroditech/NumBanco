@@ -21,6 +21,13 @@ function getUserId(req) {
   return req.user?.userId || req.user?._id?.toString() || null;
 }
 
+/** Build User model selector that matches whichever auth id is present. */
+function getUserSelector(req) {
+  if (req.user?.userId) return { userId: req.user.userId };
+  if (req.user?._id) return { _id: req.user._id };
+  return null;
+}
+
 function buildUserNotification(message, status = "success", from = "Mines", to = "") {
   return {
     id: Date.now() + Math.floor(Math.random() * 1000),
@@ -32,12 +39,12 @@ function buildUserNotification(message, status = "success", from = "Mines", to =
   };
 }
 
-async function pushUserNotification(userId, message, status = "success") {
-  if (!userId || !message) return;
+async function pushUserNotification(userSelector, toUserId, message, status = "success") {
+  if (!userSelector || !message) return;
   try {
     await User.updateOne(
-      { userId },
-      { $push: { notification: buildUserNotification(message, status, "Mines", userId) } }
+      userSelector,
+      { $push: { notification: buildUserNotification(message, status, "Mines", toUserId || "") } }
     );
   } catch (e) {
     console.warn("mines pushUserNotification failed:", e.message);
@@ -62,8 +69,9 @@ async function pushMinesHistory(userIdObj, entry) {
  * Mode 1 → 2 when minesWinAmount > minesAmount * minesMode1To2Threshold (user winning a lot).
  * Mode 2 → 1 when minesWinAmount <= minesAmount * minesMode2To1Threshold.
  */
-async function updateMinesMode(userId) {
-  const user = await User.findOne({ userId }).select("minesMode minesAmount minesWinAmount").lean();
+async function updateMinesMode(userSelector) {
+  if (!userSelector) return;
+  const user = await User.findOne(userSelector).select("minesMode minesAmount minesWinAmount").lean();
   if (!user) return;
   const setting = await MinesSetting.findOne({}).select("minesMode1To2Threshold minesMode2To1Threshold").lean();
   const thresh1To2 = setting?.minesMode1To2Threshold ?? 1.2;
@@ -75,7 +83,7 @@ async function updateMinesMode(userId) {
   if (currentMode === 1 && winAmount > amount * thresh1To2) newMode = 2;
   else if (currentMode === 2 && winAmount <= amount * thresh2To1) newMode = 1;
   if (newMode !== currentMode) {
-    await User.findOneAndUpdate({ userId }, { $set: { minesMode: newMode } });
+    await User.findOneAndUpdate(userSelector, { $set: { minesMode: newMode } });
   }
 }
 
@@ -179,7 +187,11 @@ export const getActiveGame = async (req, res) => {
 export const startGame = async (req, res) => {
   try {
     const userId = getUserId(req);
+    const userSelector = getUserSelector(req);
     if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    if (!userSelector) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
@@ -194,7 +206,7 @@ export const startGame = async (req, res) => {
     }
 
     const minesCount = getMinesCountForMode(mode);
-    const user = await User.findOne({ userId }).select("balance").lean();
+    const user = await User.findOne(userSelector).select("balance").lean();
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
@@ -212,7 +224,7 @@ export const startGame = async (req, res) => {
     }
 
     await User.findOneAndUpdate(
-      { userId },
+      userSelector,
       {
         $inc: { balance: -amount, totalBet: amount, refreshBet: amount, lotterybet: amount, minesAmount: amount },
         $push: { totalhistory: { amount: -amount, date: new Date(), type: "mines" } },
@@ -230,7 +242,7 @@ export const startGame = async (req, res) => {
       status: "playing",
     });
 
-    await pushUserNotification(userId, `Mines started. Bet $${amount.toFixed(2)}.`, "success");
+    await pushUserNotification(userSelector, userId, `Mines started. Bet $${amount.toFixed(2)}.`, "success");
 
     return res.json({
       success: true,
@@ -256,7 +268,11 @@ export const startGame = async (req, res) => {
 export const reveal = async (req, res) => {
   try {
     const userId = getUserId(req);
+    const userSelector = getUserSelector(req);
     if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    if (!userSelector) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
@@ -286,13 +302,22 @@ export const reveal = async (req, res) => {
     } else {
       const nextRevealedCount = (game.revealedIndices?.length || 0) + 1;
       const multiplier = getMultiplierForRevealed(GRID_SIZE, game.minesCount, nextRevealedCount);
-      // Use cached win-rate config. If DB didn't seed winRateBands, we fall back to getWinRateForMultiplier defaults.
-      const cached = getMinesWinRateCache();
+      // Use cached win-rate config. If cache is cold (e.g. getPrefix was not called),
+      // refresh here so reveal uses DB-configured bands.
+      let cached = getMinesWinRateCache();
+      if (
+        !Array.isArray(cached?.winRateBands) ||
+        cached.winRateBands.length === 0 ||
+        cached.minesMode2RateFactor == null
+      ) {
+        await refreshMinesMultiplierCache();
+        cached = getMinesWinRateCache();
+      }
       const rateBands = cached?.winRateBands ?? undefined;
       const minesMode2RateFactor = cached?.minesMode2RateFactor ?? 0.7;
 
       let rate = getWinRateForMultiplier(multiplier, rateBands);
-      const user = await User.findOne({ userId }).select("minesMode").lean();
+      const user = await User.findOne(userSelector).select("minesMode").lean();
       // Mode 2: apply factor only when multiplier > 1; multiplier 0–1 keeps 90% rate
       if (user?.minesMode === 2 && multiplier > 1) {
         rate *= minesMode2RateFactor;
@@ -307,9 +332,14 @@ export const reveal = async (req, res) => {
       );
 
       // totalhistory already updated at start (-amount); no extra push on loss
-      // Show full grid with minesCount bombs, always including the clicked tile
+      // Show full grid with minesCount bombs, always including the clicked tile.
+      // Important: never place display bombs on tiles already revealed as safe,
+      // otherwise the UI can incorrectly flip previous diamonds into bombs.
       const allIndices = Array.from({ length: GRID_SIZE }, (_, i) => i);
-      const otherIndices = allIndices.filter((i) => i !== index);
+      const revealedSafeSet = new Set(game.revealedIndices || []);
+      const otherIndices = allIndices.filter(
+        (i) => i !== index && !revealedSafeSet.has(i)
+      );
       const remaining = Math.max(game.minesCount - 1, 0);
       const count = Math.min(remaining, otherIndices.length);
       const shuffled = otherIndices.sort(() => Math.random() - 0.5);
@@ -330,7 +360,7 @@ export const reveal = async (req, res) => {
             });
           }
 
-          const userDoc = await User.findOne({ userId }).select("altas avatar").lean();
+          const userDoc = await User.findOne(userSelector).select("altas avatar").lean();
           await MinesResult.create({
             userName: userDoc?.altas || "User",
             avatar: userDoc?.avatar || null,
@@ -358,8 +388,8 @@ export const reveal = async (req, res) => {
             }
           }
 
-          await updateMinesMode(userId);
-          await pushUserNotification(userId, `You lost $${Number(game.amount).toFixed(2)} in Mines.`, "error");
+          await updateMinesMode(userSelector);
+          await pushUserNotification(userSelector, userId, `You lost $${Number(game.amount).toFixed(2)} in Mines.`, "error");
         } catch (e) {
           // Side effects should not affect reveal response.
           console.warn("mines loss side-effects failed:", e?.message);
@@ -395,7 +425,7 @@ export const reveal = async (req, res) => {
       );
       const profit = winAmount - game.amount;
       await User.findOneAndUpdate(
-        { userId },
+        userSelector,
         {
           $inc: { balance: winAmount, totalEarn: winAmount, minesWinAmount: winAmount },
           $push: { totalhistory: { amount: winAmount, date: new Date(), type: "mines" } },
@@ -417,7 +447,7 @@ export const reveal = async (req, res) => {
             });
           }
 
-          const userDoc = await User.findOne({ userId }).select("altas avatar").lean();
+          const userDoc = await User.findOne(userSelector).select("altas avatar").lean();
           await MinesResult.create({
             userName: userDoc?.altas || "User",
             avatar: userDoc?.avatar || null,
@@ -445,8 +475,8 @@ export const reveal = async (req, res) => {
             }
           }
 
-          await updateMinesMode(userId);
-          await pushUserNotification(userId, `You won $${Number(winAmount).toFixed(2)} in Mines.`, "success");
+          await updateMinesMode(userSelector);
+          await pushUserNotification(userSelector, userId, `You won $${Number(winAmount).toFixed(2)} in Mines.`, "success");
         } catch (e) {
           console.warn("mines win side-effects failed:", e?.message);
         }
@@ -481,7 +511,11 @@ export const reveal = async (req, res) => {
 export const cashOut = async (req, res) => {
   try {
     const userId = getUserId(req);
+    const userSelector = getUserSelector(req);
     if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    if (!userSelector) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
@@ -514,7 +548,7 @@ export const cashOut = async (req, res) => {
       { status: "won", multiplierAtCashOut: multiplier, profit }
     );
     await User.findOneAndUpdate(
-      { userId },
+      userSelector,
       {
         $inc: { balance: winAmount, totalEarn: winAmount, minesWinAmount: winAmount },
         $push: { totalhistory: { amount: winAmount, date: new Date(), type: "Win mines" } },
@@ -534,7 +568,7 @@ export const cashOut = async (req, res) => {
     }
 
     // Store global mines result row
-    const userDoc = await User.findOne({ userId }).select("altas avatar").lean();
+    const userDoc = await User.findOne(userSelector).select("altas avatar").lean();
     await MinesResult.create({
       userName: userDoc?.altas || "User",
       avatar: userDoc?.avatar || null,
@@ -549,7 +583,7 @@ export const cashOut = async (req, res) => {
     const ably = req.app?.locals?.ably;
     if (ably) {
       try {
-        const userDoc = await User.findOne({ userId }).select("altas avatar").lean();
+        const userDoc = await User.findOne(userSelector).select("altas avatar").lean();
         const channel = ably.channels.get("minesResult");
         await channel.publish("MINES_RESULT", {
           userName: userDoc?.altas || "User",
@@ -564,8 +598,8 @@ export const cashOut = async (req, res) => {
       }
     }
 
-    await updateMinesMode(userId);
-    await pushUserNotification(userId, `You won $${Number(winAmount).toFixed(2)} in Mines.`, "success");
+    await updateMinesMode(userSelector);
+    await pushUserNotification(userSelector, userId, `You won $${Number(winAmount).toFixed(2)} in Mines.`, "success");
     return res.json({
       success: true,
       data: { winAmount, multiplier, profit: winAmount - game.amount },

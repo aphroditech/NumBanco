@@ -28,7 +28,7 @@ import Landing_logo from "assets/img/logo_Landing.png";
 function Sidebar(props) {
   let variantChange = "0.2s linear";
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState(null);
+  const [activeMenu, setActiveMenu] = React.useState("menu");
   const toggleMenu = (menu) => {
     setActiveMenu(prev => prev === menu ? null : menu);
   };
@@ -43,9 +43,9 @@ function Sidebar(props) {
           <Box key={key}>
             <SideBarToggle
             value={prop}
-            isExpanded={activeMenu === "bet"}
-            onClick={() => toggleMenu("bet")} />
-              <Collapse in={activeMenu === "bet"} animateOpacity>
+            isExpanded={activeMenu === "menu"}
+            onClick={() => toggleMenu("menu")} />
+              <Collapse in={activeMenu === "menu"} animateOpacity>
                 <SidebarButtonLink value={TierA} />
                 <SidebarButtonLink value={TierB} />
                 <SidebarButtonLink value={TierC} />
@@ -169,7 +169,7 @@ function Sidebar(props) {
 
 export function SidebarResponsive(props) {
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState(null);
+  const [activeMenu, setActiveMenu] = React.useState("menu");
 
   const toggleMenu = (menu) => {
     setActiveMenu(prev => (prev === menu ? null : menu));
@@ -185,12 +185,13 @@ export function SidebarResponsive(props) {
             {/* Main toggle */}
             <SideBarToggle
               value={prop}
-              isExpanded={activeMenu === "bet"}
-              onClick={() => toggleMenu("bet")}
+              
+              isExpanded={activeMenu === "menu"}
+              onClick={() => toggleMenu("menu")}
             />
 
             {/* Sub menu */}
-            <Collapse in={activeMenu === "bet"} animateOpacity>
+            <Collapse in={activeMenu === "menu"} animateOpacity>
               <Stack
                 spacing={2}
                 mt={2}
@@ -256,7 +257,8 @@ export function SidebarResponsive(props) {
   // SidebarResponsive (drawer) top logo — same logo_Landing.png as desktop sidebar
   const brand = (
     <Box pt="40px" mb="24px" w="100%">
-      <NavLink
+      <Link
+        as={NavLink}
         to='/user/dashboard'
         display="flex"
         w="100%"
@@ -265,7 +267,7 @@ export function SidebarResponsive(props) {
         _hover={{ textDecoration: "none" }}
       >
         <Image src={Landing_logo} alt="NumBanco Logo" maxH="40px" objectFit="contain" mx="auto" mb="20px" />
-      </NavLink>
+      </Link>
 
       <Separator mb="20px" />
     </Box>
