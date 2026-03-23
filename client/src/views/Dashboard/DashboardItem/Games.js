@@ -27,7 +27,7 @@ import jackal from "assets/img/Games/jackal.png"
 import rocket from "assets/img/Games/rocket.png"
 import fishing from "assets/img/Games/fishing.png"
 import mine from "assets/img/Games/mine.png"
-
+import alphaTree from "assets/img/Games/alphaTree.png"
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
 
@@ -45,6 +45,7 @@ const DASHBOARD_GAMES = [
     { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 3600 },
     { img: jackal, name: "Jackal", path: "/game/jackal", reduxKey: "jackalUsers", tickMs: 2600 },
     { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4900 },
+    { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {

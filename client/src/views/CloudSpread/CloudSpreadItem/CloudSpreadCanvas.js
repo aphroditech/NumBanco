@@ -290,17 +290,84 @@ export default function CloudSpreadCanvas({
 
       ctx.clearRect(0, 0, w, h);
 
-      const sky = ctx.createLinearGradient(0, 0, 0, h);
-      sky.addColorStop(0, "#3f89ff");
-      sky.addColorStop(0.6, "#89c4ff");
-      sky.addColorStop(1, "#d9efff");
-      ctx.fillStyle = sky;
+      const tSec = performance.now() * 0.001;
+
+      // —— Gradient sky: deep twilight → mid blue → bright horizon ——
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, "#0a1020");
+      skyGrad.addColorStop(0.18, "#152238");
+      skyGrad.addColorStop(0.38, "#1e4a6e");
+      skyGrad.addColorStop(0.58, "#4a8ec4");
+      skyGrad.addColorStop(0.78, "#9fd4f0");
+      skyGrad.addColorStop(1, "#eef6fc");
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Soft diagonal light wash (subtle depth)
+      const wash = ctx.createLinearGradient(0, 0, w * 0.9, h * 0.55);
+      wash.addColorStop(0, "rgba(120, 185, 255, 0)");
+      wash.addColorStop(0.45, "rgba(180, 220, 255, 0.14)");
+      wash.addColorStop(1, "rgba(255, 255, 255, 0.06)");
+      ctx.fillStyle = wash;
+      ctx.fillRect(0, 0, w, h);
+
+      // Sun / bloom (soft radial glow, top area)
+      const sunX = w * 0.72;
+      const sunY = h * 0.08;
+      const sunR = Math.max(w, h) * 0.42;
+      const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR);
+      sunGlow.addColorStop(0, "rgba(255, 248, 220, 0.35)");
+      sunGlow.addColorStop(0.25, "rgba(180, 220, 255, 0.12)");
+      sunGlow.addColorStop(0.55, "rgba(100, 160, 220, 0.04)");
+      sunGlow.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = sunGlow;
+      ctx.fillRect(0, 0, w, h);
+
+      // Horizon haze / soft glow band
+      const haze = ctx.createLinearGradient(0, h * 0.55, 0, h);
+      haze.addColorStop(0, "rgba(255, 255, 255, 0)");
+      haze.addColorStop(0.35, "rgba(230, 245, 255, 0.18)");
+      haze.addColorStop(1, "rgba(255, 255, 255, 0.28)");
+      ctx.fillStyle = haze;
+      ctx.fillRect(0, h * 0.52, w, h * 0.48);
+
+      // Subtle vignette (focus toward center)
+      const vig = ctx.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.15, w / 2, h * 0.45, Math.max(w, h) * 0.75);
+      vig.addColorStop(0, "rgba(0, 0, 0, 0)");
+      vig.addColorStop(1, "rgba(10, 20, 40, 0.22)");
+      ctx.fillStyle = vig;
       ctx.fillRect(0, 0, w, h);
 
       ctx.save();
       ctx.translate(w / 2, h / 2);
       ctx.scale(zoom, zoom);
       ctx.translate(-w / 2, -h / 2);
+
+      /** Parallax: layer 0 = far (slow), 2 = near (faster). */
+      const parallaxForLayer = (layer, idx) => {
+        const spd = [0.11, 0.17, 0.24][layer];
+        const ampX = [9, 15, 22][layer];
+        const ampY = [6, 10, 14][layer];
+        const ox = Math.sin(tSec * spd + idx * 1.17 + layer * 0.4) * ampX;
+        const oy = Math.cos(tSec * spd * 0.75 + idx * 0.93 + layer * 0.35) * ampY;
+        return { ox, oy };
+      };
+
+      /** Soft glow under a cloud (blur-like falloff). */
+      const drawCloudAmbientGlow = (c, cx, cy, r, layer) => {
+        const spread = r * (2.1 - layer * 0.15);
+        const g = c.createRadialGradient(cx, cy, r * 0.2, cx, cy, spread);
+        g.addColorStop(0, "rgba(255, 255, 255, 0.22)");
+        g.addColorStop(0.45, "rgba(200, 230, 255, 0.08)");
+        g.addColorStop(1, "rgba(255, 255, 255, 0)");
+        c.save();
+        c.globalCompositeOperation = "screen";
+        c.fillStyle = g;
+        c.beginPath();
+        c.arc(cx, cy, spread, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      };
 
       const cloudCenters = [];
       const padX = Math.max(14, w * 0.045);
@@ -315,11 +382,23 @@ export default function CloudSpreadCanvas({
         const x = Math.max(r + 6, Math.min(w - (r + 6), xRaw));
         const y = Math.max(r + 6, Math.min(h - (r + 46), yRaw));
         const variant = Math.floor(detRand(i, 99) * 8);
-        cloudCenters.push({ x, y, r, i: i + 1, variant });
-
-        drawCloudShape(ctx, x, y, r, variant);
-
+        const layer = Math.floor(detRand(i, 71) * 3);
+        const { ox, oy } = parallaxForLayer(layer, i);
+        const cx = Math.max(r + 6, Math.min(w - (r + 6), x + ox));
+        const cy = Math.max(r + 6, Math.min(h - (r + 46), y + oy));
+        cloudCenters.push({ x, y, cx, cy, r, i: i + 1, variant, layer });
       }
+
+      cloudCenters.sort((a, b) => a.layer - b.layer);
+
+      cloudCenters.forEach((c) => {
+        const alphaByLayer = [0.78, 0.9, 1][c.layer];
+        drawCloudAmbientGlow(ctx, c.cx, c.cy, c.r, c.layer);
+        ctx.save();
+        ctx.globalAlpha = alphaByLayer;
+        drawCloudShape(ctx, c.cx, c.cy, c.r, c.variant);
+        ctx.restore();
+      });
 
       // Ball animation: jump to newly selected cloud, bounce on landing, then show multiplier.
       // Keep multipliers visible on all previously selected clouds.
@@ -334,17 +413,21 @@ export default function CloudSpreadCanvas({
         selNum > 0;
 
       if (pickedSet.size > 0) {
-        const mulFont = Math.max(10, Math.round(12 * layoutScale));
-        ctx.font = `800 ${mulFont}px Arial`;
-        ctx.fillStyle = "rgba(28, 43, 71, 0.95)";
+        const mulFont = Math.max(7, Math.round(9 * layoutScale));
+        ctx.font = `700 ${mulFont}px Arial`;
+        ctx.fillStyle = "rgba(20, 35, 65, 0.98)";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(255, 255, 255, 0.45)";
+        ctx.shadowBlur = 4;
         cloudCenters.forEach((c) => {
           if (!pickedSet.has(Number(c.i))) return;
           if (skipCurrentMul && Number(c.i) === selNum) return;
           const mul = Number(cloudMultipliers?.[c.i - 1] ?? 0);
-          ctx.fillText(`x${mul.toFixed(2)}`, c.x, c.y);
+          ctx.fillText(`x${mul.toFixed(2)}`, c.cx, c.cy);
         });
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
       }
 
       const rawSel = selectedRef.current;
@@ -372,8 +455,8 @@ export default function CloudSpreadCanvas({
 
       const targetCloud = showBall ? cloudCenters.find((c) => c.i === selected) : undefined;
       if (targetCloud) {
-        const targetX = targetCloud.x;
-        const targetY = targetCloud.y - targetCloud.r - 10 * layoutScale + CLOUD_BALL_VERT_NUDGE;
+        const targetX = targetCloud.cx;
+        const targetY = targetCloud.cy - targetCloud.r - 10 * layoutScale + CLOUD_BALL_VERT_NUDGE;
 
         if (ballRef.current.targetIndex !== selected) {
           ballRef.current.targetIndex = selected;
@@ -443,7 +526,7 @@ export default function CloudSpreadCanvas({
       }
 
       if (showBall && targetCloud) {
-        const R = 11.2 * layoutScale;
+        const R = 6 * layoutScale;
         drawPremiumBall(ctx, ballRef.current.x, ballRef.current.y, R, {
           inFlight: ballRef.current.progress < 1,
         });
@@ -452,23 +535,23 @@ export default function CloudSpreadCanvas({
           const mul = Number(cloudMultipliers?.[selected - 1] ?? 0);
           const label = `x${mul.toFixed(2)}`;
           /** Same as other clouds: multiplier centered inside the cloud body. */
-          const lx = targetCloud.x;
-          const ly = targetCloud.y;
+          const lx = targetCloud.cx;
+          const ly = targetCloud.cy;
           const pulse = Math.min(1, multHitRef.current.pulse);
-          const scale = 1 + 0.1 * pulse;
-          const fontPx = Math.max(10, 12 * layoutScale + 1.2 * pulse);
+          const scale = 1 + 0.08 * pulse;
+          const fontPx = Math.max(7, 9 * layoutScale + 0.85 * pulse);
 
           ctx.save();
           ctx.translate(lx, ly);
           ctx.scale(scale, scale);
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.font = `800 ${fontPx}px Arial`;
+          ctx.font = `700 ${fontPx}px Arial`;
 
-          const ring = pulse * 10 * layoutScale;
+          const ring = pulse * 8 * layoutScale;
           if (ring > 0.2) {
             ctx.beginPath();
-            ctx.arc(0, 0, 15 * layoutScale + ring, 0, Math.PI * 2);
+            ctx.arc(0, 0, 11 * layoutScale + ring, 0, Math.PI * 2);
             ctx.strokeStyle = `rgba(255, 210, 130, ${0.18 * pulse})`;
             ctx.lineWidth = 1;
             ctx.stroke();
