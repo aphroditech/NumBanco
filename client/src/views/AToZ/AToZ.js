@@ -34,6 +34,8 @@ import RemoveIcon from '@mui/icons-material/Remove';
 
 import { aToZBet, aToZSpinComplete } from '../../action/AtoZActions';
 
+import backgroundImage from 'assets/img/Digits/background.png'
+
 import RealTimeHistory from './AToZItems/RealTimeHistory';
 import UserBetHistory from './AToZItems/UserBetHistory';
 
@@ -412,11 +414,15 @@ export default function AToZPage() {
                 <GridItem area="game">
                     <Card minH={{ base: '420px', md: '640px' }} w="100%" overflow="hidden">
                         <CardBody p="0" flexDirection="column" h="100%">
+                            {/* main game top section */}
                             <Box
                                 w="100%"
                                 h="100%"
                                 minH={{ base: '360px', md: '560px' }}
-                                bg="#000"
+                                bgImage={backgroundImage}
+                                bgSize="cover"
+                                bgPosition="center"
+                                bgRepeat="no-repeat"
                                 position="relative"
                                 overflow="hidden"
                             >
@@ -429,7 +435,6 @@ export default function AToZPage() {
                                     justifyContent="center"
                                     px={{ base: 2, md: 6 }}
                                     py={4}
-                                    bgGradient="linear(to-b, #05080c 0%, #0c1219 100%)"
                                 >
                                     <Box
                                         borderRadius="2xl"
@@ -686,7 +691,87 @@ export default function AToZPage() {
                                         </MotionBox>
                                     )}
                                 </AnimatePresence>
+                                <FormControl w="100%" maxW="420px" position={'absolute'} bottom="10px" left="50%" transform="translateX(-50%)" zIndex={10}>
+                                    <HStack
+                                        spacing={{ base: '8px', sm: '12px' }}
+                                        justify="center"
+                                        align="flex-end"
+                                        flexWrap="wrap"
+                                        w="100%"
+                                    >
+                                        {['100s', '10s', '1s'].map((place, index) => (
+                                            <VStack key={place} spacing="4px" align="center">
+                                                
+                                                <HStack
+                                                    spacing="4px"
+                                                    bg="#0A1018EB   "
+                                                    borderRadius="10px"
+                                                    px="6px"
+                                                    py="4px"
+                                                    border="1px solid rgba(0, 212, 255, 0.35)"
+                                                >
+                                                    <IconButton
+                                                        aria-label={`Decrease ${place} digit`}
+                                                        icon={<RemoveIcon style={{ fontSize: 18 }} />}
+                                                        size="sm"
+                                                        h="30px"
+                                                        w="30px"
+                                                        minW="20px"
+                                                        bg="rgba(0, 212, 255, 0.15)"
+                                                        color="#00D4FF"
+                                                        borderRadius="8px"
+                                                        _hover={{ bg: 'rgba(0, 212, 255, 0.28)' }}
+                                                        isDisabled={isSpinning || isBetPending || pickDigits[index] <= 0}
+                                                        onClick={() => adjustPickDigit(index, -1)}
+                                                    />
+                                                    <Input
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        autoComplete="off"
+                                                        value={String(pickDigits[index])}
+                                                        onChange={(e) => handlePickDigitChange(index, e)}
+                                                        maxLength={1}
+                                                        textAlign="center"
+                                                        fontSize="1xl"
+                                                        fontWeight="bold"
+                                                        fontFamily="Orbitron, system-ui, monospace"
+                                                        color="#fff"
+                                                        bg="transparent"
+                                                        border="none"
+                                                        w="20px"
+                                                        h="45px"
+                                                        p="0"
+                                                        isDisabled={isSpinning || isBetPending}
+                                                        aria-label={`${place} digit 0-9`}
+                                                        _focus={{
+                                                            boxShadow: 'none',
+                                                            border: 'none',
+                                                        }}
+                                                    />
+                                                    <IconButton
+                                                        aria-label={`Increase ${place} digit`}
+                                                        icon={<AddIcon style={{ fontSize: 18 }} />}
+                                                        size="sm"
+                                                        h="30px"
+                                                        w="30px"
+                                                        minW="20px"
+                                                        bg="rgba(0, 212, 255, 0.15)"
+                                                        color="#00D4FF"
+                                                        borderRadius="8px"
+                                                        _hover={{ bg: 'rgba(0, 212, 255, 0.28)' }}
+                                                        isDisabled={isSpinning || isBetPending || pickDigits[index] >= 9}
+                                                        onClick={() => adjustPickDigit(index, 1)}
+                                                    />
+                                                </HStack>
+                                            </VStack>
+                                        ))}
+                                    </HStack>
+                                    <Text fontSize="xs" color="rgba(255,255,255,0.5)" textAlign="center" mt="8px">
+                                        Use − / + or type a digit (0–9) in each box.
+                                    </Text>
+                                </FormControl>
                             </Box>
+                            {/* main game bottom section */}
                             <Box
                                 w="100%"
                                 pt="12px"
@@ -707,105 +792,13 @@ export default function AToZPage() {
                                     _hover={{ bg: 'rgba(255,255,255,0.08)', color: '#00D4FF' }}
                                     onClick={() => setIsHelpModalOpen(true)}
                                 />
-                                <VStack spacing="14px" align="center" w="100%" maxW="560px" mx="auto" px="16px">
-                                    <FormControl w="100%" maxW="420px">
-                                        <FormLabel
-                                            mb="8px"
-                                            fontSize="xs"
-                                            fontWeight="bold"
-                                            color="rgba(255,255,255,0.85)"
-                                            textAlign="center"
-                                            letterSpacing="0.02em"
-                                        >
-                                            Your pick (000 – 999)
-                                        </FormLabel>
-                                        <HStack
-                                            spacing={{ base: '8px', sm: '12px' }}
-                                            justify="center"
-                                            align="flex-end"
-                                            flexWrap="wrap"
-                                            w="100%"
-                                        >
-                                            {['100s', '10s', '1s'].map((place, index) => (
-                                                <VStack key={place} spacing="4px" align="center">
-                                                    <Text fontSize="10px" color="rgba(255,255,255,0.45)" fontWeight="600">
-                                                        {/* {place} */}
-                                                    </Text>
-                                                    <HStack
-                                                        spacing="4px"
-                                                        bg="#323738"
-                                                        borderRadius="10px"
-                                                        px="6px"
-                                                        py="4px"
-                                                        border="1px solid rgba(0, 212, 255, 0.35)"
-                                                    >
-                                                        <IconButton
-                                                            aria-label={`Decrease ${place} digit`}
-                                                            icon={<RemoveIcon style={{ fontSize: 18 }} />}
-                                                            size="sm"
-                                                            h="20px"
-                                                            w="20px"
-                                                            minW="20px"
-                                                            bg="rgba(0, 212, 255, 0.15)"
-                                                            color="#00D4FF"
-                                                            borderRadius="8px"
-                                                            _hover={{ bg: 'rgba(0, 212, 255, 0.28)' }}
-                                                            isDisabled={isSpinning || isBetPending || pickDigits[index] <= 0}
-                                                            onClick={() => adjustPickDigit(index, -1)}
-                                                        />
-                                                        <Input
-                                                            inputMode="numeric"
-                                                            pattern="[0-9]*"
-                                                            autoComplete="off"
-                                                            value={String(pickDigits[index])}
-                                                            onChange={(e) => handlePickDigitChange(index, e)}
-                                                            maxLength={1}
-                                                            textAlign="center"
-                                                            fontSize="1xl"
-                                                            fontWeight="bold"
-                                                            fontFamily="Orbitron, system-ui, monospace"
-                                                            color="#fff"
-                                                            bg="transparent"
-                                                            border="none"
-                                                            w="20px"
-                                                            h="20px"
-                                                            p="0"
-                                                            isDisabled={isSpinning || isBetPending}
-                                                            aria-label={`${place} digit 0-9`}
-                                                            _focus={{
-                                                                boxShadow: 'none',
-                                                                border: 'none',
-                                                            }}
-                                                        />
-                                                        <IconButton
-                                                            aria-label={`Increase ${place} digit`}
-                                                            icon={<AddIcon style={{ fontSize: 18 }} />}
-                                                            size="sm"
-                                                            h="20px"
-                                                            w="20px"
-                                                            minW="20px"
-                                                            bg="rgba(0, 212, 255, 0.15)"
-                                                            color="#00D4FF"
-                                                            borderRadius="8px"
-                                                            _hover={{ bg: 'rgba(0, 212, 255, 0.28)' }}
-                                                            isDisabled={isSpinning || isBetPending || pickDigits[index] >= 9}
-                                                            onClick={() => adjustPickDigit(index, 1)}
-                                                        />
-                                                    </HStack>
-                                                </VStack>
-                                            ))}
-                                        </HStack>
-                                        <Text fontSize="xs" color="rgba(255,255,255,0.5)" textAlign="center" mt="8px">
-                                            Use − / + or type a digit (0–9) in each box.
-                                        </Text>
-                                    </FormControl>
-
-                                    {/* Bet amount — same pattern as Rocket Shot */}
+                                <HStack spacing="10px" align="center"  justify="center" w="100%">
+                                    {/* Pick Digits Form */}
                                     <Flex align="center" justify="center" gap="6px" flexWrap="wrap" w="100%">
                                         <Button
                                             size="sm"
-                                            h="32px"
-                                            minW="44px"
+                                            h="52px"
+                                            minW="54px"
                                             px="10px"
                                             fontSize="xs"
                                             fontWeight="bold"
@@ -821,10 +814,10 @@ export default function AToZPage() {
                                         </Button>
                                         <HStack
                                             spacing="4px"
-                                            bg="#323738"
+                                            bg="#0A1018EB"
                                             borderRadius="8px"
                                             px="6px"
-                                            h="36px"
+                                            h="54px"
                                             border="1px solid rgba(255, 255, 255, 0.1)"
                                         >
                                             <IconButton
@@ -896,8 +889,8 @@ export default function AToZPage() {
                                         </HStack>
                                         <Button
                                             size="sm"
-                                            h="32px"
-                                            minW="44px"
+                                            h="54px"
+                                            minW="54px"
                                             px="10px"
                                             fontSize="xs"
                                             fontWeight="bold"
@@ -912,10 +905,10 @@ export default function AToZPage() {
                                             Max
                                         </Button>
                                     </Flex>
-
+                                    {/* Spin Button */}
                                     <HStack spacing="10px" align="center" flexWrap="wrap" justify="center" w="100%">
                                         <Button
-                                            h="56px"
+                                            h="66px"
                                             w="100%"
                                             maxW="300px"
                                             fontSize="md"
@@ -936,15 +929,15 @@ export default function AToZPage() {
                                                 amount < MIN_AMOUNT
                                                     ? `Enter at least $${MIN_AMOUNT}`
                                                     : amount > maxAmount
-                                                      ? `Max bet is $${maxAmount}`
-                                                      : ''
+                                                        ? `Max bet is $${maxAmount}`
+                                                        : ''
                                             }
                                             onClick={handleSpin}
                                         >
                                             {isBetPending && !isSpinning ? 'Placing bet...' : isSpinning ? 'Spinning...' : 'BET'}
                                         </Button>
                                     </HStack>
-                                </VStack>
+                                </HStack>
                             </Box>
                         </CardBody>
                     </Card>

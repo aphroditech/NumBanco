@@ -32,6 +32,7 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import NumbersIcon from '@mui/icons-material/Numbers';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import ForestIcon from '@mui/icons-material/Forest';
+import Filter9Icon from '@mui/icons-material/Filter9';
 
 
 export const TierA = {
@@ -161,7 +162,7 @@ export const CocoGame = {
 export const AToZGame = {
     path: "/digits",
     name: "DIGITS",
-    icon: <NumbersIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
     layout: "/game",
 }

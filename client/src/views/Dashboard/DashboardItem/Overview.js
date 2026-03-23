@@ -29,8 +29,12 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import { totalActiveUsers as fetchTotalActiveUsers } from "action/BetActions";
+import { formatTime } from "components/functions/format";
+
 
 function Overview() {
+    const remainingMs = useSelector((state) => state.user.lootRemainingMs);
+    const lootAvailable = useSelector((state) => state.user.lootAvailable);
     const user = useSelector((state) => state.user?.userInfo) || {};
 
     const activeUsers = useSelector((state) => state.user.activeUsers);
@@ -67,7 +71,7 @@ function Overview() {
                         <Flex flexDirection='row' align='center' justify='center' w='100%'>
                             <Stat me='auto'>
                                 <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
-                                    Medal
+                                    Bet Level
                                 </StatLabel>
                                 <Flex>
                                     <StatNumber fontSize='lg' color='#fff'>
@@ -107,12 +111,35 @@ function Overview() {
                         </Flex>
                     </CardBody>
                 </Card>
-                <Card key="deposit" minH='83px' pt="17px" pb="10px" height="85px">
-                    <CardBody  >
+                <Card key="users" pt="17px" pb="10px" height="85px">
+                    <CardBody >
                         <Flex flexDirection='row' align='center' justify='center' w='100%'>
-                            <Stat me='auto'>
+                            <Stat>
                                 <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
-                                    Deposit
+                                    Users
+                                </StatLabel>
+                                <Flex>
+                                    <StatNumber fontSize='lg' color='#fff'>
+                                        {activeUsers?.onlineUsers == 0 ? totalActiveUsers.onlineUsers : activeUsers?.onlineUsers}
+                                    </StatNumber>
+                                </Flex>
+                            </Stat>
+                            <GroupsRoundedIcon style={{ fontSize: "46px", color: "#00D4FF", marginRight: "8px" }} />
+                            {/* <NeonBadge
+                                src={users}
+                                size="70px"
+                                delay="0s"
+                                neonColor="#ff9700"
+                            /> */}
+                        </Flex>
+                    </CardBody>
+                </Card>
+                <Card key="reward" pt="17px" pb="10px" height="85px">
+                    <CardBody >
+                        <Flex flexDirection='row' align='center' justify='center' w='100%'>
+                            <Stat>
+                                <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
+                                    Reward
                                 </StatLabel>
                                 <Flex>
                                     <Text fontSize="lg" color="#00D4FF"
@@ -123,16 +150,16 @@ function Overview() {
                                         $
                                     </Text>
                                     <StatNumber fontSize='lg' color='#fff'>
-                                        {truncateToTwo(user.totalDeposit) || !user.totalDeposit && 0}
+                                        {user.userId ? truncateToTwo(user.refreshBet * 0.02) : 0}
                                     </StatNumber>
                                 </Flex>
                             </Stat>
-                            <CloudUploadRoundedIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
+                            <CurrencyExchangeIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
                             {/* <NeonBadge
-                                src={deposit}
+                                src={reward}
                                 size="70px"
                                 delay="0s"
-                                neonColor="#318fc3"
+                                neonColor="#ae1728"
                             /> */}
                         </Flex>
                     </CardBody>
@@ -142,18 +169,11 @@ function Overview() {
                         <Flex flexDirection='row' align='center' justify='center' w='100%'>
                             <Stat>
                                 <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
-                                    Withdraw
+                                    Daily Loot
                                 </StatLabel>
                                 <Flex>
-                                    <Text fontSize="lg" color="#00D4FF"
-                                        style={{
-                                            marginLeft: "0px", marginRight: "5px",
-
-                                        }} fontWeight="bold" m="auto">
-                                        $
-                                    </Text>
                                     <StatNumber fontSize='lg' color='#fff'>
-                                        {truncateToTwo(user.totalWithdraw) || !user.totalWithdraw && 0}
+                                        {lootAvailable ? "Can get now!" : formatTime(remainingMs)}
                                     </StatNumber>
                                 </Flex>
                             </Stat>
@@ -165,6 +185,36 @@ function Overview() {
                                 neonColor="#d5a20a"
                             /> */}
                             {/* <Avatar  src={withdraw} bg="transparent"  w="70px" h="70px"  /> */}
+                        </Flex>
+                    </CardBody>
+                </Card>
+                <Card key="deposit" minH='83px' pt="17px" pb="10px" height="85px">
+                    <CardBody  >
+                        <Flex flexDirection='row' align='center' justify='center' w='100%'>
+                            <Stat me='auto'>
+                                <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
+                                    Partner Earning
+                                </StatLabel>
+                                <Flex>
+                                    <Text fontSize="lg" color="#00D4FF"
+                                        style={{
+                                            marginLeft: "0px", marginRight: "5px",
+
+                                        }} fontWeight="bold" m="auto">
+                                        $
+                                    </Text>
+                                    <StatNumber fontSize='lg' color='#fff'>
+                                        {truncateToTwo(user.partnerEarn) || !user.partnerEarn && 0}
+                                    </StatNumber>
+                                </Flex>
+                            </Stat>
+                            <CloudUploadRoundedIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
+                            {/* <NeonBadge
+                                src={deposit}
+                                size="70px"
+                                delay="0s"
+                                neonColor="#318fc3"
+                            /> */}
                         </Flex>
                     </CardBody>
                 </Card>
@@ -226,59 +276,6 @@ function Overview() {
                                 size="70px"
                                 delay="0s"
                                 neonColor="#dfb7da"
-                            /> */}
-                        </Flex>
-                    </CardBody>
-                </Card>
-                <Card key="users" pt="17px" pb="10px" height="85px">
-                    <CardBody >
-                        <Flex flexDirection='row' align='center' justify='center' w='100%'>
-                            <Stat>
-                                <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
-                                    Users
-                                </StatLabel>
-                                <Flex>
-                                    <StatNumber fontSize='lg' color='#fff'>
-                                        {activeUsers?.onlineUsers == 0 ? totalActiveUsers.onlineUsers : activeUsers?.onlineUsers}
-                                    </StatNumber>
-                                </Flex>
-                            </Stat>
-                            <GroupsRoundedIcon style={{ fontSize: "46px", color: "#00D4FF", marginRight: "8px" }} />
-                            {/* <NeonBadge
-                                src={users}
-                                size="70px"
-                                delay="0s"
-                                neonColor="#ff9700"
-                            /> */}
-                        </Flex>
-                    </CardBody>
-                </Card>
-                <Card key="reward" pt="17px" pb="10px" height="85px">
-                    <CardBody >
-                        <Flex flexDirection='row' align='center' justify='center' w='100%'>
-                            <Stat>
-                                <StatLabel fontSize='sm' color='#00D4FF' fontWeight='bold' pb='2px'>
-                                    Reward
-                                </StatLabel>
-                                <Flex>
-                                    <Text fontSize="lg" color="#00D4FF"
-                                        style={{
-                                            marginLeft: "0px", marginRight: "5px",
-
-                                        }} fontWeight="bold" m="auto">
-                                        $
-                                    </Text>
-                                    <StatNumber fontSize='lg' color='#fff'>
-                                        {user.userId ? truncateToTwo(user.refreshBet * 0.02) : 0}
-                                    </StatNumber>
-                                </Flex>
-                            </Stat>
-                            <CurrencyExchangeIcon style={{ fontSize: "46px", color: "#00D4FF" }} />
-                            {/* <NeonBadge
-                                src={reward}
-                                size="70px"
-                                delay="0s"
-                                neonColor="#ae1728"
                             /> */}
                         </Flex>
                     </CardBody>
