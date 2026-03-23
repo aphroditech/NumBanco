@@ -281,7 +281,7 @@ export const withdraw = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         const amounts = user.dailyWithdraw + wd_amt;
@@ -534,7 +534,7 @@ export const startWithdrawApprovalCron = (ably) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         let network = 'ETH';

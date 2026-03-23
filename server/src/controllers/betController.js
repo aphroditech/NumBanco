@@ -35,7 +35,7 @@ export const buyTickets = async (req, res) => {
                     partnerId: 0,
                     partnerActivity: 0,
                     lastClickDate: 0,
-                    canWithdraw: 0,
+                    
                 }
             )
         ]);
@@ -527,7 +527,7 @@ export const onlineUser = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         user.active = Number(level) + 2;
@@ -563,7 +563,7 @@ export const offlineUser = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         user.active = 1;

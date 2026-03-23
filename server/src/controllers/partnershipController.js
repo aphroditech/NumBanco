@@ -92,7 +92,7 @@ export const partnershipDeposit = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
 
@@ -133,7 +133,7 @@ export const startPartnerDepositCron = (ably) => {
                     partnerId: 0,
                     partnerActivity: 0,
                     lastClickDate: 0,
-                    canWithdraw: 0,
+                    
                 });
 
             for (const user of users) {

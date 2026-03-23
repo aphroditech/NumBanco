@@ -64,8 +64,8 @@ connectDB()
     // };
 
     /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
-    http.createServer(app).listen(PORT, "0.0.0.0", () => {
-        console.log(`🚀 HTTP Server listening on http://0.0.0.0:${PORT} (API + http://localhost:${PORT})`);
+    http.createServer(app).listen(PORT, () => {
+        console.log(`🚀 HTTP Server listening on ${PORT} port.`);
     });
     // https.createServer(sslOptions, app).listen(PORT, () => {
     //     console.log(`🚀 HTTPS Server running on port ${PORT}`);

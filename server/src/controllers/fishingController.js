@@ -20,7 +20,7 @@ const fishingUserProjection = {
     partnerId: 0,
     partnerActivity: 0,
     lastClickDate: 0,
-    canWithdraw: 0,
+    
 };
 
 const getFishingUser = async (userId) => {
@@ -364,7 +364,7 @@ async function enrichFishingViewsWithUser(fishingViews) {
                     partnerId: 0,
                     partnerActivity: 0,
                     lastClickDate: 0,
-                    canWithdraw: 0,
+                    
                 });
             const obj = item.toObject();
             delete obj.isUser;
