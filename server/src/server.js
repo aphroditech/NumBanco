@@ -92,7 +92,7 @@ connectDB()
         // rocketBot(ably);
         // aToZBot(ably);
         // fishingBot(ably);
-        // startGravityGameLoop(ably);
+        startGravityGameLoop(ably);
         setCloudSpreadAbly(ably);
         cloudSpreadBot().catch((err) => {
             console.error("[cloud-spread] bot failed to start:", err);

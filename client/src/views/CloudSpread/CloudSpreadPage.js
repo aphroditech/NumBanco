@@ -47,7 +47,7 @@ export default function CloudSpreadPage() {
   /** True while placing bet + ball flying — disables Play to prevent double bets. */
   const [playBusy, setPlayBusy] = useState(false);
   const playBusyTimerRef = useRef(null);
-  const { liveRows: liveFeedRows } = useAblyCloudSpreadLive();
+  const { liveRows: liveFeedRows, isInitialLoading: isLiveFeedLoading } = useAblyCloudSpreadLive();
   const [showCashOutFireworks, setShowCashOutFireworks] = useState(false);
   const [cashOutFireworksAmount, setCashOutFireworksAmount] = useState("0.00");
   const cashOutFireworksTimeoutRef = useRef(null);
@@ -218,6 +218,7 @@ export default function CloudSpreadPage() {
   };
 
   const bal = Number(user?.balance ?? 0);
+  const isCloudsLoading = !state;
 
   return (
     <Box px={{ base: "8px", md: "16px" }} minH="100vh" mt="90px" w="100%" maxW="100%" overflowX="hidden" bg={S.pageBg} pb="24px">
@@ -304,15 +305,30 @@ export default function CloudSpreadPage() {
                 overflow="hidden"
                 lineHeight={0}
               >
-                <CloudSpreadCanvas
-                  currentStep={state?.currentStep || 0}
-                  totalSteps={state?.totalSteps || 8}
-                  cloudsPerStep={state?.cloudsPerStep || 10}
-                  selectedCloudIndex={selectedCloudIndexForCanvas}
-                  selectedCloudIndices={state?.selectedClouds || []}
-                  cloudMultipliers={state?.cloudMultipliers || []}
-                  height={canvasHeight}
-                />
+                {isCloudsLoading ? (
+                  <HStack
+                    h={`${canvasHeight}px`}
+                    align="center"
+                    justify="center"
+                    bg={S.innerBg}
+                    border="1px solid"
+                    borderColor={S.border}
+                  >
+                    <Text color={S.textMuted} fontSize="sm" fontWeight="700">
+                      Loading clouds...
+                    </Text>
+                  </HStack>
+                ) : (
+                  <CloudSpreadCanvas
+                    currentStep={state?.currentStep || 0}
+                    totalSteps={state?.totalSteps || 8}
+                    cloudsPerStep={state?.cloudsPerStep || 10}
+                    selectedCloudIndex={selectedCloudIndexForCanvas}
+                    selectedCloudIndices={state?.selectedClouds || []}
+                    cloudMultipliers={state?.cloudMultipliers || []}
+                    height={canvasHeight}
+                  />
+                )}
               </Box>
 
               <Grid
@@ -484,7 +500,26 @@ export default function CloudSpreadPage() {
         </GridItem>
 
         <GridItem area="live" minW={0} maxW="100%" display="flex" flexDirection="column" minH={0} alignSelf="stretch">
-          <CloudSpreadLiveFeed rows={liveFeedRows} title="Cloud history" maxRows={15} />
+          {isLiveFeedLoading ? (
+            <Card
+              p="14px"
+              h={{ xl: "100%" }}
+              minH={{ base: "180px", xl: "0" }}
+              border={S.panelBorder}
+              borderRadius="14px"
+              boxShadow="0 8px 24px rgba(0,0,0,0.35)"
+              bg="#2b2b2b"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Text color={S.textMuted} fontSize="sm" fontWeight="700">
+                Loading cloud history...
+              </Text>
+            </Card>
+          ) : (
+            <CloudSpreadLiveFeed rows={liveFeedRows} title="Cloud history" maxRows={15} />
+          )}
         </GridItem>
 
         <GridItem area="history" minW={0} maxW="100%">
