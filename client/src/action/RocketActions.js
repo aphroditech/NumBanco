@@ -6,7 +6,7 @@ export const rocketBet = async (data, dispatch, history) => {
         const res = await axiosInstance.post('/rocket/bet', data); // data contains bet, level
         if(res.data.balance != null) {
             dispatch({
-                type: 'SET_BALANCE',
+                type: 'UPDATE_USER_BALANCE',
                 payload: res.data.balance
             });
         }
@@ -26,7 +26,7 @@ export const rocketShotResult = async (data, dispatch, history) => {
         const res = await axiosInstance.post('/rocket/shotResult', data); // data contains isWin, betAmount, level. The goal is to save the result to the database
         if(res.data.balance != null) {
             dispatch({
-                type: 'SET_BALANCE',
+                type: 'UPDATE_USER_BALANCE',
                 payload: res.data.balance
             });
         }   

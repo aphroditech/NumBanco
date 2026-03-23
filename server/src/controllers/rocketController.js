@@ -50,7 +50,7 @@ export const bet = async (req, res) => {
             multiplier *= 1200;
             multiplier /= 1000;  
         }
-        return res.json({ balance: user.balance, multiplier: multiplier });
+        return res.json({ balance: -bet, multiplier: multiplier });
 
     } catch (error) {
         console.error(error);
@@ -170,9 +170,9 @@ export const shotResult = async (req, res) => {
         const userRocketHistory = await RocketHistory.findOne({ user: user._id });
         
         if(isWin) {
-            return  res.json({ balance: user.balance, rocketHistory: userRocketHistory.history } );
+            return  res.json({ balance: winAmount, rocketHistory: userRocketHistory.history } );
         } else {
-            return res.json({  rocketHistory: userRocketHistory.history } );
+            return res.json({ balance: 0, rocketHistory: userRocketHistory.history } );
         }
         
     } catch (error) {

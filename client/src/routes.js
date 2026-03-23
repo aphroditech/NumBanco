@@ -55,6 +55,7 @@ import Coco from "views/Coco/CocoPage";
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import AToZPage from "views/AToZ/AToZ";
 import ForestIcon from '@mui/icons-material/Forest';
+import Filter9Icon from '@mui/icons-material/Filter9';
 
 import {
   DocumentIcon,
@@ -137,7 +138,7 @@ var dashRoutes = [
     redirect: true,
     path: "/digits",
     name: "DIGITS",
-    icon: <NumbersIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
     layout: "/game",
   },
