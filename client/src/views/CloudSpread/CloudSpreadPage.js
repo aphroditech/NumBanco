@@ -4,21 +4,26 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Card from "components/Card/Card";
 import CardBody from "components/Card/CardBody";
-import { offlineUser, onlineUser } from "action/BetActions";
 import {
   cashOutCloudSpread,
   getCloudSpreadState,
-  getMyCloudSpreadHistory,
+  getLiveCloudSpreadHistory,
   placeCloudSpreadBet,
 } from "action/CloudSpreadActions";
+import { getUserData } from "action";
+import WinFireworksEffect from "components/Effects/WinFireworksEffect";
+import truncateToTwo from "variables/truncateToTwo";
 import CloudSpreadCanvas from "./CloudSpreadItem/CloudSpreadCanvas";
 import CloudSpreadBetHistory from "./CloudSpreadItem/CloudSpreadBetHistory";
-import CloudSpreadRealView from "./CloudSpreadItem/CloudSpreadRealView";
+import CloudSpreadLiveFeed from "./CloudSpreadItem/CloudSpreadLiveFeed";
 
 const multiplierForStep = (step) => 2 ** Number(step || 1);
 
 /** Max amount when user clicks Max (capped; also limited by balance). */
 const MAX_AMOUNT_USDT = 20;
+
+/** Must match `FLIGHT_MS` in `CloudSpreadCanvas.js` (ball arc duration). */
+const BALL_FLIGHT_MS = 1120;
 
 /** Dark panel — neutral borders (no yellow outline). */
 const S = {
@@ -35,41 +40,35 @@ const S = {
   radius: "10px",
 };
 
-/** Same idea as Gravity: stable keys for live feed rows. */
-function dedupeCloudSpreadLive(rows) {
-  const arr = Array.isArray(rows) ? rows : [];
-  const map = new Map();
-  for (const r of arr) {
-    const betId = r?.betId;
-    const amountRaw = r?.betAmount ?? r?.amount ?? "";
-    const amountNum = Number(amountRaw);
-    const amountKey = Number.isFinite(amountNum) ? amountNum.toFixed(2) : String(amountRaw);
-    const key = betId
-      ? `betId:${String(betId)}`
-      : `${String(r?.userId ?? "")}|${String(r?.targetStep ?? "")}|${amountKey}`;
-    if (!map.has(key)) map.set(key, r);
-  }
-  return [...map.values()];
-}
-
 export default function CloudSpreadPage() {
   const dispatch = useDispatch();
   const user = useSelector((s) => s.user.userInfo) || {};
   const canvasHeight = useBreakpointValue({ base: 300, sm: 340, md: 380 }) ?? 380;
   const [state, setState] = useState(null);
   const [amount, setAmount] = useState("1");
-  const [myHistory, setMyHistory] = useState([]);
   const [selectedCloudInfo, setSelectedCloudInfo] = useState(null);
   const roundIdRef = useRef(null);
-  const gameWrapRef = useRef(null);
-  const gameSceneHeightRef = useRef(null);
-  const [gameSceneHeight, setGameSceneHeight] = useState(null);
+  /** True while placing bet + ball flying — disables Play to prevent double bets. */
+  const [playBusy, setPlayBusy] = useState(false);
+  const playBusyTimerRef = useRef(null);
+  const [liveFeedRows, setLiveFeedRows] = useState([]);
+  const [showCashOutFireworks, setShowCashOutFireworks] = useState(false);
+  const [cashOutFireworksAmount, setCashOutFireworksAmount] = useState("0.00");
+  const cashOutFireworksTimeoutRef = useRef(null);
+
+  const refreshLiveFeed = async () => {
+    try {
+      const rows = await getLiveCloudSpreadHistory();
+      setLiveFeedRows(Array.isArray(rows) ? rows : []);
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
-    onlineUser(7);
-    return () => {
-      offlineUser(7);
-    };
+    refreshLiveFeed();
+    const id = setInterval(refreshLiveFeed, 5000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -77,13 +76,17 @@ export default function CloudSpreadPage() {
 
     const load = async () => {
       try {
-        const [snapshot, history] = await Promise.all([getCloudSpreadState(), getMyCloudSpreadHistory()]);
+        await getUserData(dispatch);
+        const snapshot = await getCloudSpreadState();
         if (!mounted) return;
         setState(snapshot);
-        setMyHistory(history || []);
         if (snapshot?.roundId != null) roundIdRef.current = snapshot.roundId;
-      } catch {
-        toast.error("Failed to load Cloud Spread");
+      } catch (e) {
+        if (e?.response?.status === 401) {
+          toast.error("Please log in to play Cloud Spread");
+        } else {
+          toast.error("Failed to load Cloud Spread");
+        }
       }
     };
     load();
@@ -93,64 +96,38 @@ export default function CloudSpreadPage() {
     };
   }, [user?.userId]);
 
-  /** Refresh live users + state periodically (no Ably on Cloud Spread). */
+  /** Rounds saved on user doc (`cloudSpreadHistory`) — newest first. */
+  const myHistory = useMemo(() => {
+    const h = user?.cloudSpreadHistory;
+    if (!Array.isArray(h) || h.length === 0) return [];
+    return [...h].sort((a, b) => {
+      const ta = new Date(a.createAt || a.createdAt || 0).getTime();
+      const tb = new Date(b.createAt || b.createdAt || 0).getTime();
+      return tb - ta;
+    });
+  }, [user?.cloudSpreadHistory]);
+
   useEffect(() => {
-    let id;
-    const tick = async () => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      try {
-        const snap = await getCloudSpreadState();
-        if (snap) setState((prev) => ({ ...(prev || {}), ...snap }));
-      } catch {
-        /* ignore */
-      }
-    };
-    id = setInterval(tick, 5000);
-    return () => clearInterval(id);
-  }, [user?.userId]);
-
-  /** Match Dove: real-view column height ≈ canvas block height. */
-  useEffect(() => {
-    const node = gameWrapRef.current;
-    if (!node) return undefined;
-
-    const updateHeight = () => {
-      const nextHeight = node.clientHeight || null;
-      if (nextHeight !== gameSceneHeightRef.current) {
-        gameSceneHeightRef.current = nextHeight;
-        setGameSceneHeight(nextHeight);
-      }
-    };
-
-    updateHeight();
-    let rafId = null;
-    const onResize = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        updateHeight();
-        rafId = null;
-      });
-    };
-    window.addEventListener("resize", onResize);
-    const t1 = setTimeout(updateHeight, 100);
-    const t2 = setTimeout(updateHeight, 400);
     return () => {
-      window.removeEventListener("resize", onResize);
-      clearTimeout(t1);
-      clearTimeout(t2);
-      if (rafId) cancelAnimationFrame(rafId);
+      if (playBusyTimerRef.current) {
+        clearTimeout(playBusyTimerRef.current);
+        playBusyTimerRef.current = null;
+      }
+      if (cashOutFireworksTimeoutRef.current) {
+        clearTimeout(cashOutFireworksTimeoutRef.current);
+        cashOutFireworksTimeoutRef.current = null;
+      }
     };
-  }, [canvasHeight]);
+  }, []);
 
   useEffect(() => {
     const rid = state?.roundId;
-    const phase = state?.phase;
     if (rid == null) return;
-    if (roundIdRef.current !== null && String(rid) !== String(roundIdRef.current) && phase === "betting") {
+    if (roundIdRef.current !== null && String(rid) !== String(roundIdRef.current)) {
       setSelectedCloudInfo(null);
     }
     roundIdRef.current = rid;
-  }, [state?.roundId, state?.phase]);
+  }, [state?.roundId]);
 
   const maxBetsPerRound = Number(state?.maxBetsPerRound ?? state?.totalSteps ?? 8);
   const myBetCount = Number(state?.myBetCount ?? 0);
@@ -159,7 +136,17 @@ export default function CloudSpreadPage() {
   /** Next bet must use this step (one bet per step: 1→2→…→8). */
   const nextBetStep = myBetCount < maxBetsPerRound ? myBetCount + 1 : maxBetsPerRound;
   const selectedMultiplier = useMemo(() => multiplierForStep(nextBetStep), [nextBetStep]);
-  const potentialWin = (Number(amount || 0) * selectedMultiplier).toFixed(2);
+  /** Stake × cloud mult product (cash-out). Before first paid play, estimate step 1 line only. */
+  const potentialWin = useMemo(() => {
+    const preview = state?.cashOutPayoutPreview;
+    if (myBetCount > 0 && preview != null && Number.isFinite(Number(preview))) {
+      return Number(preview).toFixed(2);
+    }
+    if (myBetCount === 0) {
+      return (Number(amount || 0) * selectedMultiplier).toFixed(2);
+    }
+    return "0.00";
+  }, [state?.cashOutPayoutPreview, myBetCount, amount, selectedMultiplier]);
 
   /** Ball target: local pick after bet, or last cloud in round from API (refresh / return to page). */
   const selectedCloudIndexForCanvas = useMemo(() => {
@@ -178,10 +165,12 @@ export default function CloudSpreadPage() {
   }, [selectedCloudInfo?.cloud, state?.selectedClouds]);
 
   const handleBet = async () => {
+    if (playBusy) return;
+    setPlayBusy(true);
     try {
       const res = await placeCloudSpreadBet(
         {
-          amount: Number(amount),
+          amount: myBetCount === 0 ? Number(amount) : 0,
           targetStep: nextBetStep,
         },
         dispatch
@@ -196,55 +185,78 @@ export default function CloudSpreadPage() {
       });
       try {
         const snap = await getCloudSpreadState();
-        if (snap) setState((prev) => ({ ...(prev || {}), ...snap }));
-        const hist = await getMyCloudSpreadHistory();
-        setMyHistory(hist || []);
+        if (snap) setState(snap);
+        refreshLiveFeed();
       } catch {
         /* ignore */
       }
       toast.success(
         `Cloud #${selectedCloud} selected (x${selectedCloudMultiplier.toFixed(2)})`
       );
+      if (playBusyTimerRef.current) clearTimeout(playBusyTimerRef.current);
+      playBusyTimerRef.current = setTimeout(() => {
+        setPlayBusy(false);
+        playBusyTimerRef.current = null;
+      }, BALL_FLIGHT_MS);
     } catch (e) {
+      setPlayBusy(false);
+      if (playBusyTimerRef.current) {
+        clearTimeout(playBusyTimerRef.current);
+        playBusyTimerRef.current = null;
+      }
       toast.error(e?.response?.data?.message || "Failed to place bet");
     }
   };
 
   const handleCashOut = async () => {
+    const previewWin = Number(state?.cashOutPayoutPreview ?? 0);
     try {
-      const data = await cashOutCloudSpread();
-      if (data?.state) setState((prev) => ({ ...(prev || {}), ...data.state }));
-      try {
-        const hist = await getMyCloudSpreadHistory();
-        setMyHistory(hist || []);
-      } catch {
-        /* ignore */
-      }
+      const data = await cashOutCloudSpread(dispatch);
+      if (data?.state) setState(data.state);
       if (data?.alreadySettled) {
         toast.info(data?.message || "Round already ended");
       } else {
         toast.success("Cashed out. Round ended.");
+        let winAmt = Number.isFinite(previewWin) ? previewWin : 0;
+        const hist = data?.user?.cloudSpreadHistory;
+        if (Array.isArray(hist) && hist.length > 0) {
+          const last = hist[hist.length - 1];
+          const w = Number(last?.win ?? last?.winAmount);
+          if (Number.isFinite(w)) winAmt = w;
+        }
+        setCashOutFireworksAmount(truncateToTwo(Math.max(0, winAmt)));
+        setShowCashOutFireworks(true);
+        if (cashOutFireworksTimeoutRef.current) clearTimeout(cashOutFireworksTimeoutRef.current);
+        cashOutFireworksTimeoutRef.current = setTimeout(() => {
+          setShowCashOutFireworks(false);
+          cashOutFireworksTimeoutRef.current = null;
+        }, 2200);
       }
+      refreshLiveFeed();
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to cash out");
     }
   };
 
   const bal = Number(user?.balance ?? 0);
-  const liveRows = useMemo(() => dedupeCloudSpreadLive(state?.liveUsers), [state?.liveUsers]);
 
   return (
     <Box px={{ base: "8px", md: "16px" }} minH="100vh" mt="90px" w="100%" maxW="100%" overflowX="hidden" bg={S.pageBg} pb="24px">
+      <WinFireworksEffect
+        isVisible={showCashOutFireworks}
+        totalEarn={cashOutFireworksAmount}
+        duration={2200}
+      />
       <Grid
         templateAreas={{
-          base: `"board" "realview" "history"`,
-          md: `"board realview" "history history"`,
+          base: `"board" "live" "history"`,
+          xl: `"board live" "history history"`,
         }}
-        templateColumns={{ base: "1fr", md: "minmax(0,6fr) minmax(260px,1.35fr)" }}
-        gap={{ base: "14px", md: "18px" }}
+        templateColumns={{ base: "1fr", xl: "minmax(0, 1fr) minmax(260px, 300px)" }}
+        gap="14px"
         w="100%"
         maxW="100%"
-        alignItems="start"
+        alignItems="stretch"
       >
         <GridItem area="board" minW={0} maxW="100%">
           <Card
@@ -260,8 +272,12 @@ export default function CloudSpreadPage() {
                   Cloud Spread
                 </Text>
                 <Text color={S.textMuted} fontSize="sm" fontWeight="600">
-                  Step {state?.currentStep || 0}/{state?.totalSteps || 8} · Clouds {state?.currentClouds || 0} · Max x
-                  {Number(state?.maxMultiplier || 1).toFixed(2)} · Plays {myBetCount}/{maxBetsPerRound} (one per step)
+                  Pay once · then play each step free · Cash out to finish · Step {state?.currentStep || 0}/{state?.totalSteps || 8}{" "}
+                  · Clouds {state?.currentClouds || 0} · Max x{Number(state?.maxMultiplier || 1).toFixed(2)} · Plays{" "}
+                  {myBetCount}/{maxBetsPerRound}
+                  {Number(state?.sessionStake) > 0 && (
+                    <> · Stake ${Number(state.sessionStake).toFixed(2)}</>
+                  )}
                 </Text>
                 {state?.phase === "result" && (
                   <Text color={S.accentText} fontWeight="700" fontSize="sm">
@@ -302,7 +318,6 @@ export default function CloudSpreadPage() {
               </VStack>
 
               <Box
-                ref={gameWrapRef}
                 w="100%"
                 maxW="100%"
                 borderColor={S.border}
@@ -329,7 +344,7 @@ export default function CloudSpreadPage() {
               >
                 <HStack spacing="8px" flexWrap="wrap">
                   <Text color={S.textMuted} fontSize="xs" fontWeight="700" whiteSpace="nowrap">
-                    Amount:
+                    {myBetCount > 0 ? "Stake:" : "Pay once:"}
                   </Text>
                   <Button
                     size="xs"
@@ -341,6 +356,7 @@ export default function CloudSpreadPage() {
                     color={S.text}
                     borderRadius="8px"
                     fontWeight="700"
+                    isDisabled={myBetCount > 0}
                     onClick={() => setAmount("0.1")}
                   >
                     Min
@@ -355,6 +371,7 @@ export default function CloudSpreadPage() {
                     color={S.text}
                     borderRadius="8px"
                     fontWeight="700"
+                    isDisabled={myBetCount > 0}
                     onClick={() =>
                       setAmount(
                         String(
@@ -368,8 +385,14 @@ export default function CloudSpreadPage() {
                 </HStack>
 
                 <Input
-                  value={amount}
+                  value={
+                    myBetCount > 0 && state?.sessionStake != null
+                      ? String(Number(state.sessionStake))
+                      : amount
+                  }
                   onChange={(e) => setAmount(e.target.value)}
+                  isDisabled={myBetCount > 0}
+                  title={myBetCount > 0 ? "Stake locked — next steps are free until cash out" : "Amount to pay on first play only"}
                   bg={S.innerBg}
                   border="1px solid"
                   borderColor={S.border}
@@ -380,7 +403,7 @@ export default function CloudSpreadPage() {
                   _placeholder={{ color: "rgba(255,255,255,0.35)" }}
                   _hover={{ borderColor: S.borderStrong }}
                   _focus={{ borderColor: S.borderStrong, boxShadow: "0 0 0 1px rgba(255,255,255,0.25)" }}
-                  placeholder="USDT"
+                  placeholder="USDT (first play)"
                 />
 
                 <HStack flexWrap="wrap" spacing="6px">
@@ -396,6 +419,7 @@ export default function CloudSpreadPage() {
                       color={S.text}
                       borderRadius="8px"
                       fontWeight="800"
+                      isDisabled={myBetCount > 0}
                       onClick={() => setAmount(v)}
                     >
                       {v}
@@ -430,8 +454,8 @@ export default function CloudSpreadPage() {
                   borderRadius="8px"
                   px="12px"
                 >
-                  <Text color={S.accentText} fontSize="sm" fontWeight="800">
-                    Win: ${potentialWin}
+                  <Text color={S.accentText} fontSize="sm" fontWeight="800" title="Stake × product of cloud multipliers (paid once at first play)">
+                    {myBetCount > 0 ? "Cash-out payout" : "If you start"}: ${potentialWin}
                   </Text>
                 </HStack>
 
@@ -446,14 +470,19 @@ export default function CloudSpreadPage() {
                   _active={{ bg: "#2f855a" }}
                   _disabled={{ opacity: 0.45, cursor: "not-allowed" }}
                   onClick={handleBet}
-                  isDisabled={!canBet}
+                  isDisabled={!canBet || playBusy}
+                  isLoading={playBusy}
                   title={
-                    myBetCount >= maxBetsPerRound
-                      ? `You played all ${maxBetsPerRound} steps — cash out or wait for the next round`
-                      : `Bet uses step ${nextBetStep} (one play per step)`
+                    playBusy
+                      ? "Wait for the ball to land…"
+                      : myBetCount >= maxBetsPerRound
+                        ? `All ${maxBetsPerRound} steps done — cash out`
+                        : myBetCount === 0
+                          ? `Pay ${Number(amount || 0).toFixed(2)} USDT and play step ${nextBetStep}`
+                          : `Free play — step ${nextBetStep}`
                   }
                 >
-                  Play
+                  {myBetCount === 0 ? "Start" : "Play"}
                 </Button>
                 <Button
                   h="42px"
@@ -465,7 +494,8 @@ export default function CloudSpreadPage() {
                   fontWeight="800"
                   _hover={{ bg: "#333333", borderColor: S.borderStrong }}
                   onClick={handleCashOut}
-                  isDisabled={!phaseBetting}
+                  isDisabled={!phaseBetting || myBetCount === 0}
+                  title={myBetCount === 0 ? "Pay and play at least once before cash out" : "End round and collect payout"}
                 >
                   Cash Out
                 </Button>
@@ -474,15 +504,8 @@ export default function CloudSpreadPage() {
           </Card>
         </GridItem>
 
-        <GridItem
-          area="realview"
-          minH={{ base: "auto", md: "250px" }}
-          maxW={{ md: "340px" }}
-          justifySelf={{ base: "stretch", md: "stretch" }}
-          w="100%"
-          display="flex"
-        >
-          <CloudSpreadRealView rows={liveRows} sceneHeight={gameSceneHeight} />
+        <GridItem area="live" minW={0} maxW="100%" display="flex" flexDirection="column" minH={0} alignSelf="stretch">
+          <CloudSpreadLiveFeed rows={liveFeedRows} title="Cloud history" maxRows={15} />
         </GridItem>
 
         <GridItem area="history" minW={0} maxW="100%">
