@@ -7,9 +7,7 @@ function WinFireworksEffect({
     width,
     height,
     duration = 1200,
-    zIndex = 9999,
-    /** Optional line under the main amount (e.g. total multiplier). */
-    subtitle
+    zIndex = 9999
 }) {
     if (!isVisible) return null;
     if (typeof document === "undefined") return null;
@@ -180,9 +178,6 @@ function WinFireworksEffect({
                     <div className="earn-neon">
                         ${totalEarn}
                     </div>
-                    {subtitle ? (
-                        <div className="earn-subtitle">{subtitle}</div>
-                    ) : null}
                 </div>
                 <style>{`
                 // .win-glow {
@@ -243,23 +238,6 @@ function WinFireworksEffect({
                     transform-origin: 50% 50%;
                     animation: earnPop 1.6s ease-out both;
                     will-change: transform, opacity;
-                }
-
-                .earn-subtitle {
-                    margin-top: 14px;
-                    font-size: clamp(16px, 3.5vw, 24px);
-                    font-weight: 700;
-                    color: rgba(0, 212, 255, 0.98);
-                    text-shadow:
-                        0 0 10px rgba(0, 212, 255, 0.55),
-                        0 0 22px rgba(0, 212, 255, 0.35);
-                    letter-spacing: 0.04em;
-                    animation: subtitleIn 0.85s ease-out 0.15s both;
-                }
-
-                @keyframes subtitleIn {
-                    0% { opacity: 0; transform: translateY(10px); }
-                    100% { opacity: 1; transform: translateY(0); }
                 }
 
                 @keyframes earnPop {

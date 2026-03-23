@@ -10,17 +10,9 @@ import CardFooter from "components/Card/CardFooter";
 import CardHeader from "components/Card/CardHeader.js";
 import GradientBorder from "components/GradientBorder/GradientBorder";
 
-/** e.g. -10 -> "-$10.00", 10 -> "$10.00" */
-function formatUsdSigned(n) {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return "$0.00";
-  const abs = Math.abs(x).toFixed(2);
-  return x < 0 ? `-$${abs}` : `$${abs}`;
-}
-
 export default function GravityBetHistory({ results = [] }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const reversedResults = useMemo(() => [...results].reverse(), [results]);
   const totalPages = useMemo(
@@ -45,23 +37,6 @@ export default function GravityBetHistory({ results = [] }) {
     // Jump back to the first page whenever we receive a new results list.
     setCurrentPage(1);
   }, [results]);
-
-  const handleItemsPerPageChange = (e) => {
-    setItemsPerPage(parseInt(e.target.value, 10));
-    setCurrentPage(1);
-  };
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-
-  const handlePageClick = (page) => {
-    setCurrentPage(page);
-  };
 
   return (
     <Box mt="24px" w="100%">
@@ -156,7 +131,7 @@ export default function GravityBetHistory({ results = [] }) {
                           $ {Number(result.winAmount || 0).toFixed(2)}
                         </Td>
                         <Td border={lastItem ? "none" : null} borderBottomColor="#56577A" color={profit > 0 ? "#68d391" : "#f56565"}>
-                          {formatUsdSigned(profit)}
+                          $ {profit.toFixed(2)}
                         </Td>
                         <Td border={lastItem ? "none" : null} borderBottomColor="#56577A" color="rgba(255,255,255,0.7)">
                           {new Date(result.createdAt).toLocaleDateString()}, {new Date(result.createdAt).toLocaleTimeString()}
@@ -190,10 +165,8 @@ export default function GravityBetHistory({ results = [] }) {
           {results.length > 0 && (
             <Box px="22px" pb="20px" pt="0px">
               <Flex justify="space-between" align="center" flexWrap="wrap" gap="16px">
-                <Flex align="center" gap="12px" flexWrap="wrap">
-                  <Text fontSize="sm" color="rgba(255, 255, 255, 0.7)" whiteSpace="nowrap">
-                    Items per page:
-                  </Text>
+                <Flex align="center" gap="12px">
+                  <Text fontSize="sm" color="rgba(255,255,255,0.7)">Items per page:</Text>
                   <GradientBorder w="100px" borderRadius="20px">
                     <Select
                       color="white"
@@ -205,126 +178,27 @@ export default function GravityBetHistory({ results = [] }) {
                       w="100px"
                       h="36px"
                       value={itemsPerPage}
-                      onChange={handleItemsPerPageChange}
-                      sx={{
-                        option: {
-                          backgroundColor: "#323738",
-                          color: "white",
-                          padding: "8px 10px",
-                          fontSize: "14px",
-                        },
+                      onChange={(e) => {
+                        setItemsPerPage(parseInt(e.target.value, 10));
+                        setCurrentPage(1);
                       }}
                     >
                       <option value={5}>5</option>
                       <option value={10}>10</option>
                       <option value={20}>20</option>
+                      <option value={50}>50</option>
                     </Select>
                   </GradientBorder>
                 </Flex>
-
                 {totalPages > 1 && (
-                  <>
-                    <Text fontSize="sm" color="rgba(255, 255, 255, 0.7)">
-                      Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, results.length)} of {results.length}{" "}
-                      results
-                    </Text>
-
-                    <HStack spacing="8px">
-                      <Button
-                        size="sm"
-                        bg="#323738"
-                        color="white"
-                        _hover={{ bg: "#3d4243" }}
-                        _active={{ bg: "#2a2d2e" }}
-                        onClick={handlePreviousPage}
-                        disabled={currentPage === 1}
-                        isDisabled={currentPage === 1}
-                        leftIcon={<ChevronLeftIcon />}
-                      >
-                        Previous
-                      </Button>
-
-                      <HStack spacing="4px">
-                        {(() => {
-                          const pages = [];
-                          const maxVisible = 7;
-
-                          if (totalPages <= maxVisible) {
-                            for (let i = 1; i <= totalPages; i += 1) {
-                              pages.push(i);
-                            }
-                          } else {
-                            pages.push(1);
-
-                            let startPage = Math.max(2, currentPage - 1);
-                            let endPage = Math.min(totalPages - 1, currentPage + 1);
-
-                            if (currentPage <= 3) {
-                              endPage = Math.min(5, totalPages - 1);
-                            }
-
-                            if (currentPage >= totalPages - 2) {
-                              startPage = Math.max(2, totalPages - 4);
-                            }
-
-                            if (startPage > 2) {
-                              pages.push("ellipsis-start");
-                            }
-
-                            for (let i = startPage; i <= endPage; i += 1) {
-                              pages.push(i);
-                            }
-
-                            if (endPage < totalPages - 1) {
-                              pages.push("ellipsis-end");
-                            }
-
-                            pages.push(totalPages);
-                          }
-
-                          return pages.map((page, idx) => {
-                            if (page === "ellipsis-start" || page === "ellipsis-end") {
-                              return (
-                                <Text key={`ellipsis-${idx}`} color="rgba(255, 255, 255, 0.5)" px="4px">
-                                  ...
-                                </Text>
-                              );
-                            }
-
-                            return (
-                              <Button
-                                key={page}
-                                size="sm"
-                                minW="36px"
-                                h="36px"
-                                bg={currentPage === page ? "#00D4FF" : "#323738"}
-                                color="white"
-                                _hover={{ bg: currentPage === page ? "#00b8e6" : "#3d4243" }}
-                                _active={{ bg: currentPage === page ? "#00a3cc" : "#2a2d2e" }}
-                                onClick={() => handlePageClick(page)}
-                              >
-                                {page}
-                              </Button>
-                            );
-                          });
-                        })()}
-                      </HStack>
-
-                      <Button
-                        size="sm"
-                        bg="#323738"
-                        color="white"
-                        _hover={{ bg: "#3d4243" }}
-                        _active={{ bg: "#2a2d2e" }}
-                        onClick={handleNextPage}
-                        disabled={currentPage === totalPages}
-                        isDisabled={currentPage === totalPages}
-                        rightIcon={<ChevronRightIcon />}
-                      >
-                        Next
-                      </Button>
-                    </HStack>
-                  </>
+                  <HStack spacing="8px">
+                    <Button size="sm" bg="#323738" color="white" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} isDisabled={currentPage === 1} leftIcon={<ChevronLeftIcon />}>
+                      Previous
+                    </Button>
+                    <Button size="sm" bg="#323738" color="white" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} isDisabled={currentPage === totalPages} rightIcon={<ChevronRightIcon />}>
+                      Next
+                    </Button>
+                  </HStack>
                 )}
               </Flex>
             </Box>

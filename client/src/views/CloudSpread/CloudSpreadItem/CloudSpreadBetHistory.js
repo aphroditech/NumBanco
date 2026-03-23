@@ -74,7 +74,7 @@ export default function CloudSpreadBetHistory({ results = [] }) {
       <Card pt="20px" pb="20px" minH="400px" px="22px">
         <CardHeader>
           <Text fontSize="lg" fontWeight="bold" color="#00D4FF" mb="16px" textAlign="center" whiteSpace="nowrap">
-            Round history
+            Bet History
           </Text>
         </CardHeader>
         <CardBody>
@@ -110,7 +110,7 @@ export default function CloudSpreadBetHistory({ results = [] }) {
                       Mult
                     </Th>
                     <Th color="white" textAlign="left" className="real_th_font" width="14%">
-                      Stake
+                      Amount
                     </Th>
                     <Th color="white" textAlign="left" className="real_th_font" width="14%">
                       Win
@@ -124,23 +124,9 @@ export default function CloudSpreadBetHistory({ results = [] }) {
                   {paginatedResults.map((result, index, arr) => {
                     const lastItem = index === arr.length - 1;
                     const globalIndex = (currentPage - 1) * itemsPerPage + index;
-                    /** Embedded `user.cloudSpreadHistory` rows (per round); API rows have `targetStep`. */
-                    const isRoundSummary =
-                      result.targetStep == null && result.totalBet != null && result.multProduct != null;
-                    const win = Number(result.winAmount ?? result.win ?? 0);
-                    const bet = Number(result.sessionStake ?? result.betAmount ?? result.totalBet ?? 0);
-                    const stepShow =
-                      result.targetStep != null ? result.targetStep : result.crashStep != null ? result.crashStep : "—";
-                    const multVal =
-                      result.targetMultiplier != null
-                        ? result.targetMultiplier
-                        : result.multProduct != null
-                          ? result.multProduct
-                          : 1;
-                    const rowKey =
-                      result._id ||
-                      result.id ||
-                      `cs-${result.roundId}-${String(result.createAt || result.createdAt || globalIndex)}`;
+                    const win = Number(result.winAmount || 0);
+                    const bet = Number(result.betAmount || 0);
+                    const rowKey = result._id || result.id || `cs-${globalIndex}`;
 
                     return (
                       <Tr key={rowKey}>
@@ -175,7 +161,7 @@ export default function CloudSpreadBetHistory({ results = [] }) {
                           color="#fff"
                           fontWeight="normal"
                         >
-                          {stepShow}
+                          {result.targetStep}
                         </Td>
                         <Td
                           textAlign="left"
@@ -185,9 +171,8 @@ export default function CloudSpreadBetHistory({ results = [] }) {
                           fontSize="sm"
                           color="#68d391"
                           fontWeight="normal"
-                          title={isRoundSummary ? "Product of cloud multipliers (round)" : undefined}
                         >
-                          x{truncateToTwo(Number(multVal || 1))}
+                          x{truncateToTwo(Number(result.targetMultiplier || 1))}
                         </Td>
                         <Td
                           textAlign="left"
@@ -248,7 +233,7 @@ export default function CloudSpreadBetHistory({ results = [] }) {
                       filter: "drop-shadow(0 0 10px white)",
                     }}
                   />
-                  No cloud spread rounds yet
+                  No cloud spread bets yet
                 </Flex>
               </Flex>
             )}

@@ -10,8 +10,17 @@ import {
 
 const router = Router();
 
-/** Each user gets their own round — state requires login (like Rubic / Pumping). */
-router.get("/state", passport.authenticate("jwt", { session: false }), getCloudSpreadState);
+/** Attach req.user when a valid JWT is sent; otherwise continue (for public state + myBetCount when logged in). */
+function optionalJwt(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ")) return next();
+  passport.authenticate("jwt", { session: false }, (err, user) => {
+    if (user) req.user = user;
+    next();
+  })(req, res, next);
+}
+
+router.get("/state", optionalJwt, getCloudSpreadState);
 router.get("/history/live", getLiveCloudSpreadHistory);
 router.get("/history/me", passport.authenticate("jwt", { session: false }), getMyCloudSpreadHistory);
 router.post("/bet", passport.authenticate("jwt", { session: false }), createCloudSpreadBet);
