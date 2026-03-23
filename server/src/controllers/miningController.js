@@ -36,7 +36,7 @@ export const checkCanWin = async (req, res) => {
 
         const M1uXj3sZpU = await isWinLimitReached( user._id, betAmt, turn);
 
-        return res.json({ balance: user.balance, M1uXj3sZpU });
+        return res.json({ balance: -betAmt, M1uXj3sZpU });
     }
     catch (error) {
         console.error("Error in checkCanWin:", error);
@@ -161,7 +161,7 @@ export const resultGameMining = async (req, res) => {
             await newMiningHistory.save();
         }
         const histories = await MiningHistory.findOne({ user: req.user._id });
-        return res.json({ balance: user.balance, histories: histories?.history || [] });
+        return res.json({ balance: profit, histories: histories?.history || [] });
     }
     catch (error) {
         console.error("Error in resultGameMining:", error);

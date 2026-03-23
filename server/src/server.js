@@ -79,8 +79,8 @@ connectDB()
 
     ably.connection.once("connected", () => {
         console.log("✅ Ably connected");
-        // confirmDepositEngine(ably);
-        // tronEngine(ably);
+        confirmDepositEngine(ably);
+        tronEngine(ably);
         // startPartnerDepositCron(ably);
         // startWithdrawApprovalCron(ably);
         // getUserStatusChannel(ably);

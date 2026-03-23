@@ -55,6 +55,7 @@ import Coco from "views/Coco/CocoPage";
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import AToZPage from "views/AToZ/AToZ";
 import ForestIcon from '@mui/icons-material/Forest';
+import Filter9Icon from '@mui/icons-material/Filter9';
 
 import {
   DocumentIcon,
@@ -77,6 +78,22 @@ var dashRoutes = [
     component: Dashboard,
     layout: "/user",
   },
+  {
+    name: "LOTTERY",
+    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    layout: "/admin",
+  },
+  {
+    path: "/affiliation",
+    name: "AFFILIATION",
+    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Partnership,
+    layout: "/user",
+  },
+  // {
+  //   name: "LOTTERY",
+  //   icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+  // },
   {
     name: "NUMEXA",
     icon: <PixIcon style={{ fontSize: "24px", color: "#00D4FF" }} />
@@ -128,7 +145,7 @@ var dashRoutes = [
   {
     redirect: true,
     path: "/dove",
-    name: "DOVE CROSS",
+    name: "LUCKY HOP",
     icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
     layout: "/game",
@@ -137,7 +154,7 @@ var dashRoutes = [
     redirect: true,
     path: "/digits",
     name: "DIGITS",
-    icon: <NumbersIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
     layout: "/game",
   },
@@ -182,24 +199,7 @@ var dashRoutes = [
     layout: "/game",
   },
   {
-    path: "/affiliation",
-    name: "AFFILIATION",
-    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    component: Partnership,
-    layout: "/user",
-  },
-  {
-    name: "LOTTERY",
-    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    layout: "/admin",
-  },
-  // {
-  //   name: "LOTTERY",
-  //   icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-  // },
-
-  {
-    // redirect: true,
+    redirect: true,
     path: "/deposit",
     name: "DEPOSIT",
     icon: <CloudUploadRoundedIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -207,7 +207,7 @@ var dashRoutes = [
     layout: "/transaction",
   },
   {
-    // redirect: true,
+    redirect: true,
     path: "/withdraw",
     name: "WITHDRAW",
     icon: <CloudDownloadRoundedIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -215,6 +215,7 @@ var dashRoutes = [
     layout: "/transaction",
   },
   {
+    redirect: true,
     path: "/myprofile",
     name: "MY PROFILE",
     icon: <PersonIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,

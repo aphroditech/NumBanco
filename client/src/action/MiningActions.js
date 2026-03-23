@@ -5,7 +5,7 @@ export const checkCanWin = async (data, dispatch, history) => {
         const res = await axiosInstance.post('/mining/checkCanWin', data);
         if (res.data.balance != null) {
             dispatch({
-                type: 'SET_BALANCE',
+                type: 'UPDATE_USER_BALANCE',
                 payload: res.data.balance
             });
         }
@@ -24,7 +24,7 @@ export const resultGameMining = async (data, dispatch, history) => {
         const res = await axiosInstance.post('/mining/resultGameMining', data);
         if (res.data.balance != null) {
             dispatch({
-                type: 'SET_BALANCE',
+                type: 'UPDATE_USER_BALANCE',
                 payload: res.data.balance
             });
         }

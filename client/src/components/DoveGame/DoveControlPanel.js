@@ -24,6 +24,7 @@ const GREEN = "#22c55e";
 const GREEN_HOVER = "#16a34a";
 const GOLD_BG = "rgba(255, 215, 0, 0.2)";
 const GOLD_BORDER = "rgba(255, 215, 0, 0.5)";
+const PANEL_FONT_FAMILY = "Orbitron, Arial Black, sans-serif";
 const DIFFICULTY_OPTIONS = [
     { value: "easy", label: "Easy" },
     { value: "med", label: "Med" },
@@ -122,12 +123,29 @@ function DoveControlPanel({
             px={{ base: "14px", sm: "22px", md: "29px" }}
             py="18px"
             bg="rgba(0,0,0,0.85)"
-            bgImage="url('/assets/panelground.png')"
-            bgSize="cover"
-            bgPosition="center"
-            bgRepeat="no-repeat"
-            borderTop="2px solid rgba(255, 215, 0, 0.4)"
+            position="relative"
+            overflow="hidden"
+            borderTop="2px solid rgba(255, 215, 0, 0.75)"
             pointerEvents="auto"
+            fontFamily={PANEL_FONT_FAMILY}
+            sx={{
+                "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    inset: 0,
+                    backgroundImage: "url('/assets/panelground.png')",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    opacity: 0.90, // ~85% transparent image
+                    zIndex: 0,
+                    pointerEvents: "none",
+                },
+                "& > *": {
+                    position: "relative",
+                    zIndex: 1,
+                },
+            }}
         >
             <Flex
                 flexDirection="column"
@@ -141,7 +159,7 @@ function DoveControlPanel({
                         <Flex flexDirection="column" gap="14px" align="center" justify="center" w="100%" minH="209px">
                             <HStack spacing="11px" align="center" justify="center" flexWrap="wrap">
                                 <Box as="span" fontSize="sm" color="rgba(255,255,255,0.9)" whiteSpace="nowrap">Difficulty:</Box>
-                                <Select size="sm" w="180px" h="58px" fontSize="sm" bg="#323738" color="#fff" borderColor={GOLD_BORDER} borderRadius="11px" value={difficulty} onChange={(e) => { const val = e.target.value; setDifficulty(val); onDifficultyChange?.(val); }} sx={{ option: { bg: "#323738", color: "#fff" } }}>
+                                <Select size="sm" w="180px" h="58px" fontSize="sm" fontFamily={PANEL_FONT_FAMILY} bg="#323738" color="#fff" borderColor={GOLD_BORDER} borderRadius="11px" value={difficulty} onChange={(e) => { const val = e.target.value; setDifficulty(val); onDifficultyChange?.(val); }} sx={{ option: { bg: "#323738", color: "#fff", fontFamily: PANEL_FONT_FAMILY } }}>
                                     {DIFFICULTY_OPTIONS.map((opt) => (
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                     ))}
@@ -151,9 +169,9 @@ function DoveControlPanel({
                                 <Button size="sm" h="58px" minW="72px" fontSize="sm" fontWeight="bold" bg={GOLD_BG} color={GOLD} border="2px solid" borderColor={GOLD_BORDER} borderRadius="11px" _hover={{ bg: "rgba(255, 215, 0, 0.3)" }} onClick={() => setClampedAmount(MIN_AMOUNT)}>
                                     Min
                                 </Button>
-                                <HStack spacing="4px" bg="#323738" borderRadius="11px" px="7px" h="58px" border="2px solid rgba(255,255,255,0.2)" flexShrink={0}>
+                                    <HStack spacing="4px" bg="#323738" borderRadius="11px" px="7px" h="58px" border="2px solid rgba(255,255,255,0.2)" flexShrink={0}>
                                     <IconButton aria-label="Decrease" icon={<RemoveIcon style={{ fontSize: 22 }} />} size="sm" h="40px" w="40px" minW="40px" bg="transparent" color="#fff" borderRadius="7px" _hover={{ bg: "rgba(255,255,255,0.1)" }} onClick={() => setClampedAmount(currentAmount - 0.1)} isDisabled={currentAmount <= MIN_AMOUNT} />
-                                    <Input type="number" value={amount} onChange={(e) => handleAmountChange(e)} onBlur={handleAmountBlur} min={MIN_AMOUNT} max={maxAmount} step={0.1} w="65px" minW="65px" h="47px" textAlign="center" fontSize="sm" fontWeight="bold" color="#fff" bg="transparent" border="none" p="0" _focus={{ outline: "none", boxShadow: "none", border: "none" }} _hover={{ border: "none" }} />
+                                    <Input type="number" value={amount} onChange={(e) => handleAmountChange(e)} onBlur={handleAmountBlur} min={MIN_AMOUNT} max={maxAmount} step={0.1} w="65px" minW="65px" h="47px" textAlign="center" fontSize="sm" fontFamily={PANEL_FONT_FAMILY} fontWeight="bold" color="#fff" bg="transparent" border="none" p="0" _focus={{ outline: "none", boxShadow: "none", border: "none" }} _hover={{ border: "none" }} />
                                     <IconButton aria-label="Increase" icon={<AddIcon style={{ fontSize: 22 }} />} size="sm" h="40px" w="40px" minW="40px" bg="transparent" color="#fff" borderRadius="7px" _hover={{ bg: "rgba(255,255,255,0.1)" }} onClick={() => setClampedAmount(currentAmount + 0.1)} isDisabled={currentAmount >= maxAmount} />
                                 </HStack>
                                 <Button size="sm" h="58px" minW="72px" fontSize="sm" fontWeight="bold" bg={GOLD_BG} color={GOLD} border="2px solid" borderColor={GOLD_BORDER} borderRadius="11px" _hover={{ bg: "rgba(255, 215, 0, 0.3)" }} onClick={() => setClampedAmount(maxAmount)}>
@@ -177,7 +195,25 @@ function DoveControlPanel({
                                     Multiplier
                                 </Button>
                             </HStack>
-                            <Button size="md" h="100px" w="270px" minW="270px" maxW="270px" px="86px" fontSize="xl" fontWeight="bold" bg={GREEN} color="#fff" borderRadius="7px" _hover={{ bg: GREEN_HOVER, transform: "translateY(-2px)" }} _active={{ transform: "translateY(0)" }} _disabled={{ opacity: 0.5, cursor: "not-allowed" }} onClick={handlePlay} isDisabled={!canPlay}>
+                            <Button
+                                size="md"
+                                h="100px"
+                                w="270px"
+                                minW="270px"
+                                maxW="270px"
+                                px="86px"
+                                fontSize="4xl"
+                                fontWeight="900"
+                                letterSpacing="0.5px"
+                                bg={GREEN}
+                                color="#fff"
+                                borderRadius="7px"
+                                _hover={{ bg: GREEN_HOVER, transform: "translateY(-2px)" }}
+                                _active={{ transform: "translateY(0)" }}
+                                _disabled={{ opacity: 0.5, cursor: "not-allowed" }}
+                                onClick={handlePlay}
+                                isDisabled={!canPlay}
+                            >
                                 Play
                             </Button>
                         </Flex>
@@ -202,7 +238,25 @@ function DoveControlPanel({
                                     Multiplier
                                 </Button>
                             </HStack>
-                            <Button size="md" h="100px" w="270px" minW="270px" maxW="270px" px="86px" fontSize="xl" fontWeight="bold" bg={GREEN} color="#fff" borderRadius="7px" _hover={{ bg: GREEN_HOVER, transform: "translateY(-2px)" }} _active={{ transform: "translateY(0)" }} _disabled={{ opacity: 0.5, cursor: "not-allowed" }} onClick={onGo} isDisabled={!canMove}>
+                            <Button
+                                size="md"
+                                h="100px"
+                                w="270px"
+                                minW="270px"
+                                maxW="270px"
+                                px="86px"
+                                fontSize="4xl"
+                                fontWeight="900"
+                                letterSpacing="0.5px"
+                                bg={GREEN}
+                                color="#fff"
+                                borderRadius="7px"
+                                _hover={{ bg: GREEN_HOVER, transform: "translateY(-2px)" }}
+                                _active={{ transform: "translateY(0)" }}
+                                _disabled={{ opacity: 0.5, cursor: "not-allowed" }}
+                                onClick={onGo}
+                                isDisabled={!canMove}
+                            >
                                 Go
                             </Button>
                         </Flex>
