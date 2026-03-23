@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+/** Reel symbols: 0–9 (10 symbols per reel strip) */
+const DIGITS = "0123456789".split("");
 
 /** Exactly 3 visible rows per column: top / middle / bottom */
 const VISIBLE_ROWS = 3;
@@ -97,14 +98,14 @@ export default class AToZScene extends Phaser.Scene {
     }
 
     /**
-     * Letter centers at (i + 0.5) * cellH in container space.
+     * Digit centers at (i + 0.5) * cellH in container space.
      * Middle visible row center = topY + 1.5 * cellH (row index 1).
      */
     createReels() {
         const totalW = this.reelCount * this.reelW + (this.reelCount - 1) * this.reelGap;
         const startX = (this.gameW - totalW) / 2 + this.reelW / 2;
         const topY = this.centerLineY - this.windowH / 2;
-        const loopLen = LETTERS.length * this.cellH;
+        const loopLen = DIGITS.length * this.cellH;
 
         for (let r = 0; r < this.reelCount; r += 1) {
             const x = startX + r * (this.reelW + this.reelGap);
@@ -120,12 +121,12 @@ export default class AToZScene extends Phaser.Scene {
             container.setMask(mask);
             container.setDepth(2);
 
-            const letterTexts = [];
-            const totalLetters = LETTERS.length * 3;
-            for (let i = 0; i < totalLetters; i += 1) {
-                const letter = LETTERS[i % LETTERS.length];
+            const digitTexts = [];
+            const totalCells = DIGITS.length * 3;
+            for (let i = 0; i < totalCells; i += 1) {
+                const digit = DIGITS[i % DIGITS.length];
                 const cy = (i + 0.5) * this.cellH;
-                const t = this.add.text(this.reelW / 2, cy, letter, {
+                const t = this.add.text(this.reelW / 2, cy, digit, {
                     fontFamily: "Orbitron, system-ui, Arial Black, sans-serif",
                     fontSize: `${Math.round(this.cellH * 0.62)}px`,
                     color: "#EAF7FF",
@@ -134,7 +135,7 @@ export default class AToZScene extends Phaser.Scene {
                     strokeThickness: 5,
                 }).setOrigin(0.5, 0.5);
                 container.add(t);
-                letterTexts.push(t);
+                digitTexts.push(t);
             }
 
             container.y = topY - loopLen;
@@ -142,7 +143,7 @@ export default class AToZScene extends Phaser.Scene {
             this.reels.push({
                 panel,
                 container,
-                letterTexts,
+                letterTexts: digitTexts,
                 topY,
                 loopLen,
                 speed: 0,
@@ -152,13 +153,13 @@ export default class AToZScene extends Phaser.Scene {
         }
     }
 
-    /** Fade top/bottom row letters; emphasize middle row (slot-machine clarity). */
+    /** Fade top/bottom row digits; emphasize middle row (slot-machine clarity). */
     updateLetterStyles(reel) {
-        const { container, topY, letterTexts } = reel;
+        const { container, topY, letterTexts: digitTexts } = reel;
         const midCenterWorld = topY + 1.5 * this.cellH;
 
-        for (let i = 0; i < letterTexts.length; i += 1) {
-            const t = letterTexts[i];
+        for (let i = 0; i < digitTexts.length; i += 1) {
+            const t = digitTexts[i];
             const worldY = container.y + (i + 0.5) * this.cellH;
             const dist = Math.abs(worldY - midCenterWorld);
 
@@ -205,8 +206,21 @@ export default class AToZScene extends Phaser.Scene {
         if (this.isSpinning) return false;
         this.isSpinning = true;
 
-        const targetIndexes = Array.from({ length: this.reelCount }, () => Phaser.Math.Between(0, 25));
-        const resultLetters = targetIndexes.map((i) => LETTERS[i]);
+        let targetIndexes;
+        const reelStr =
+            typeof window !== "undefined" &&
+            typeof window.__atozReelResult === "string" &&
+            /^[0-9]{3}$/.test(window.__atozReelResult)
+                ? window.__atozReelResult
+                : null;
+        if (typeof window !== "undefined") window.__atozReelResult = null;
+
+        if (reelStr) {
+            targetIndexes = reelStr.split("").map((c) => parseInt(c, 10));
+        } else {
+            targetIndexes = Array.from({ length: this.reelCount }, () => Phaser.Math.Between(0, 9));
+        }
+        const resultLetters = targetIndexes.map((i) => DIGITS[i]);
 
         this.reels.forEach((reel, i) => {
             reel.spinning = true;
@@ -222,11 +236,24 @@ export default class AToZScene extends Phaser.Scene {
                 const bet = Number(window.__atozBetAmount || 0);
                 const word = resultLetters.join("");
 
-                // Win/loss and multiplier are computed on the backend; UI only sends the draw.
+                const pickStr =
+                    typeof window.__atozPick === "string" ? window.__atozPick : "000";
+                const pickNum =
+                    typeof window.__atozPickNumber === "number" && Number.isFinite(window.__atozPickNumber)
+                        ? window.__atozPickNumber
+                        : 0;
+                const pickDigitsArr = Array.isArray(window.__atozPickDigits)
+                    ? [...window.__atozPickDigits]
+                    : [0, 0, 0];
+
+                // Win/loss and multiplier are computed on the backend; UI sends bet, user pick, and reel draw.
                 this.pendingResult = {
                     betAmount: bet,
                     word,
                     letters: resultLetters,
+                    pick: pickStr,
+                    pickNumber: pickNum,
+                    pickDigits: pickDigitsArr,
                 };
 
                 if (typeof window.onAToZSpinComplete === "function") {
@@ -242,7 +269,7 @@ export default class AToZScene extends Phaser.Scene {
         const reel = this.reels[reelIndex];
         if (!reel) return;
 
-        const midCycleIndex = LETTERS.length + targetIndex;
+        const midCycleIndex = DIGITS.length + targetIndex;
         const targetYBase = reel.topY + 1.5 * this.cellH - (midCycleIndex + 0.5) * this.cellH;
 
         const candidates = [

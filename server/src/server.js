@@ -77,9 +77,9 @@ connectDB().then(async () => {
         // rubicBot(ably);
         // pumpingBot(ably);
         // miningBot(ably);
-        rocketBot(ably);
+        // rocketBot(ably);
         // fishingBot(ably);
-        startGravityGameLoop(ably);
+        // startGravityGameLoop(ably);
         setCloudSpreadAbly(ably);
         cloudSpreadBot().catch((err) => {
             console.error("[cloud-spread] bot failed to start:", err);

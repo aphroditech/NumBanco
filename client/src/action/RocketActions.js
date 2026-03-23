@@ -30,6 +30,12 @@ export const rocketShotResult = async (data, dispatch, history) => {
                 payload: res.data.balance
             });
         }   
+        if(res.data.rocketHistory != null) {
+            dispatch({
+                type: 'SET_ROCKET_HISTORY',
+                payload: res.data.rocketHistory
+            });
+        }
     } catch (error) {
         console.error(error);
         if (error.response?.status === 401 && history) {
@@ -48,5 +54,22 @@ export const getRocketResults = (history) => async () => {
             history.push('/auth/landing');
         }
         return [];
+    }
+};
+
+export const getRocketHistory = (history, dispatch) => async () => {
+    try {
+        const res = await axiosInstance.get('/rocket/getRocketHistory');
+        if(res.data.rocketHistory != null) {
+            dispatch({
+                type: 'SET_ROCKET_HISTORY',
+                payload: res.data.rocketHistory
+            });
+        }
+    } catch (error) {
+        console.error(error);
+        if(error.response?.status === 401 && history) {
+            history.push('/auth/landing');
+        }
     }
 };

@@ -30,6 +30,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useHistory } from 'react-router-dom';
+import History from './RocketItems/History';
 
 
 const MIN_AMOUNT = 0.5;
@@ -614,6 +615,7 @@ export default function RocketShotPage() {
                     </Box>
                 </GridItem>
             </Grid>
+            <History />
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
                 <ModalOverlay bg="blackAlpha.700" />
                 <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">

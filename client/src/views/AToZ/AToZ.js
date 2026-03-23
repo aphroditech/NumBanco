@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box,
     Grid,
@@ -16,6 +16,8 @@ import {
     Button,
     Input,
     IconButton,
+    FormControl,
+    FormLabel,
 } from '@chakra-ui/react';
 import Card from 'components/Card/Card';
 import CardBody from 'components/Card/CardBody';
@@ -25,18 +27,38 @@ import { useSelector } from 'react-redux';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 
+import { aToZBet, aToZSpinComplete } from '../../action/AtoZActions';
+
 import RealTimeHistory from './AToZItems/RealTimeHistory';
 import UserBetHistory from './AToZItems/UserBetHistory';
 
+import { useDispatch } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { motion, AnimatePresence } from 'framer-motion';
 
+const MotionBox = motion(Box);
+const MotionText = motion(Text);
 /** Match Rocket Shot bet range and step */
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 const AMOUNT_STEP = 0.5;
 
+/** Normalize to 3-digit string "000"…"999" */
+function padPickDigits(n) {
+    const v = Math.min(999, Math.max(0, Math.floor(Number(n))));
+    if (Number.isNaN(v)) return '000';
+    return String(v).padStart(3, '0');
+}
+
 export default function AToZPage() {
+    const dispatch = useDispatch();
+    const history = useHistory();
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+    /** Set when spin ends and server said `isWin` — drives center-screen multiplier reveal */
+    const [winOverlay, setWinOverlay] = useState(null);
+    const pendingServerWinRef = useRef({ isWin: false, multiplier: 0, winAmount: null });
+    const winOverlayHideTimerRef = useRef(null);
     const user = useSelector((state) => state.user.userInfo) || {};
     const walletBalance = user.balance;
     const balanceNum = Number(walletBalance);
@@ -45,6 +67,8 @@ export default function AToZPage() {
         : MAX_AMOUNT;
 
     const [amount, setAmount] = useState(MIN_AMOUNT);
+    /** Three digits 0–9: [hundreds, tens, ones] → 000–999 */
+    const [pickDigits, setPickDigits] = useState([0, 0, 0]);
     const [isSpinning, setIsSpinning] = useState(false);
 
     const handleAmountChange = (e) => {
@@ -64,14 +88,47 @@ export default function AToZPage() {
     }, [amount, isSpinning, maxAmount, balanceNum]);
 
     useEffect(() => {
-        window.onAToZSpinComplete = (result) => {
+        window.onAToZSpinComplete = async (result) => {
             setIsSpinning(false);
-            console.log("result", result);
-            // `result`: { betAmount, word, letters } — send to your API for odds / payout.
+            const { isWin, multiplier: mult, winAmount } = pendingServerWinRef.current;
+            pendingServerWinRef.current = { isWin: false, multiplier: 0, winAmount: null };
+
+            const data = {
+                isWin: isWin, multiplier: mult, betAmount: result.betAmount, pickNumber: result.pickNumber, result: result.word
+            }
+            await aToZSpinComplete(data, dispatch, history);
+            if (isWin && mult > 0) {
+                if (winOverlayHideTimerRef.current) {
+                    window.clearTimeout(winOverlayHideTimerRef.current);
+                }
+                // One-shot explosion burst: shards fly outward from center
+                const bursts = Array.from({ length: 56 }).map(() => ({
+                    angle: Math.random() * Math.PI * 2,
+                    dist: 100 + Math.random() * 160,
+                    duration: 0.38 + Math.random() * 0.35,
+                    size: 5 + Math.random() * 12,
+                    hue: 160 + Math.random() * 90,
+                }));
+                setWinOverlay({
+                    id: Date.now(),
+                    multiplier: mult,
+                    winAmount: typeof winAmount === 'number' ? winAmount : null,
+                    bursts,
+                });
+                winOverlayHideTimerRef.current = window.setTimeout(() => {
+                    setWinOverlay(null);
+                    winOverlayHideTimerRef.current = null;
+                }, 1600);
+            }
+
         };
 
         return () => {
             if (window.onAToZSpinComplete) window.onAToZSpinComplete = undefined;
+            if (winOverlayHideTimerRef.current) {
+                window.clearTimeout(winOverlayHideTimerRef.current);
+                winOverlayHideTimerRef.current = null;
+            }
         };
     }, []);
 
@@ -85,10 +142,56 @@ export default function AToZPage() {
         });
     }, [maxAmount]);
 
-    const handleSpin = () => {
+    const adjustPickDigit = (index, delta) => {
+        setPickDigits((prev) => {
+            const next = [...prev];
+            next[index] = Math.min(9, Math.max(0, next[index] + delta));
+            return next;
+        });
+    };
+
+    const handlePickDigitChange = (index, e) => {
+        const raw = e.target.value.replace(/\D/g, '');
+        const last = raw.slice(-1);
+        const v = last === '' ? 0 : Math.min(9, Math.max(0, parseInt(last, 10)));
+        if (Number.isNaN(v)) return;
+        setPickDigits((prev) => {
+            const next = [...prev];
+            next[index] = v;
+            return next;
+        });
+    };
+
+    const handleSpin = async () => {
         if (!canSpin) return;
         const bet = parseFloat(amount);
+
+        const data = {
+            betAmount: bet,
+            number: pickDigits[0] * 100 + pickDigits[1] * 10 + pickDigits[2],
+        };
+        const res = await aToZBet(data, dispatch, history);
+        if (res == null) return;
+
+        const mult = Number(res.multiplier) || 0;
+        const won = res.isWin === true;
+        const winAmt = typeof res.winAmount === 'number' ? res.winAmount : null;
+        pendingServerWinRef.current = {
+            isWin: won,
+            multiplier: mult,
+            winAmount: winAmt,
+        };
+
         window.__atozBetAmount = bet;
+        const pickNum = pickDigits[0] * 100 + pickDigits[1] * 10 + pickDigits[2];
+        const pickStr = padPickDigits(pickNum);
+        window.__atozPick = pickStr;
+        window.__atozPickNumber = pickNum;
+        window.__atozPickDigits = [...pickDigits];
+        // Server-generated 3-digit result for reels (must match payout).
+        const serverResult =
+            res.result != null ? String(res.result).replace(/\D/g, '').slice(0, 3).padStart(3, '0') : null;
+        window.__atozReelResult = serverResult && /^[0-9]{3}$/.test(serverResult) ? serverResult : null;
 
         if (typeof window.spinAToZ === 'function') {
             const started = window.spinAToZ();
@@ -128,8 +231,154 @@ export default function AToZPage() {
                                 minH={{ base: '360px', md: '560px' }}
                                 bg="#000"
                                 position="relative"
+                                overflow="hidden"
                             >
                                 <AToZGame />
+                                <AnimatePresence mode="wait">
+                                    {winOverlay != null && (
+                                        <MotionBox
+                                            key={winOverlay.id ?? 'atoz-win-overlay'}
+                                            position="absolute"
+                                            inset={0}
+                                            zIndex={30}
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            pointerEvents="none"
+                                            initial={{ opacity: 1 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.12 }}
+                                            bg="radial-gradient(ellipse at center, rgba(40, 90, 120, 0.55) 0%, rgba(0, 0, 0, 0.88) 55%, rgba(0, 0, 0, 0.92) 100%)"
+                                            backdropFilter="blur(4px)"
+                                        >
+                                            {/* Impact flash */}
+                                            <MotionBox
+                                                position="absolute"
+                                                inset={0}
+                                                bg="radial-gradient(circle at 50% 50%, rgba(255,255,255,0.55) 0%, rgba(0,220,255,0.15) 35%, transparent 65%)"
+                                                initial={{ opacity: 0.95 }}
+                                                animate={{ opacity: 0 }}
+                                                transition={{ duration: 0.14, ease: 'easeOut' }}
+                                                pointerEvents="none"
+                                            />
+                                            {/* Expanding shockwaves */}
+                                            {[0, 1].map((ring) => (
+                                                <MotionBox
+                                                    key={ring}
+                                                    position="absolute"
+                                                    left="50%"
+                                                    top="50%"
+                                                    w="80px"
+                                                    h="80px"
+                                                    marginLeft="-40px"
+                                                    marginTop="-40px"
+                                                    borderRadius="full"
+                                                    border="3px solid rgba(0, 230, 255, 0.65)"
+                                                    boxShadow="0 0 24px rgba(0, 230, 255, 0.5)"
+                                                    initial={{ scale: 0.2, opacity: 0.9 }}
+                                                    animate={{ scale: 3.2 + ring * 0.4, opacity: 0 }}
+                                                    transition={{
+                                                        duration: 0.55,
+                                                        delay: ring * 0.06,
+                                                        ease: [0.15, 0.85, 0.35, 1],
+                                                    }}
+                                                    pointerEvents="none"
+                                                />
+                                            ))}
+                                            {/* Explosion shards */}
+                                            <Box position="absolute" inset={0} overflow="visible" aria-hidden>
+                                                {winOverlay.bursts?.map((b, i) => (
+                                                    <MotionBox
+                                                        key={`${winOverlay.id}-b-${i}`}
+                                                        position="absolute"
+                                                        left="50%"
+                                                        top="50%"
+                                                        w={`${b.size}px`}
+                                                        h={`${Math.max(4, b.size * 0.45)}px`}
+                                                        marginLeft={`${-b.size / 2}px`}
+                                                        marginTop={`${-Math.max(4, b.size * 0.45) / 2}px`}
+                                                        borderRadius="full"
+                                                        bg={`hsla(${b.hue}, 95%, 62%, 0.95)`}
+                                                        boxShadow={`0 0 ${Math.min(18, b.size)}px hsla(${b.hue}, 100%, 55%, 0.85)`}
+                                                        initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                                                        animate={{
+                                                            x: Math.cos(b.angle) * b.dist,
+                                                            y: Math.sin(b.angle) * b.dist,
+                                                            opacity: 0,
+                                                            scale: 0.15,
+                                                        }}
+                                                        transition={{
+                                                            duration: b.duration,
+                                                            ease: [0.02, 0.75, 0.25, 1],
+                                                        }}
+                                                    />
+                                                ))}
+                                            </Box>
+                                            <MotionBox
+                                                position="relative"
+                                                zIndex={2}
+                                                display="flex"
+                                                flexDirection="column"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                                gap={{ base: 1, md: 2 }}
+                                                px={{ base: 4, md: 7 }}
+                                                py={{ base: 5, md: 7 }}
+                                                borderRadius="xl"
+                                                border="2px solid rgba(0, 240, 255, 0.55)"
+                                                boxShadow="0 0 0 1px rgba(255,255,255,0.12), 0 0 48px rgba(0, 230, 255, 0.55), inset 0 0 32px rgba(0, 200, 255, 0.12)"
+                                                bg="rgba(8, 14, 22, 0.92)"
+                                                initial={{ scale: 0, opacity: 1 }}
+                                                animate={{
+                                                    scale: [0, 1.22, 0.98, 1],
+                                                }}
+                                                transition={{
+                                                    duration: 0.28,
+                                                    times: [0, 0.55, 0.8, 1],
+                                                    ease: [0.2, 0.9, 0.3, 1],
+                                                }}
+                                            >
+                                                <Text
+                                                    fontSize={{ base: '10px', md: 'xs' }}
+                                                    fontWeight="800"
+                                                    letterSpacing="0.35em"
+                                                    color="#7af0ff"
+                                                    textTransform="uppercase"
+                                                >
+                                                    You win
+                                                </Text>
+                                                <Text
+                                                    fontSize={{ base: '52px', md: '78px' }}
+                                                    fontWeight="900"
+                                                    lineHeight="0.95"
+                                                    fontFamily="Orbitron, system-ui, sans-serif"
+                                                    letterSpacing="-0.04em"
+                                                    sx={{
+                                                        background:
+                                                            'linear-gradient(130deg, #ffffff 0%, #00d4ff 35%, #ffea8a 70%, #7aebff 100%)',
+                                                        WebkitBackgroundClip: 'text',
+                                                        WebkitTextFillColor: 'transparent',
+                                                        backgroundClip: 'text',
+                                                        filter:
+                                                            'drop-shadow(0 0 20px rgba(0, 240, 255, 0.9)) drop-shadow(0 0 48px rgba(0, 200, 255, 0.55))',
+                                                    }}
+                                                >
+                                                    {Number(winOverlay.multiplier).toLocaleString()}×
+                                                </Text>
+                                                {winOverlay.winAmount != null && Number.isFinite(winOverlay.winAmount) && (
+                                                    <Text
+                                                        fontSize={{ base: 'sm', md: 'md' }}
+                                                        fontWeight="700"
+                                                        color="rgba(180, 250, 255, 0.98)"
+                                                    >
+                                                        +${Number(winOverlay.winAmount).toFixed(2)}
+                                                    </Text>
+                                                )}
+                                            </MotionBox>
+                                        </MotionBox>
+                                    )}
+                                </AnimatePresence>
                             </Box>
                             <Box
                                 w="100%"
@@ -152,6 +401,98 @@ export default function AToZPage() {
                                     onClick={() => setIsHelpModalOpen(true)}
                                 />
                                 <VStack spacing="14px" align="center" w="100%" maxW="560px" mx="auto" px="16px">
+                                    <FormControl w="100%" maxW="420px">
+                                        <FormLabel
+                                            mb="8px"
+                                            fontSize="xs"
+                                            fontWeight="bold"
+                                            color="rgba(255,255,255,0.85)"
+                                            textAlign="center"
+                                            letterSpacing="0.02em"
+                                        >
+                                            Your pick (000 – 999)
+                                        </FormLabel>
+                                        <HStack
+                                            spacing={{ base: '8px', sm: '12px' }}
+                                            justify="center"
+                                            align="flex-end"
+                                            flexWrap="wrap"
+                                            w="100%"
+                                        >
+                                            {['100s', '10s', '1s'].map((place, index) => (
+                                                <VStack key={place} spacing="4px" align="center">
+                                                    <Text fontSize="10px" color="rgba(255,255,255,0.45)" fontWeight="600">
+                                                        {/* {place} */}
+                                                    </Text>
+                                                    <HStack
+                                                        spacing="4px"
+                                                        bg="#323738"
+                                                        borderRadius="10px"
+                                                        px="6px"
+                                                        py="4px"
+                                                        border="1px solid rgba(0, 212, 255, 0.35)"
+                                                    >
+                                                        <IconButton
+                                                            aria-label={`Decrease ${place} digit`}
+                                                            icon={<RemoveIcon style={{ fontSize: 18 }} />}
+                                                            size="sm"
+                                                            h="20px"
+                                                            w="20px"
+                                                            minW="20px"
+                                                            bg="rgba(0, 212, 255, 0.15)"
+                                                            color="#00D4FF"
+                                                            borderRadius="8px"
+                                                            _hover={{ bg: 'rgba(0, 212, 255, 0.28)' }}
+                                                            isDisabled={isSpinning || pickDigits[index] <= 0}
+                                                            onClick={() => adjustPickDigit(index, -1)}
+                                                        />
+                                                        <Input
+                                                            inputMode="numeric"
+                                                            pattern="[0-9]*"
+                                                            autoComplete="off"
+                                                            value={String(pickDigits[index])}
+                                                            onChange={(e) => handlePickDigitChange(index, e)}
+                                                            maxLength={1}
+                                                            textAlign="center"
+                                                            fontSize="1xl"
+                                                            fontWeight="bold"
+                                                            fontFamily="Orbitron, system-ui, monospace"
+                                                            color="#fff"
+                                                            bg="transparent"
+                                                            border="none"
+                                                            w="20px"
+                                                            h="20px"
+                                                            p="0"
+                                                            isDisabled={isSpinning}
+                                                            aria-label={`${place} digit 0-9`}
+                                                            _focus={{
+                                                                boxShadow: 'none',
+                                                                border: 'none',
+                                                            }}
+                                                        />
+                                                        <IconButton
+                                                            aria-label={`Increase ${place} digit`}
+                                                            icon={<AddIcon style={{ fontSize: 18 }} />}
+                                                            size="sm"
+                                                            h="20px"
+                                                            w="20px"
+                                                            minW="20px"
+                                                            bg="rgba(0, 212, 255, 0.15)"
+                                                            color="#00D4FF"
+                                                            borderRadius="8px"
+                                                            _hover={{ bg: 'rgba(0, 212, 255, 0.28)' }}
+                                                            isDisabled={isSpinning || pickDigits[index] >= 9}
+                                                            onClick={() => adjustPickDigit(index, 1)}
+                                                        />
+                                                    </HStack>
+                                                </VStack>
+                                            ))}
+                                        </HStack>
+                                        <Text fontSize="xs" color="rgba(255,255,255,0.5)" textAlign="center" mt="8px">
+                                            Use − / + or type a digit (0–9) in each box.
+                                        </Text>
+                                    </FormControl>
+
                                     {/* Bet amount — same pattern as Rocket Shot */}
                                     <Flex align="center" justify="center" gap="6px" flexWrap="wrap" w="100%">
                                         <Button
@@ -304,16 +645,10 @@ export default function AToZPage() {
                     <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
                     <ModalBody py={4}>
                         <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
-                            AToZ Game is a word guessing game where you have to guess the word that is hidden in the spinning wheel.
+                            AToZ is a number slot: each reel shows digits 0–9. Choose your pick from 000 to 999, place your bet, then tap BET to spin.
                         </Text>
                         <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
-                            You can bet on any word in the alphabet.
-                        </Text>
-                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
-                            The word is hidden in the spinning wheel and you have to guess the word that is hidden in the spinning wheel.
-                        </Text>
-                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
-                            The word is hidden in the spinning wheel and you have to guess the word that is hidden in the spinning wheel.
+                            The reels reveal a random 3-digit result. Payout rules depend on your pick and the outcome — see the game rules on the server.
                         </Text>
                     </ModalBody>
                 </ModalContent>
