@@ -55,10 +55,13 @@ export default function AToZGame() {
         }
 
         window.spinAToZ = () => {
+            if (!game?.scene) return false;
+            const sm = game.scene;
+            // Phaser 3 ScenePlugin: prefer `get(key)`; some builds expose `getScene`.
             const scene =
-                typeof game.scene.getScene === "function"
-                    ? game.scene.getScene("AToZScene")
-                    : game.scene.keys?.["AToZScene"];
+                (typeof sm.get === "function" && sm.get("AToZScene")) ||
+                (typeof sm.getScene === "function" && sm.getScene("AToZScene")) ||
+                null;
             if (!scene || typeof scene.spin !== "function") return false;
             return scene.spin() === true;
         };

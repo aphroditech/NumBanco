@@ -34,7 +34,7 @@ import PlinkoPage from "views/Plinko/Plinko";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import DiamondIcon from '@mui/icons-material/Diamond';
-import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
+import NumbersIcon from '@mui/icons-material/Numbers';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import SupportPage from "views/Support/Support";
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -136,8 +136,8 @@ var dashRoutes = [
   {
     redirect: true,
     path: "/a-to-z",
-    name: "A TO Z",
-    icon: <SortByAlphaIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    name: "0 TO 9",
+    icon: <NumbersIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
     layout: "/game",
   },

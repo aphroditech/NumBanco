@@ -29,7 +29,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import DiamondIcon from '@mui/icons-material/Diamond';
-import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
+import NumbersIcon from '@mui/icons-material/Numbers';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import ForestIcon from '@mui/icons-material/Forest';
 
@@ -160,8 +160,8 @@ export const CocoGame = {
 
 export const AToZGame = {
     path: "/a-to-z",
-    name: "A TO Z",
-    icon: <SortByAlphaIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    name: "0 TO 9",
+    icon: <NumbersIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
     layout: "/game",
 }

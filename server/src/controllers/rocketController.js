@@ -167,10 +167,14 @@ export const shotResult = async (req, res) => {
 
             channel.publish("ROCKET_RESULT", data);
         }
-
-        if (isWin) {
-            return  res.json({ balance: user.balance} );
+        const userRocketHistory = await RocketHistory.findOne({ user: user._id });
+        
+        if(isWin) {
+            return  res.json({ balance: user.balance, rocketHistory: userRocketHistory.history } );
+        } else {
+            return res.json({  rocketHistory: userRocketHistory.history } );
         }
+        
     } catch (error) {
         console.error(error);
     }
@@ -181,6 +185,16 @@ export const getRocketResults = async (req, res) => {
     try {
         const rocketResults = await RocketResult.find({}).sort({ date: -1 }).limit(23);
         return res.json(rocketResults);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const getRocketHistory = async (req, res) => {
+    try {
+        const rocketHistory = await RocketHistory.findOne({ user: req.user._id });
+        return res.json({ rocketHistory: rocketHistory?.history || [] });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: "Internal server error" });
