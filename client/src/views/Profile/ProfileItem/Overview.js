@@ -407,7 +407,7 @@ function Overview() {
               </HStack>
               <VStack align="start" spacing={3} w="100%">
                 <Flex justify="space-between" w="100%">
-                  <Text fontSize="sm" color="gray.400">Can Withdraw</Text>
+                  <Text fontSize="sm" color="gray.400">Withdraw</Text>
                   <Badge
                     colorScheme={user?.canWithdraw ? "green" : "red"}
                     variant="solid"

@@ -118,7 +118,7 @@ const contactItems = [
       </IconBoxCircle>
     ),
     title: "Telegram",
-    text: "@numexawin",
+    text: "@numexa_support",
   },
   {
     icon: (

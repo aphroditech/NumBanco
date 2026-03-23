@@ -122,7 +122,7 @@ export default class GameScene extends Phaser.Scene {
         // Difficulty rotation speed:
         // RotatingSpeed(normal) = RotatingSpeed(easy) * 1.8
         // RotatingSpeed(hard) = RotatingSpeed(easy) * 2.3
-        this.easyRotationSpeed = 0.02;
+        this.easyRotationSpeed = 0.015;
         this.rotationSpeedMultiplier = 1;
         this.rotationSpeed = this.easyRotationSpeed;
 

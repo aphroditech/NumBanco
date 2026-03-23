@@ -17,9 +17,10 @@ export const bet = async (req, res) => {
             return res.status(400).json({ message: "You don't have enough balance" });
         }
 
-        const pickStr = String(number);
+        const pickStr = String(Math.min(999, Math.max(0, Math.floor(Number(number))))).padStart(3, "0");
 
-        const outcomeKey = getOutcomeKey(aToZSetting);
+
+        const outcomeKey = getOutcomeKey(pickStr, aToZSetting);
         const { result, multiplier } = generateResult(pickStr, outcomeKey, aToZSetting);
 
         const winAmount = betAmount * multiplier;
@@ -50,8 +51,12 @@ export const bet = async (req, res) => {
 
 
 // get outcome key based on probability
-function getOutcomeKey(aToZSetting) {
+function getOutcomeKey(pickStr, aToZSetting) {
     if(!aToZSetting) return "NONE";
+
+    if(pickStr[0] === pickStr[1] && pickStr[1] === pickStr[2]) {
+        return "NONE";
+    }
 
     const probabilityTable = [
         { key: "THREE_ORDERED", probability: aToZSetting.THREE_ORDERED.probability },
@@ -301,7 +306,8 @@ export const spinComplete = async (req, res) => {
             const channel = ably.channels.get(channelName);
             await channel.publish("A_TO_Z_RESULT", aToZResult);
         }
-        return res.status(200).json({ message: "AToZ spin complete", balance: user.balance });
+        const Histories = await AToZHistory.findOne({ user: req.user._id });
+        return res.status(200).json({ message: "AToZ spin complete", balance: user.balance, history: Histories?.history || [] });
 
     } catch (error) {
         console.error(error);
@@ -313,6 +319,16 @@ export const getAToZResults = async (req, res) => {
     try {
         const aToZResults = await AToZResult.find().sort({ date: -1 }).limit(25);
         return res.status(200).json({ aToZResults: aToZResults || [] });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server Error" });
+    }
+}
+
+export const getAToZHistory = async (req, res) => {
+    try {
+        const aToZHistory = await AToZHistory.findOne({ user: req.user._id });
+        return res.status(200).json({ aToZHistory: aToZHistory?.history || [] });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: "Server Error" });

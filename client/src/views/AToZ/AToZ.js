@@ -12,6 +12,12 @@ import {
     ModalCloseButton,
     VStack,
     HStack,
+    Table,
+    Thead,
+    Tbody,
+    Tr,
+    Th,
+    Td,
     Flex,
     Button,
     Input,
@@ -948,19 +954,71 @@ export default function AToZPage() {
                 <RealTimeHistory />
             </Grid>
             <UserBetHistory />
-            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size='3xl' minW="1000px" isCentered>
                 <ModalOverlay bg="blackAlpha.700" />
                 <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
-                    <ModalHeader color="white" >
-                        *How to Play AToZ Game
+                    <ModalHeader color="#00D4FF" >
+                         How to Play Digits Game
                     </ModalHeader>
                     <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
                     <ModalBody py={4}>
-                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
-                            AToZ is a number slot: each reel shows digits 0–9. Choose your pick from 000 to 999, place your bet, then tap BET to spin.
+                        <Text color="gray.200" lineHeight="1.65" mb={3} fontSize="sm">
+                            Digits is a 3-reel number slot (000-999). Pick your 3-digit number, set your bet, and press BET.
+                            After the reels stop, your payout depends on how many digits match and whether positions match.
                         </Text>
-                        <Text color="gray.200" lineHeight="1.6" mb={1} fontSize="sm">
-                            The reels reveal a random 3-digit result. Payout rules depend on your pick and the outcome — see the game rules on the server.
+
+                        <Box
+                            border="1px solid rgba(0, 212, 255, 0.28)"
+                            borderRadius="12px"
+                            bg="rgba(6, 12, 18, 0.72)"
+                            overflowX="auto"
+                            mb={3}
+                        >
+                            <Table size="sm" variant="simple" minW="620px">
+                                <Thead>
+                                    <Tr>
+                                        <Th color="#7fefff" borderColor="rgba(255,255,255,0.1)">Match Type</Th>
+                                        <Th color="#7fefff" borderColor="rgba(255,255,255,0.1)">Description</Th>
+                                        <Th color="#7fefff" borderColor="rgba(255,255,255,0.1)" isNumeric>Multiplier</Th>
+                                    </Tr>
+                                </Thead>
+                                <Tbody>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Exact Match</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">All 3 digits match and all positions match</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x800</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Three Unordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">All 3 digits match but positions differ</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x150</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Two Ordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 2 digits match and those positions match</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x15</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Two Unordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 2 digits match but positions differ</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x7.5</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">One Ordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 1 digit matches and its position matches</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x2.4</Td>
+                                    </Tr>
+                                    <Tr>
+                                        <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">One Unordered</Td>
+                                        <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 1 digit matches but in a different position</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x1.2</Td>
+                                    </Tr>
+                                </Tbody>
+                            </Table>
+                        </Box>
+
+                        <Text color="gray.300" lineHeight="1.6" fontSize="xs">
+                            Tip: outcomes are evaluated from highest match tier to lowest, so each spin is counted once under the best matching rule.
                         </Text>
                     </ModalBody>
                 </ModalContent>
