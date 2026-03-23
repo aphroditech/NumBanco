@@ -25,6 +25,7 @@ export async function getMyCloudSpreadHistory() {
   return res.data;
 }
 
+/** Recent cash-out + bot rows for the live feed (initial load; real-time via Ably). */
 export async function getLiveCloudSpreadHistory() {
   const res = await axiosInstance.get("/cloud-spread/history/live");
   return res.data;
