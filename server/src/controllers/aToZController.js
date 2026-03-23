@@ -27,6 +27,8 @@ export const bet = async (req, res) => {
 
         user.balance -= betAmount;
         user.aToZAmount += betAmount;
+        user.refreshBet += betAmount;
+        user.lotterybet += betAmount;
         user.totalBet = (user.totalBet || 0) + betAmount;
         user.totalhistory.push({
             amount: -betAmount,
