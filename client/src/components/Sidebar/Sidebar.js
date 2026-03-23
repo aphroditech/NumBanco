@@ -256,7 +256,8 @@ export function SidebarResponsive(props) {
   // SidebarResponsive (drawer) top logo — same logo_Landing.png as desktop sidebar
   const brand = (
     <Box pt="40px" mb="24px" w="100%">
-      <NavLink
+      <Link
+        as={NavLink}
         to='/user/dashboard'
         display="flex"
         w="100%"
@@ -265,7 +266,7 @@ export function SidebarResponsive(props) {
         _hover={{ textDecoration: "none" }}
       >
         <Image src={Landing_logo} alt="NumBanco Logo" maxH="40px" objectFit="contain" mx="auto" mb="20px" />
-      </NavLink>
+      </Link>
 
       <Separator mb="20px" />
     </Box>

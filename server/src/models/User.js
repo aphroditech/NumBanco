@@ -330,6 +330,18 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 1 // normal mode by default
   },
+  minesMode: {
+    type: Number,
+    default: 1 // normal mode by default
+  },
+  minesAmount: {
+    type: Number,
+    default: 0
+  },
+  minesWinAmount: {
+    type: Number,
+    default: 0
+  },
   cocoMode: {
     type: Number,
     default: 0, // 0=easy, 1=normal, 2=hard

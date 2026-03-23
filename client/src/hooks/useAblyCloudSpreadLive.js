@@ -35,6 +35,7 @@ function normalizeRow(data) {
  */
 export function useAblyCloudSpreadLive() {
   const [liveRows, setLiveRows] = useState([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +52,8 @@ export function useAblyCloudSpreadLive() {
         }
       } catch {
         /* ignore — still show Ably-only updates */
+      } finally {
+        if (!cancelled) setIsInitialLoading(false);
       }
 
       if (cancelled || !ablyClient) {
@@ -85,5 +88,5 @@ export function useAblyCloudSpreadLive() {
     };
   }, []);
 
-  return { liveRows, setLiveRows };
+  return { liveRows, setLiveRows, isInitialLoading };
 }
