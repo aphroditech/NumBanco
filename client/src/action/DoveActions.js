@@ -68,6 +68,7 @@ export const getDoveEarnings = async (data, dispatch) => {
             type: 'SET_BALANCE',
             payload: res.data.balance
         });
+        return winAmount;
     } catch (error) {
         console.error(error);
         dispatch({

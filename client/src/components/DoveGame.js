@@ -4,6 +4,8 @@ import Phaser from "phaser";
 import DoveControlPanel from "./DoveGame/DoveControlPanel";
 import { getDovePrefix, getDifficultyKey, checkDoveWin, getDoveEarnings, reportDoveFail } from "action/DoveActions";
 import WinFireworksEffect from "components/Effects/WinFireworksEffect";
+import { toast } from "react-toastify";
+import { getUserData } from "action";
 
 const GAME_WIDTH = 1280
 const GAME_HEIGHT = 720
@@ -638,7 +640,7 @@ function DoveGame() {
 
             game.triggerMove = () => moveDove()
 
-            game.handleCashOut = () => {
+            game.handleCashOut = async () => {
                 if (step < 1) return
                 gameOver = true
                 canMove = false
@@ -649,36 +651,50 @@ function DoveGame() {
                 }
                 dove.setFlipX(true)
                 dove.play("doveHappy")
-                const bet = betAmountRef.current
+                const bet = Number(betAmountRef.current || 0)
                 const { a, b } = multiplierParamsRef.current
                 const multiplier = getMultiplier(step, a, b)
-                game.getDoveEarningsFn?.({ bet, multiplier, level: step, difficulty: difficultyRef.current })
                 const cashOutAmount = bet * multiplier
+                const earned = await game.getDoveEarningsFn?.({
+                    bet,
+                    multiplier,
+                    level: step,
+                    difficulty: difficultyRef.current
+                })
 
-                // Cash out should use the same "win" visuals.
-                if (scene?.bubbles && scene?.bubbleTexts && scene.winBubbleLanes) {
-                    const idx = Math.max(0, Math.min(scene.bubbles.length - 1, step - 1))
-                    game.updateStepBar?.(step, null)
-                    scene.bubbles[idx].setTexture("winbubble")
-                    scene.winBubbleLanes.add(step)
-                    const bt = scene.bubbleTexts[idx]
-                    bt?.setStyle({
-                        fontFamily: "Orbitron, Arial Black, sans-serif",
-                        fontSize: "20px",
-                        fontStyle: "bold",
-                        color: "#ffffff",
-                        stroke: "#ffd700",
-                        strokeThickness: 3
-                    })
+                if (earned == null) {
+                    toast.error("Cash out failed.");
+                } else {
+                    // Cash out should use the same "win" visuals.
+                    if (scene?.bubbles && scene?.bubbleTexts && scene.winBubbleLanes) {
+                        const idx = Math.max(0, Math.min(scene.bubbles.length - 1, step - 1))
+                        game.updateStepBar?.(step, null)
+                        scene.bubbles[idx].setTexture("winbubble")
+                        scene.winBubbleLanes.add(step)
+                        const bt = scene.bubbleTexts[idx]
+                        bt?.setStyle({
+                            fontFamily: "Orbitron, Arial Black, sans-serif",
+                            fontSize: "20px",
+                            fontStyle: "bold",
+                            color: "#ffffff",
+                            stroke: "#ffd700",
+                            strokeThickness: 3
+                        })
+                    }
+
+                    // Fireworks effect (same component used in other games).
+                    setWinFireworks({ visible: true, amount: Number(cashOutAmount.toFixed(2)) })
+                    if (winFireworksTimeoutRef.current) clearTimeout(winFireworksTimeoutRef.current)
+                    winFireworksTimeoutRef.current = setTimeout(() => {
+                        setWinFireworks({ visible: false, amount: 0 })
+                        winFireworksTimeoutRef.current = null
+                    }, 2200)
+
+                    toast.success(`Cashed out! You won $${cashOutAmount.toFixed(2)}.`);
+                    // Refresh notifications so the cash-out amount shows immediately
+                    // in the Notifications panel (like other games).
+                    getUserData(dispatchRef.current)
                 }
-
-                // Fireworks effect (same component used in other games).
-                setWinFireworks({ visible: true, amount: Number(cashOutAmount.toFixed(2)) })
-                if (winFireworksTimeoutRef.current) clearTimeout(winFireworksTimeoutRef.current)
-                winFireworksTimeoutRef.current = setTimeout(() => {
-                    setWinFireworks({ visible: false, amount: 0 })
-                    winFireworksTimeoutRef.current = null
-                }, 2200)
 
                 scene.time.delayedCall(1500, () => resetGame())
             }
@@ -1008,6 +1024,8 @@ function DoveGame() {
                 })
             }
             dove.setVisible(false)
+            const bet = Number(betAmountRef.current || 0)
+            toast.error(`Crashed! You lost $${bet.toFixed(2)}.`)
             if (winFireworksTimeoutRef.current) clearTimeout(winFireworksTimeoutRef.current)
             setWinFireworks({ visible: false, amount: 0 })
             const { a, b } = multiplierParamsRef.current
@@ -1132,6 +1150,8 @@ function DoveGame() {
             })
 
         if (!(await waitForReady())) return
+
+        toast.info(`Dove started. Bet $${betAmount.toFixed(2)}.`)
 
         const { a, b } = multiplierParamsRef.current
         const multiplier = getMultiplier(1, a, b)
