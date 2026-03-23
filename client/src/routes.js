@@ -128,7 +128,7 @@ var dashRoutes = [
   {
     redirect: true,
     path: "/dove",
-    name: "DOVE CROSS",
+    name: "LUCKY HOP",
     icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
     layout: "/game",
