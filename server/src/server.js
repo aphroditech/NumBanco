@@ -19,12 +19,13 @@ import { initializeDatabase } from "./database/index.js";
 import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
-import { startCloudSpreadGameLoop } from "./services/cloudSpread/cloudSpreadGame.service.js";
+import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSpread/cloudSpreadGame.service.js";
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
 import {rocketBot} from "./services/rocket/rocketBot.service.js";
+import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
@@ -35,15 +36,18 @@ const ably = createAblyClient();
 
 app.locals.ably = ably;
 
-connectDB().then(async () => {
-    await initializeDatabase();
+connectDB()
+  .then(async () => {
+    try {
+        await initializeDatabase();
+    } catch (err) {
+        console.error("❌ Database initialization failed:", err);
+        process.exit(1);
+    }
 
-    // Cloud Spread is DB-only (no Ably); must start here so /api/cloud-spread/state has a round.
+    // Cloud Spread game loop (per-user rounds). Live feed uses Ably after `setCloudSpreadAbly` on connect.
     startCloudSpreadGameLoop().catch((err) => {
         console.error("[cloud-spread] failed to start game loop:", err);
-    });
-    cloudSpreadBot().catch((err) => {
-        console.error("[cloud-spread] bot failed to start:", err);
     });
 
     // Check and create yesterday's wallet if it doesn't exist
@@ -59,14 +63,19 @@ connectDB().then(async () => {
     //     cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
     // };
 
-    http.createServer(app).listen(PORT, () => {
-        console.log(`🚀 HTTP Server running on port ${PORT}`);
+    /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
+    http.createServer(app).listen(PORT, "0.0.0.0", () => {
+        console.log(`🚀 HTTP Server listening on http://0.0.0.0:${PORT} (API + http://localhost:${PORT})`);
     });
     // https.createServer(sslOptions, app).listen(PORT, () => {
     //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
 
     // });
-    await initMoralis();
+    try {
+        await initMoralis();
+    } catch (err) {
+        console.warn("⚠️ Moralis failed to start (optional for many routes):", err?.message || err);
+    }
 
     ably.connection.once("connected", () => {
         console.log("✅ Ably connected");
@@ -81,15 +90,19 @@ connectDB().then(async () => {
         // pumpingBot(ably);
         // miningBot(ably);
         // rocketBot(ably);
+        // aToZBot(ably);
         // fishingBot(ably);
         // startGravityGameLoop(ably);
+        setCloudSpreadAbly(ably);
+        cloudSpreadBot().catch((err) => {
+            console.error("[cloud-spread] bot failed to start:", err);
+        });
         // cocoBot(ably);
         // alphaTreeBot(ably);
         // doveBot(ably);
         // fundMergeEngine();
         // tankCheckEngine();
         // getWithdrawWallet();
-
 
         // startBetEngine(ably, 0);
         // startBetEngine(ably, 1);
@@ -101,4 +114,9 @@ connectDB().then(async () => {
             console.warn('Failed to start cron jobs:', err);
         }
     });
-});
+  })
+  .catch((err) => {
+    console.error("❌ Failed to start server (MongoDB or startup error):", err?.message || err);
+    console.error("Check MONGO_URI in .env and that MongoDB is running.");
+    process.exit(1);
+  });

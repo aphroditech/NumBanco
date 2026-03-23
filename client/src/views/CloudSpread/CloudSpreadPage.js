@@ -4,13 +4,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Card from "components/Card/Card";
 import CardBody from "components/Card/CardBody";
-import {
-  cashOutCloudSpread,
-  getCloudSpreadState,
-  getLiveCloudSpreadHistory,
-  placeCloudSpreadBet,
-} from "action/CloudSpreadActions";
+import { cashOutCloudSpread, getCloudSpreadState, placeCloudSpreadBet } from "action/CloudSpreadActions";
 import { getUserData } from "action";
+import { useAblyCloudSpreadLive } from "hooks/useAblyCloudSpreadLive";
 import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 import truncateToTwo from "variables/truncateToTwo";
 import CloudSpreadCanvas from "./CloudSpreadItem/CloudSpreadCanvas";
@@ -51,25 +47,10 @@ export default function CloudSpreadPage() {
   /** True while placing bet + ball flying — disables Play to prevent double bets. */
   const [playBusy, setPlayBusy] = useState(false);
   const playBusyTimerRef = useRef(null);
-  const [liveFeedRows, setLiveFeedRows] = useState([]);
+  const { liveRows: liveFeedRows } = useAblyCloudSpreadLive();
   const [showCashOutFireworks, setShowCashOutFireworks] = useState(false);
   const [cashOutFireworksAmount, setCashOutFireworksAmount] = useState("0.00");
   const cashOutFireworksTimeoutRef = useRef(null);
-
-  const refreshLiveFeed = async () => {
-    try {
-      const rows = await getLiveCloudSpreadHistory();
-      setLiveFeedRows(Array.isArray(rows) ? rows : []);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  useEffect(() => {
-    refreshLiveFeed();
-    const id = setInterval(refreshLiveFeed, 5000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -186,7 +167,6 @@ export default function CloudSpreadPage() {
       try {
         const snap = await getCloudSpreadState();
         if (snap) setState(snap);
-        refreshLiveFeed();
       } catch {
         /* ignore */
       }
@@ -232,7 +212,6 @@ export default function CloudSpreadPage() {
           cashOutFireworksTimeoutRef.current = null;
         }, 2200);
       }
-      refreshLiveFeed();
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to cash out");
     }

@@ -10,6 +10,7 @@ import { initDoveSetting } from './initDoveSetting.js';
 import { initMiningSetting } from './initMiningSetting.js';
 import { initRocketSetting } from './initRocket.js';
 import { initAToZSetting } from './initAtoZSettings.js';
+import { initCloudSpreadSetting } from './initCloudSpreadSetting.js';
 import { initializeFishingPercentages } from './FishingPercentages.js';
 import { initializeFishingLimits } from './fishingLimits.js';
 
@@ -29,6 +30,7 @@ export const initializeDatabase = async () => {
     await initMiningSetting();
     await initRocketSetting();
     await initAToZSetting();
+    await initCloudSpreadSetting();
     await initializeFishingPercentages();
     await initializeFishingLimits();
 

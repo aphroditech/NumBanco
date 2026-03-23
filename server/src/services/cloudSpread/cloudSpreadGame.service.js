@@ -13,6 +13,48 @@ const RESULT_MS = 3000;
 const sessions = new Map();
 let timer = null;
 
+/** Ably live feed (right column) — set from `server.js` when Ably connects. */
+const CLOUD_SPREAD_LIVE_CHANNEL = "cloudSpreadLive";
+const CLOUD_SPREAD_LIVE_EVENT = "CLOUD_SPREAD_HISTORY";
+let cloudSpreadAbly = null;
+
+export function setCloudSpreadAbly(ably) {
+  cloudSpreadAbly = ably;
+}
+
+function serializeCloudSpreadHistoryDoc(doc) {
+  const o = doc?.toObject ? doc.toObject({ virtuals: true }) : doc;
+  if (!o) return null;
+  const createdAt = o.createdAt;
+  return {
+    _id: o._id != null ? String(o._id) : undefined,
+    userId: o.userId,
+    userName: o.userName,
+    avatar: o.avatar || "",
+    targetStep: o.targetStep,
+    targetMultiplier: o.targetMultiplier,
+    betAmount: o.betAmount,
+    sessionStake: o.sessionStake,
+    winAmount: o.winAmount,
+    isBot: !!o.isBot,
+    isCashOutSummary: !!o.isCashOutSummary,
+    createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
+  };
+}
+
+/** Push one row to all clients (cash-out summaries + bot plays). */
+export async function publishCloudSpreadLiveRow(doc) {
+  if (!cloudSpreadAbly || !doc) return;
+  try {
+    const payload = serializeCloudSpreadHistoryDoc(doc);
+    if (!payload) return;
+    const channel = cloudSpreadAbly.channels.get(CLOUD_SPREAD_LIVE_CHANNEL);
+    await channel.publish(CLOUD_SPREAD_LIVE_EVENT, payload);
+  } catch (err) {
+    console.warn("[cloudSpread] Ably publish live row failed:", err?.message || err);
+  }
+}
+
 function round2(v) {
   return Math.round(v * 100) / 100;
 }
@@ -317,7 +359,7 @@ async function settleRound(userId) {
     }
 
     /** Persist round to CloudSpreadHistory on cash-out / settle (single summary row per round). */
-    await CloudSpreadHistory.create({
+    const historyDoc = await CloudSpreadHistory.create({
       roundId: s.currentRound.roundId,
       userId: user.userId,
       userName: user.altas,
@@ -330,6 +372,7 @@ async function settleRound(userId) {
       isBot: false,
       isCashOutSummary: true,
     });
+    await publishCloudSpreadLiveRow(historyDoc);
 
     await user.save();
   }
