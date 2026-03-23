@@ -59,11 +59,13 @@ import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 const MIN_AMOUNT = 0.1;
 const MAX_AMOUNT = 20;
 
-/** High-band upper bound for step s (2–10): 0.6 × 2^(s−1); matches server */
-function alphaTreeMaxForRandomStep(step) {
+/** High-band upper bound for step s (2–10): base × 2^(s−1); must use server `baseMultiplier` */
+function alphaTreeMaxForRandomStep(step, baseMult) {
     const s = Number(step);
+    const b = Number(baseMult);
+    const base = Number.isFinite(b) && b > 0 ? b : 0.6;
     if (!Number.isFinite(s) || s < 2 || s > 10) return null;
-    return Math.round(0.6 * Math.pow(2, s - 1) * 100) / 100;
+    return Math.round(base * Math.pow(2, s - 1) * 100) / 100;
 }
 
 export default function AlphaTreePage() {
@@ -83,6 +85,8 @@ export default function AlphaTreePage() {
     const [lastBandLabel, setLastBandLabel] = useState(null);
     /** Completed picks for diagram path: lines + per-letter results */
     const [pathSteps, setPathSteps] = useState([]);
+    /** Server `alphatreesettings.baseMultiplier` for UI when idle or to label caps */
+    const [displayBaseMultiplier, setDisplayBaseMultiplier] = useState(0.6);
     /** Full-screen win FX after cash out (matches Mines / Lottery). */
     const [cashOutWinFx, setCashOutWinFx] = useState({
         visible: false,
@@ -140,7 +144,12 @@ export default function AlphaTreePage() {
         (async () => {
             try {
                 const d = await getAlphaTreeState(history);
-                if (!cancelled && d?.alphaTree) setTreeState(d.alphaTree);
+                if (cancelled) return;
+                if (d?.alphaTree) setTreeState(d.alphaTree);
+                const bm = d?.baseMultiplier;
+                if (bm != null && Number.isFinite(Number(bm))) {
+                    setDisplayBaseMultiplier(Number(bm));
+                }
             } catch (_) {
                 /* ignore */
             }
@@ -149,6 +158,10 @@ export default function AlphaTreePage() {
             cancelled = true;
         };
     }, [history]);
+
+    const safeBaseMultiplier = Number(treeState?.baseMultiplier ?? displayBaseMultiplier);
+    const effectiveBase =
+        Number.isFinite(safeBaseMultiplier) && safeBaseMultiplier > 0 ? safeBaseMultiplier : 0.6;
 
     const amountLocked = Boolean(treeState);
 
@@ -165,6 +178,10 @@ export default function AlphaTreePage() {
         try {
             const data = await alphaTreeStart({ betAmount: bet }, dispatch, history);
             setTreeState(data.alphaTree ?? null);
+            const bm = data?.alphaTree?.baseMultiplier;
+            if (bm != null && Number.isFinite(Number(bm))) {
+                setDisplayBaseMultiplier(Number(bm));
+            }
         } catch (err) {
             const msg =
                 err.response?.data?.message ||
@@ -181,20 +198,28 @@ export default function AlphaTreePage() {
         try {
             const data = await alphaTreePick({ letter }, dispatch, history);
             const ld = data.lastDraw;
-            if (ld?.kind === "fixed_a") {
-                setLastStepResult("0.60");
+            const baseForUi = Number(data?.alphaTree?.baseMultiplier ?? displayBaseMultiplier);
+            const baseMult =
+                Number.isFinite(baseForUi) && baseForUi > 0 ? baseForUi : effectiveBase;
+            if (data?.alphaTree?.baseMultiplier != null && Number.isFinite(Number(data.alphaTree.baseMultiplier))) {
+                setDisplayBaseMultiplier(Number(data.alphaTree.baseMultiplier));
+            }
+            if (ld?.kind === "fixed_a" && typeof ld.value === "number") {
+                setLastStepResult(Number(ld.value).toFixed(2));
                 setLastBandLabel(null);
             } else if (ld?.kind === "fixed_z" && typeof ld.value === "number") {
                 setLastStepResult(ld.value.toFixed(2));
-                setLastBandLabel("Fixed: 0.6 × 2^9");
+                setLastBandLabel(
+                    `Fixed step 10 — ${ld.value.toFixed(2)} (base × 2^9 with mode tweak)`
+                );
             } else if (ld && typeof ld.value === "number") {
                 setLastStepResult(ld.value.toFixed(2));
                 if (ld.band === "zero") {
                     setLastBandLabel("0 (bust)");
                 } else if (ld.band === "mid") {
-                    setLastBandLabel("Between 0 and 1");
+                    setLastBandLabel("Between 0.1 and 1");
                 } else if (ld.band === "high") {
-                    const cap = alphaTreeMaxForRandomStep(ld.step);
+                    const cap = alphaTreeMaxForRandomStep(ld.step, baseMult);
                     setLastBandLabel(
                         cap != null ? `Between 1 and ${cap.toFixed(2)}` : "Between 1 and max"
                     );
@@ -210,13 +235,14 @@ export default function AlphaTreePage() {
                 toast.error("Round ended — result was 0");
                 return;
             }
-            if (ld?.kind === "fixed_a") {
+            if (ld?.kind === "fixed_a" && typeof ld.value === "number") {
+                const v = ld.value;
                 setPathSteps([
                     {
                         step: 1,
                         letter: "A",
-                        value: 0.6,
-                        letterResults: ld.letterResults || { A: 0.6 },
+                        value: v,
+                        letterResults: ld.letterResults || { A: v },
                     },
                 ]);
             } else if (ld?.kind === "fixed_z" && typeof ld.value === "number") {
@@ -637,13 +663,14 @@ export default function AlphaTreePage() {
                                 <Text color="rgba(255,255,255,0.75)" textAlign="center" py="40px">
                                     Press <Text as="span" color="#00D4FF" fontWeight="bold">Play Game</Text> to
                                     start. Step 1: choose <Text as="span" fontWeight="bold">A</Text> (result{" "}
-                                    <Text as="span" color="#FFD700">0.6</Text>). Steps 2–9: three letters — each step
+                                    <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)}</Text>). Steps 2–9: three letters — each step
                                     randomly assigns <Text as="span" color="#FFD700">0</Text> (bust), a value in{" "}
-                                    <Text as="span" color="#FFD700">(0, 1)</Text>, and a value in{" "}
-                                    <Text as="span" color="#FFD700">(1, max)</Text> to the letters (max = 0.6 ×
+                                    <Text as="span" color="#FFD700">(0.1, 1)</Text>, and a value in{" "}
+                                    <Text as="span" color="#FFD700">(1, max)</Text> to the letters (max ={" "}
+                                    <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)}</Text> ×
                                     2^(step − 1)). Step 9: W, X, Y. Step 10: only{" "}
                                     <Text as="span" fontWeight="bold">Z</Text>, fixed{" "}
-                                    <Text as="span" color="#FFD700">0.6 × 2^9</Text>.
+                                    <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)} × 2^9</Text> (plus mode settings).
                                 </Text>
                             ) : (
                                 <VStack spacing="20px" w="100%" align="stretch">
@@ -748,7 +775,7 @@ export default function AlphaTreePage() {
                                                     </Text>
                                                     ,{" "}
                                                     <Text as="span" fontWeight="semibold">
-                                                        (0, 1)
+                                                        (0.1, 1)
                                                     </Text>
                                                     , or{" "}
                                                     <Text as="span" fontWeight="semibold">
@@ -773,8 +800,8 @@ export default function AlphaTreePage() {
                                                     Z → fixed{" "}
                                                     {treeState.nextRandomMax != null
                                                         ? Number(treeState.nextRandomMax).toFixed(2)
-                                                        : alphaTreeMaxForRandomStep(10)?.toFixed(2) ?? "…"}{" "}
-                                                    (0.6 × 2^9)
+                                                        : alphaTreeMaxForRandomStep(10, effectiveBase)?.toFixed(2) ?? "…"}{" "}
+                                                    (from server; includes base × 2^9 and mode)
                                                 </Text>
                                             ) : null}
                                         </>
@@ -828,7 +855,7 @@ export default function AlphaTreePage() {
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
                                                 Enter your stake and press Play Game. Step 1 is only the letter A — it
-                                                always applies multiplier 0.6 to your running total.
+                                                always applies the configured base multiplier ({effectiveBase.toFixed(2)}) to your running total.
                                             </Text>
                                         </Box>
                                         <Box>
@@ -838,12 +865,13 @@ export default function AlphaTreePage() {
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
                                                 Steps 2–9 show three letters. Each step,{" "}
                                                 <Text as="span" fontWeight="bold">0</Text> (bust),{" "}
-                                                <Text as="span" fontWeight="bold">(0, 1)</Text>, and{" "}
-                                                <Text as="span" fontWeight="bold">(1, max)</Text> with max = 0.6 ×
+                                                <Text as="span" fontWeight="bold">(0.1, 1)</Text>, and{" "}
+                                                <Text as="span" fontWeight="bold">(1, max)</Text> with max ={" "}
+                                                {effectiveBase.toFixed(2)} ×
                                                 2^(step−1) are <Text as="span" fontWeight="bold">randomly assigned</Text>{" "}
                                                 to those three letters (order changes every step). Step 9: W, X, Y. Step
-                                                10: only <Text as="span" fontWeight="bold">Z</Text> — fixed{" "}
-                                                <Text as="span" fontWeight="bold">0.6 × 2^9</Text>.
+                                                10: only <Text as="span" fontWeight="bold">Z</Text> — fixed final multiplier from settings (≈{" "}
+                                                {effectiveBase.toFixed(2)} × 2^9 with mode factors).
                                             </Text>
                                         </Box>
                                         <Box>

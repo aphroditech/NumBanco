@@ -14,7 +14,7 @@ const ROW_BOT = ["", "D", "G", "J", "M", "P", "S", "V", "Y", ""];
 
 const EPS = 1e-9;
 
-/** Line color by step result: bust 0 → red | (0,1) → blue | (1, max) → yellow */
+/** Line color by step result: bust 0 → red | (0.1,1) → blue | (1, max) → yellow */
 export function lineColorForStepValue(v) {
     const x = Number(v);
     if (!Number.isFinite(x) || x <= EPS) return "#E74C3C";
@@ -156,7 +156,7 @@ export default function AlphaTreeLetterDiagram({ phase, step, pathSteps = [] }) 
                 </Text>{" "}
                 ·{" "}
                 <Text as="span" color="#00D4FF">
-                    (0,1)
+                    (0.1,1)
                 </Text>{" "}
                 ·{" "}
                 <Text as="span" color="#FFD700">
