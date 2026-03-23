@@ -622,7 +622,7 @@ export default function AlphaTreePage() {
                                             }}
                                             disabled={Boolean(treeState) || playLoading}
                                             onClick={handlePlayGame}
-                                            label={playLoading ? "..." : "Play Game"}
+                                            label={playLoading ? "..." : "Bet"}
                                         />
                                         <ClickButton
                                             w="100%"
