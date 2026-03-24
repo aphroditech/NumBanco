@@ -60,8 +60,17 @@ import BangBurstEffect from "components/Effects/BangBurstEffect";
 const MIN_AMOUNT = 0.1;
 const MAX_AMOUNT = 20;
 const ALPHA_TREE_MAIN_CARD_HEIGHT = "450px";
-const ALPHA_TREE_PICK_BTN_MIN_W = "48px";
+/** Fixed size for every letter pick / resolved letter button (same at every step). */
+const ALPHA_TREE_PICK_BTN_W = "48px";
 const ALPHA_TREE_PICK_BTN_H = "44px";
+const alphaTreeLetterButtonDims = {
+    w: ALPHA_TREE_PICK_BTN_W,
+    minW: ALPHA_TREE_PICK_BTN_W,
+    maxW: ALPHA_TREE_PICK_BTN_W,
+    h: ALPHA_TREE_PICK_BTN_H,
+    minH: ALPHA_TREE_PICK_BTN_H,
+    flexShrink: 0,
+};
 const ALPHA_TREE_PICK_COL_MIN_H = "114px";
 const ALPHA_TREE_ROW_GAP = "6px";
 
@@ -75,8 +84,7 @@ const ALPHA_TREE_RESOLVED_VALUE_BLOCK_MINH = "58px";
 function pickRowHeightSpacer() {
     return (
         <Box
-            minW={ALPHA_TREE_PICK_BTN_MIN_W}
-            h={ALPHA_TREE_PICK_BTN_H}
+            {...alphaTreeLetterButtonDims}
             visibility="hidden"
             pointerEvents="none"
             aria-hidden
@@ -159,11 +167,10 @@ function AlphaTreeBranchPreview({ entry }) {
         const hasVal = Number.isFinite(Number(value));
         return (
             <Box data-at-center={anchor}>
-                <VStack spacing="2px" align="center">
+                <VStack spacing="2px" align="center" w={ALPHA_TREE_PICK_BTN_W}>
                     <Button
                         type="button"
-                        minW={ALPHA_TREE_PICK_BTN_MIN_W}
-                        h={ALPHA_TREE_PICK_BTN_H}
+                        {...alphaTreeLetterButtonDims}
                         fontSize="xl"
                         fontWeight="bold"
                         color="#000"
@@ -237,16 +244,22 @@ function AlphaTreeBranchPreview({ entry }) {
             >
                 <VStack spacing={ALPHA_TREE_ROW_GAP} align="center">
                     <Box
-                        minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                        w={ALPHA_TREE_PICK_BTN_W}
+                        minW={ALPHA_TREE_PICK_BTN_W}
+                        maxW={ALPHA_TREE_PICK_BTN_W}
                         minH={ALPHA_TREE_RESOLVED_VALUE_BLOCK_MINH}
+                        flexShrink={0}
                         visibility="hidden"
                         pointerEvents="none"
                         aria-hidden
                     />
                     {resolvedCell(prevLetter, prevDisplay, prevLetter)}
                     <Box
-                        minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                        w={ALPHA_TREE_PICK_BTN_W}
+                        minW={ALPHA_TREE_PICK_BTN_W}
+                        maxW={ALPHA_TREE_PICK_BTN_W}
                         minH={ALPHA_TREE_RESOLVED_VALUE_BLOCK_MINH}
+                        flexShrink={0}
                         visibility="hidden"
                         pointerEvents="none"
                         aria-hidden
@@ -1098,11 +1111,10 @@ export default function AlphaTreePage() {
                                                 const renderResolvedButton = (ch, resultValue = null) => {
                                                     const hasValue = Number.isFinite(Number(resultValue));
                                                     return (
-                                                        <VStack spacing="2px">
+                                                        <VStack spacing="2px" align="center" w={ALPHA_TREE_PICK_BTN_W}>
                                                             <Button
                                                                 type="button"
-                                                                minW={ALPHA_TREE_PICK_BTN_MIN_W}
-                                                                h={ALPHA_TREE_PICK_BTN_H}
+                                                                {...alphaTreeLetterButtonDims}
                                                                 fontSize="xl"
                                                                 fontWeight="bold"
                                                                 color="#000"
@@ -1133,8 +1145,7 @@ export default function AlphaTreePage() {
                                                     <Button
                                                         key={`${keyPrefix}-${ch}`}
                                                         type="button"
-                                                        minW={ALPHA_TREE_PICK_BTN_MIN_W}
-                                                        h={ALPHA_TREE_PICK_BTN_H}
+                                                        {...alphaTreeLetterButtonDims}
                                                         fontSize="xl"
                                                         fontWeight="bold"
                                                         color="#000"
@@ -1154,7 +1165,8 @@ export default function AlphaTreePage() {
                                                 /** Three vertical pick buttons — used for step 10 (single Z) and fallbacks. */
                                                 const renderLetterPickColumn = (letterList, keyPrefix) => (
                                                     <VStack
-                                                        minW="86px"
+                                                        minW={ALPHA_TREE_PICK_BTN_W}
+                                                        w={ALPHA_TREE_PICK_BTN_W}
                                                         minH={ALPHA_TREE_PICK_COL_MIN_H}
                                                         justify="space-between"
                                                         align="center"
@@ -1194,8 +1206,7 @@ export default function AlphaTreePage() {
                                                 const renderStepTenGrid = (resolvedLetter, resolvedValue, pickLetter, keyPrefix) => {
                                                     const cellSpacer = (
                                                         <Box
-                                                            minW={ALPHA_TREE_PICK_BTN_MIN_W}
-                                                            h={ALPHA_TREE_PICK_BTN_H}
+                                                            {...alphaTreeLetterButtonDims}
                                                             visibility="hidden"
                                                             pointerEvents="none"
                                                             aria-hidden
@@ -1235,8 +1246,7 @@ export default function AlphaTreePage() {
                                                         <VStack justify="center" align="center" spacing="10px">
                                                             <Button
                                                                 type="button"
-                                                                minW={ALPHA_TREE_PICK_BTN_MIN_W}
-                                                                h={ALPHA_TREE_PICK_BTN_H}
+                                                                {...alphaTreeLetterButtonDims}
                                                                 fontSize="xl"
                                                                 fontWeight="bold"
                                                                 color="#000"
@@ -1307,7 +1317,13 @@ export default function AlphaTreePage() {
                                                     }
                                                     return (
                                                         <Flex wrap="nowrap" gap="18px" justify="center" align="flex-start">
-                                                            <VStack minW="86px" minH={ALPHA_TREE_PICK_COL_MIN_H} justify="center" align="center">
+                                                            <VStack
+                                                                minW={ALPHA_TREE_PICK_BTN_W}
+                                                                w={ALPHA_TREE_PICK_BTN_W}
+                                                                minH={ALPHA_TREE_PICK_COL_MIN_H}
+                                                                justify="center"
+                                                                align="center"
+                                                            >
                                                                 {prevLetter
                                                                     ? renderResolvedButton(prevLetter, lastPath?.value)
                                                                     : null}
