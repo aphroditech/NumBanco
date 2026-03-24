@@ -91,7 +91,7 @@ connectDB()
             // cloudSpreadBot().catch((err) => {
             //     console.error("[cloud-spread] bot failed to start:", err);
             // });
-            // cocoBot(ably);
+            cocoBot(ably);
             // alphaTreeBot(ably);
             // doveBot(ably);
             // fundMergeEngine();
