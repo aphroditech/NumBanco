@@ -20,7 +20,6 @@ export const handleRubicBet = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                
             }
         );
 

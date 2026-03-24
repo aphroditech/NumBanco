@@ -64,6 +64,22 @@ async function pushMinesHistory(userIdObj, entry) {
   );
 }
 
+/** Also persist Mines history directly on User document (user.minesHistory). */
+async function pushUserMinesHistory(userSelector, entry) {
+  if (!userSelector || !entry) return;
+  await User.updateOne(
+    userSelector,
+    { $push: { minesHistory: entry } }
+  );
+}
+
+/** Resolve User._id for MinesHistory when auth token provides only userId. */
+async function getUserObjectId(userSelector) {
+  if (!userSelector) return null;
+  const userDoc = await User.findOne(userSelector).select("_id").lean();
+  return userDoc?._id || null;
+}
+
 /**
  * Update user.minesMode based on minesAmount, minesWinAmount and DB thresholds.
  * Mode 1 → 2 when minesWinAmount > minesAmount * minesMode1To2Threshold (user winning a lot).
@@ -348,17 +364,25 @@ export const reveal = async (req, res) => {
       // Fire-and-forget side effects to keep reveal response fast.
       (async () => {
         try {
-          if (req.user?._id) {
-            await pushMinesHistory(req.user._id, {
-              bet: game.amount,
-              multiplier: 0,
-              winAmt: 0,
+          const userObjectId = await getUserObjectId(userSelector);
+          if (userObjectId) {
+            await pushMinesHistory(userObjectId, {
+              betAmount: game.amount,
               profit: -game.amount,
               isWin: false,
               minesCount: game.minesCount,
-              timestamp: new Date(),
+              gridSize: game.gridSize || GRID_SIZE,
+              createAt: new Date(),
             });
           }
+          await pushUserMinesHistory(userSelector, {
+            betAmount: game.amount,
+            profit: -game.amount,
+            isWin: false,
+            minesCount: game.minesCount,
+            gridSize: game.gridSize || GRID_SIZE,
+            createAt: new Date(),
+          });
 
           const userDoc = await User.findOne(userSelector).select("altas avatar").lean();
           await MinesResult.create({
@@ -435,17 +459,25 @@ export const reveal = async (req, res) => {
       // Side effects (history, Ably, notifications, mode update) run in background.
       (async () => {
         try {
-          if (req.user?._id) {
-            await pushMinesHistory(req.user._id, {
-              bet: game.amount,
-              multiplier,
-              winAmt: winAmount,
+          const userObjectId = await getUserObjectId(userSelector);
+          if (userObjectId) {
+            await pushMinesHistory(userObjectId, {
+              betAmount: game.amount,
               profit,
               isWin: true,
               minesCount: game.minesCount,
-              timestamp: new Date(),
+              gridSize: game.gridSize || GRID_SIZE,
+              createAt: new Date(),
             });
           }
+          await pushUserMinesHistory(userSelector, {
+            betAmount: game.amount,
+            profit,
+            isWin: true,
+            minesCount: game.minesCount,
+            gridSize: game.gridSize || GRID_SIZE,
+            createAt: new Date(),
+          });
 
           const userDoc = await User.findOne(userSelector).select("altas avatar").lean();
           await MinesResult.create({
@@ -555,17 +587,25 @@ export const cashOut = async (req, res) => {
       }
     );
 
-    if (req.user?._id) {
-      await pushMinesHistory(req.user._id, {
-        bet: game.amount,
-        multiplier,
-        winAmt: winAmount,
+    const userObjectId = await getUserObjectId(userSelector);
+    if (userObjectId) {
+      await pushMinesHistory(userObjectId, {
+        betAmount: game.amount,
         profit,
         isWin: true,
         minesCount: game.minesCount,
-        timestamp: new Date(),
+        gridSize: game.gridSize || GRID_SIZE,
+        createAt: new Date(),
       });
     }
+    await pushUserMinesHistory(userSelector, {
+      betAmount: game.amount,
+      profit,
+      isWin: true,
+      minesCount: game.minesCount,
+      gridSize: game.gridSize || GRID_SIZE,
+      createAt: new Date(),
+    });
 
     // Store global mines result row
     const userDoc = await User.findOne(userSelector).select("altas avatar").lean();

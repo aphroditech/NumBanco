@@ -50,8 +50,8 @@ export const minesBot = async (ably) => {
         const minesSetting = await MinesSetting.findOne({});
         if (!minesSetting) return;
 
-        // Use mines botTriggerProbability to control frequency
-        if (Math.random() <= minesSetting.botTriggerProbability) return;
+        // Trigger when random falls within configured probability.
+        if (Math.random() >= minesSetting.botTriggerProbability) return;
 
         try {
             const botUser = randomInArray(botUsers);

@@ -21,6 +21,7 @@ import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
 import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSpread/cloudSpreadGame.service.js";
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
+import { minesBot } from "./services/mines/minesBot.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import {miningBot} from "./services/mining/miningBotService.js";
@@ -81,10 +82,11 @@ connectDB()
         // jokerCrashBot(ably);
         // rubicBot(ably);
         // miningBot(ably);
+        minesBot(ably);
         // rocketBot(ably);
         // aToZBot(ably);
         // fishingBot(ably);
-        // startGravityGameLoop(ably);
+        startGravityGameLoop(ably);
         // setCloudSpreadAbly(ably);
         // cloudSpreadBot().catch((err) => {
         //     console.error("[cloud-spread] bot failed to start:", err);
