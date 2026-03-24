@@ -54,6 +54,7 @@ import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
 import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
+import CoinPage from "views/Coin/CoinPage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -62,6 +63,8 @@ import { GiChicken, GiFishingHook } from "react-icons/gi";
 import AToZPage from "views/AToZ/AToZ";
 import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+
 
 import {
   DocumentIcon,
@@ -210,6 +213,14 @@ var dashRoutes = [
     name: "ROCKET SHOT",
     icon: <RocketLaunchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: RocketShotPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/coin",
+    name: "COIN",
+    icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CoinPage,
     layout: "/game",
   },
   {
