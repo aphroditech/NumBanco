@@ -135,6 +135,7 @@ export const checkDoveWin = async (req, res) => {
         if (!doveSettings) {
             return res.status(500).json({ error: "Dove settings not found" });
         }
+        const doveHistory = await DoveHistory.findOne({ user: userId });
         if (isStart) {
             user.balance -= bet;
             user.doveAmount += bet;
@@ -167,6 +168,28 @@ export const checkDoveWin = async (req, res) => {
             return res.json({ M1uXj3sZpU : 1, ...(isStart && { balance: user.balance }) });
             
         } else {
+            if(doveHistory) {
+                doveHistory.history.push({
+                    bet: bet,
+                    multiplier: multiplier,
+                    winAmt: 0,
+                    profit: 0,
+                    timestamp: new Date(),
+                });
+            } else {
+                const newDoveHistory = new DoveHistory({
+                    user: userId,
+                    history: [{
+                        bet: bet,
+                        multiplier: multiplier,
+                        winAmt: 0,
+                        profit: 0,
+                        timestamp: new Date(),
+                    }]
+                });
+                await newDoveHistory.save();
+            }
+            await doveHistory.save();
             return res.json({ M1uXj3sZpU: 0 });
         }
 
