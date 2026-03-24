@@ -35,7 +35,6 @@ export const cardGameBot = async (ably) => {
                 })
                 
                 await cardGameView.save();
-                console.log("cardGameBot is running");
                 const oldDocs = await CardGameView.find({isUser:  0})
                     .sort({ time: -1 })
                     .skip(12)

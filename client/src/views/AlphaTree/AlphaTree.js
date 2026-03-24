@@ -933,7 +933,7 @@ export default function AlphaTreePage() {
                         alignItems="center"
                         w="100%"
                     >
-                        <CardHeader>
+                        <CardHeader mb={!treeState ? "16px" : undefined}>
                             <Text fontSize="lg" color="#fff" fontWeight="bold" textAlign="center" w="100%">
                                 Alpha Tree
                             </Text>
@@ -944,11 +944,54 @@ export default function AlphaTreePage() {
                             minW={{ base: '100%', sm: '450px' }}
                             maxW="450px"
                             mx="auto"
-                            overflowY="hidden"
+                            overflowY={!treeState ? "auto" : "hidden"}
                             overflowX="hidden"
                             position="relative"
+                            sx={
+                                !treeState
+                                    ? {
+                                          "&::-webkit-scrollbar": { width: "6px" },
+                                          "&::-webkit-scrollbar-thumb": {
+                                              background: "#555b5e",
+                                              borderRadius: "8px",
+                                          },
+                                      }
+                                    : undefined
+                            }
                         >
-                            {!treeState ? null : (
+                            {!treeState ? (
+                                <VStack align="stretch" spacing={3} pt={3} pb={2} textAlign="left">
+                                    <Text
+                                        fontSize="sm"
+                                        fontWeight="bold"
+                                        color="#00D4FF"
+                                        textAlign="center"
+                                    >
+                                        How to play
+                                    </Text>
+                                    <Text fontSize="xs" color="rgba(255,255,255,0.82)" lineHeight="1.55">
+                                        1. In the <Text as="span" fontWeight="bold">Panel</Text>, set your stake
+                                        and press <Text as="span" fontWeight="bold" color="#FFD700">Bet</Text>.
+                                    </Text>
+                                    <Text fontSize="xs" color="rgba(255,255,255,0.82)" lineHeight="1.55">
+                                        2. Step 1: tap <Text as="span" fontWeight="bold">A</Text> — your total
+                                        uses base ×{" "}
+                                        <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)}</Text>.
+                                    </Text>
+                                    <Text fontSize="xs" color="rgba(255,255,255,0.82)" lineHeight="1.55">
+                                        3. Steps 2–9: choose one letter per step (three options). Step 10: tap{" "}
+                                        <Text as="span" fontWeight="bold">Z</Text> for the final multiplier.
+                                    </Text>
+                                    <Text fontSize="xs" color="rgba(255,255,255,0.82)" lineHeight="1.55">
+                                        4. Press <Text as="span" fontWeight="bold" color="#FFD700">Cash Out</Text>{" "}
+                                        in the panel whenever you want to collect bet × current total multiplier.
+                                    </Text>
+                                    <Text fontSize="xs" color="rgba(255,255,255,0.55)" lineHeight="1.5" pt={1}>
+                                        Tap the <Text as="span" color="#00D4FF">?</Text> in the panel for full
+                                        rules.
+                                    </Text>
+                                </VStack>
+                            ) : (
                                 <VStack spacing="12px" w="100%" align="stretch">
                                     <Flex justify="space-between" wrap="wrap" gap={2}>
                                         <Text fontSize="sm" color="rgba(255,255,255,0.85)">

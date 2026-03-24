@@ -35,7 +35,13 @@ const buildCardGameCompactUser = (user) => {
 const calculateMultiplier = async (operator, arrow) => {
     const setting = await getCardGameSetting();
     if (operator === arrow) {
-        return operator === ">" ? setting.cardGameGreaterMultipler : operator === "<" ? setting.cardGameLesserMultipler : setting.cardGameEqualMultipler;
+        const rawMultiplier =
+            operator === ">"
+                ? setting.cardGameGreaterMultipler
+                : operator === "<"
+                    ? setting.cardGameLesserMultipler
+                    : setting.cardGameEqualMultipler;
+        return toNumberOrZero(rawMultiplier);
     }
     return 0;
 }
@@ -86,7 +92,8 @@ export const bet = async (req, res) => {
         }
 
         const { left, right, arrow } = await generateCardGameNumbers(operator, user.cardGameMode);
-        const multi = await calculateMultiplier(operator, arrow);
+        const multi = toNumberOrZero(await calculateMultiplier(operator, arrow));
+        const numWin = toNumberOrZero(multi * numAmount);
         
         const lastHistory =
         user.cardGameHistory?.length > 0
@@ -98,18 +105,18 @@ export const bet = async (req, res) => {
             arrow: arrow,
             left: left,
             right: right,
-            win: multi * numAmount,
+            win: numWin,
             totalBet: toNumberOrZero(lastHistory.totalBet) + numAmount,
-            totalWin: toNumberOrZero(lastHistory.totalWin) + multi * numAmount,
-            cardGameBalance: toNumberOrZero(lastHistory.cardGameBalance) + multi * numAmount - numAmount,
+            totalWin: toNumberOrZero(lastHistory.totalWin) + numWin,
+            cardGameBalance: toNumberOrZero(lastHistory.cardGameBalance) + numWin - numAmount,
             createAt: new Date(),
         };
-        const nextBalance = toNumberOrZero(user.balance) + multi * numAmount - numAmount;
+        const nextBalance = toNumberOrZero(user.balance) + numWin - numAmount;
         const updateResult = await User.updateOne(
             { userId, balance: { $gte: numAmount } },
             {
                 $inc: {
-                    balance: multi * numAmount - numAmount,
+                    balance: numWin - numAmount,
                     totalBet: numAmount,
                     refreshBet: numAmount,
                     lotterybet: numAmount,
@@ -126,7 +133,7 @@ export const bet = async (req, res) => {
             left: left,
             right: right,
             arrow: arrow,
-            win: multi * numAmount,
+            win: numWin,
         }
         
         const response = res.json({
@@ -148,7 +155,7 @@ export const bet = async (req, res) => {
                 createCardGameViewEntry({
                     userId,
                     bet: numAmount,
-                    win: multi * numAmount,
+                    win: numWin,
                     arrow: arrow,
                     left: left,
                     right: right,
@@ -326,6 +333,7 @@ async function getCardGameSetting() {
     return cardGameSettingCache;
 }
 
+
 function generate(p, symbol) {
     function rand(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -339,53 +347,57 @@ function generate(p, symbol) {
     switch (symbol) {
       case ">":
         if (enforce) {
-          B = rand(1, 12);
-          A = rand(B + 1, 13);
+          B = rand(1, 5);
+          A = rand(Math.max(B + 1, 1), 13);
         } else {
-          B = rand(1, 13);
-          A = rand(1, B);
+          B = rand(1, 5);
+          A = rand(1, Math.min(B, 13));
         }
         break;
   
       case "<":
         if (enforce) {
-          A = rand(1, 12);
-          B = rand(A + 1, 13);
+          A = rand(1, 13);
+          B = rand(Math.max(A + 1, 1), 5);
+          if (A >= 5) { // fallback (since B max is 5)
+            A = rand(1, 4);
+            B = rand(A + 1, 5);
+          }
         } else {
           A = rand(1, 13);
-          B = rand(1, A);
+          B = rand(1, Math.min(A, 5));
         }
         break;
   
       case "=":
         if (enforce) {
-          A = rand(1, 13);
-          B = A;
+          B = rand(1, 5);
+          A = B; // must match B's range
         } else {
-          A = rand(1, 13);
+          B = rand(1, 5);
           do {
-            B = rand(1, 13);
-          } while (B === A);
+            A = rand(1, 13);
+          } while (A === B);
         }
         break;
-
+  
       case ">=":
         if (enforce) {
-          B = rand(1, 13);
+          B = rand(1, 5);
           A = rand(B, 13);
         } else {
-          B = rand(2, 13);
+          B = rand(2, 5);
           A = rand(1, B - 1);
         }
         break;
   
       case "<=":
         if (enforce) {
-          A = rand(1, 13);
-          B = rand(A, 13);
+          B = rand(1, 5);
+          A = rand(1, Math.min(B, 13));
         } else {
-          A = rand(2, 13);
-          B = rand(1, A - 1);
+          B = rand(1, 5);
+          A = rand(Math.max(B + 1, 1), 13);
         }
         break;
   
