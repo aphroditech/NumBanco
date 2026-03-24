@@ -176,7 +176,6 @@ export default function CocoPage() {
     const history = useHistory();
     useEffect(() => {
         onlineUser(8);
-        getUserData(dispatch);
         return () => {
             offlineUser(8);
         };
