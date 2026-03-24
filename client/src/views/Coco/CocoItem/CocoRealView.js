@@ -68,7 +68,7 @@ function CocoRealView() {
         }
     }, [cocoView]);
 
-    const maxRows = 20;
+    const maxRows = 22;
     const baseRows = Array.isArray(cocoView) ? cocoView : [];
     const rowsToRender = baseRows.slice(0, maxRows);
     

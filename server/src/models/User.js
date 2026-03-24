@@ -348,6 +348,14 @@ const userSchema = new mongoose.Schema({
     min: 0,
     max: 2
   },
+  cocoTotalProfit: {
+    type: Number,
+    default: 0
+  },
+  cocoTotalBet: {
+    type: Number,
+    default: 0
+  },
   alphaTreeMode: {
     type: Number,
     default: 1, // 0=easy, 1=normal, 2=hard
