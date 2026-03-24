@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import RocketSettings from "../../models/RocketSettings.js";
-import RocketResult from "../../models/RocketResult.js";
+import RocketSettings from "../../models/rocketShot/RocketSettings.js";
+import RocketResult from "../../models/rocketShot/RocketResult.js";
 
 const LEVELS = ["easy", "normal", "hard"];
 

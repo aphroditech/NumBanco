@@ -1,8 +1,8 @@
-import DoveHistory from "../models/DoveHistory.js";
-import DoveView from "../models/DoveView.js";
+import DoveHistory from "../models/dove/DoveHistory.js";
+import DoveView from "../models/dove/DoveView.js";
 import User from "../models/User.js";
-import DoveSettings from "../models/DoveSettings.js";
-import CalendarDove from "../models/CalendarDove.js";
+import DoveSettings from "../models/dove/DoveSettings.js";
+import CalendarDove from "../models/dove/CalendarDove.js";
 
 const MAX_BET_AMOUNT = 20;
 const VIEW_LIMIT = 22;

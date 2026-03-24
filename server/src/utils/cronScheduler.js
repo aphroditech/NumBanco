@@ -3,7 +3,7 @@ import { checkExpiredDeposits } from '../controllers/watchDepositController.js';
 import DailyTank from '../models/DailyTank.js';
 import FeeTank from '../models/FeeTank.js';
 import WithdrawDailyTank from '../models/WithdrawDailyTank.js';
-import RubicResult from '../models/RubicResult.js';
+import RubicResult from '../models/rubic/RubicResult.js';
 import { generateETHWallet, generateTRONWallet, generateBSCWallet } from "./walletGenerator.js";
 import User from '../models/User.js';
 import "dotenv/config";

@@ -301,7 +301,6 @@ export default function AToZPage() {
 
     useEffect(() => {
         onlineUser(14);
-        getUserData(dispatch);
         return () => {
             offlineUser(14);
         };

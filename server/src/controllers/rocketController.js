@@ -1,8 +1,8 @@
 import User from "../models/User.js";
-import RocketSettings from "../models/RocketSettings.js";
-import RocketHistory from "../models/RocketHistory.js";
-import RocketResult from "../models/RocketResult.js";
-import CalendarRocket from "../models/CalendarRocket.js";
+import RocketSettings from "../models/rocketShot/RocketSettings.js";
+import RocketHistory from "../models/rocketShot/RocketHistory.js";
+import RocketResult from "../models/rocketShot/RocketResult.js";
+import CalendarRocket from "../models/rocketShot/CalendarRocket.js";
 
 export const bet = async (req, res) => {
     try {

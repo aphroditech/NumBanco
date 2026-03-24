@@ -1,4 +1,4 @@
-import AToZSetting from '../models/AToZSetting.js';
+import AToZSetting from '../models/digitsSlot/AToZSetting.js';
 
 export const initAToZSetting = async () => {
     try {
