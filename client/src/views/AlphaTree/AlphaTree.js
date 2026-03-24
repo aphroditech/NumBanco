@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { useDispatch } from "react-redux";
 import { useHistory } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -59,6 +59,180 @@ import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 const MIN_AMOUNT = 0.1;
 const MAX_AMOUNT = 20;
 
+/** Column gap for 4-button grid (step 2 + steps 3–9) — shared by play UI and step-2 line overlay. */
+const FOUR_PICK_GRID_COL_GAP = { base: "44px", sm: "64px" };
+
+function colorForAlphaTreeBranchValue(v) {
+    const x = Number(v);
+    if (!Number.isFinite(x) || x <= 1e-12) return "#E74C3C";
+    if (x < 1 - 1e-9) return "#00D4FF";
+    return "#FFD700";
+}
+
+/**
+ * Steps 2–9 non-bust reveal: same 2×3 grid as playing; SVG lines from prev letter to each option (measured button centers).
+ * entry: { prevLetter, prevValue, optionLetters[3], letterResults, chosen }
+ */
+function AlphaTreeBranchPreview({ entry }) {
+    const rootRef = useRef(null);
+    const [dims, setDims] = useState(null);
+
+    const lr = entry?.letterResults;
+    const chosen = String(entry?.chosen || "").toUpperCase();
+    const prevLetter = String(entry?.prevLetter || "").toUpperCase();
+    const optionLetters = Array.isArray(entry?.optionLetters) ? entry.optionLetters.map((x) => String(x).toUpperCase()) : [];
+    const [o0, o1, o2] = optionLetters;
+
+    useLayoutEffect(() => {
+        const root = rootRef.current;
+        if (!root || !prevLetter || !o0 || !o1 || !o2) return undefined;
+
+        const lettersForMeasure = [prevLetter, o0, o1, o2];
+
+        const measure = () => {
+            const rootRect = root.getBoundingClientRect();
+            const centerOf = (attr) => {
+                const wrap = root.querySelector(`[data-at-center="${attr}"]`);
+                const btn = wrap?.querySelector("button");
+                if (!btn) return null;
+                const r = btn.getBoundingClientRect();
+                return {
+                    x: r.left + r.width / 2 - rootRect.left,
+                    y: r.top + r.height / 2 - rootRect.top,
+                };
+            };
+            const next = { w: rootRect.width, h: rootRect.height };
+            let ok = true;
+            for (const L of lettersForMeasure) {
+                const pt = centerOf(L);
+                if (!pt) {
+                    ok = false;
+                    break;
+                }
+                next[L] = pt;
+            }
+            if (ok) {
+                setDims(next);
+            }
+        };
+
+        measure();
+        const ro = new ResizeObserver(() => measure());
+        ro.observe(root);
+        return () => ro.disconnect();
+    }, [entry, prevLetter, o0, o1, o2]);
+
+    if (!lr || typeof lr !== "object" || !prevLetter || !o0 || !o1 || !o2) return null;
+
+    const valueByLetter = {
+        [o0]: Number(lr[o0]),
+        [o1]: Number(lr[o1]),
+        [o2]: Number(lr[o2]),
+    };
+    const prevDisplay = Number.isFinite(Number(entry?.prevValue)) ? Number(entry.prevValue) : null;
+
+    const resolvedCell = (letter, value, anchor) => {
+        const hasVal = Number.isFinite(Number(value));
+        return (
+            <Box data-at-center={anchor}>
+                <VStack spacing="2px" align="center">
+                    <Button
+                        type="button"
+                        minW="56px"
+                        h="52px"
+                        fontSize="xl"
+                        fontWeight="bold"
+                        color="#000"
+                        bg="#FFD700"
+                        border="2px solid #000"
+                        borderRadius="12px"
+                        boxShadow="3px 3px 0 #000"
+                        isDisabled
+                        _hover={{ bg: "#ffe066" }}
+                    >
+                        {letter}
+                    </Button>
+                    {hasVal ? (
+                        <Text mt="2px" fontSize="11px" fontWeight="bold" color="#FFD700" lineHeight="1">
+                            {Number(value).toFixed(2)}
+                        </Text>
+                    ) : (
+                        <Text mt="2px" fontSize="11px" opacity={0}>
+                            0.00
+                        </Text>
+                    )}
+                </VStack>
+            </Box>
+        );
+    };
+
+    const startPt = dims && dims[prevLetter];
+
+    return (
+        <Box ref={rootRef} position="relative" w="fit-content" mx="auto">
+            {dims && startPt ? (
+                <svg
+                    aria-hidden
+                    style={{
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        pointerEvents: "none",
+                        zIndex: 1,
+                    }}
+                    width={dims.w}
+                    height={dims.h}
+                >
+                    {[o0, o1, o2].map((ch) => {
+                        const v = valueByLetter[ch];
+                        const isChosen = chosen === ch;
+                        const end = dims[ch];
+                        if (!end) return null;
+                        return (
+                            <line
+                                key={ch}
+                                x1={startPt.x}
+                                y1={startPt.y}
+                                x2={end.x}
+                                y2={end.y}
+                                stroke={colorForAlphaTreeBranchValue(v)}
+                                strokeWidth={isChosen ? 5 : 2.5}
+                                opacity={isChosen ? 1 : 0.5}
+                                strokeLinecap="round"
+                            />
+                        );
+                    })}
+                </svg>
+            ) : null}
+            <Grid
+                position="relative"
+                zIndex={2}
+                templateColumns="auto auto"
+                templateRows="auto auto auto"
+                columnGap={FOUR_PICK_GRID_COL_GAP}
+                rowGap="10px"
+                alignItems="flex-start"
+                justifyItems="center"
+            >
+                <GridItem colStart={1} rowStart={1} />
+                <GridItem colStart={2} rowStart={1}>
+                    {resolvedCell(o0, valueByLetter[o0], o0)}
+                </GridItem>
+                <GridItem colStart={1} rowStart={2} alignSelf="flex-start">
+                    {resolvedCell(prevLetter, prevDisplay, prevLetter)}
+                </GridItem>
+                <GridItem colStart={2} rowStart={2} alignSelf="flex-start">
+                    {resolvedCell(o1, valueByLetter[o1], o1)}
+                </GridItem>
+                <GridItem colStart={1} rowStart={3} />
+                <GridItem colStart={2} rowStart={3}>
+                    {resolvedCell(o2, valueByLetter[o2], o2)}
+                </GridItem>
+            </Grid>
+        </Box>
+    );
+}
+
 /** High-band upper bound for step s (2–10): base × 2^(s−1); must use server `baseMultiplier` */
 function alphaTreeMaxForRandomStep(step, baseMult) {
     const s = Number(step);
@@ -93,7 +267,10 @@ export default function AlphaTreePage() {
         amount: "0.00",
         subtitle: "",
     });
+    /** Steps 2–9: show all branch values + lines for 1s before advancing tree state. */
+    const [branchPreview, setBranchPreview] = useState(null);
     const cashOutFxTimeoutRef = useRef(null);
+    const stepAdvanceTimeoutRef = useRef(null);
     const amountRef = useRef('0.10');
     const updateAmount = (value) => {
         setAmount(value);
@@ -109,6 +286,10 @@ export default function AlphaTreePage() {
             if (cashOutFxTimeoutRef.current) {
                 clearTimeout(cashOutFxTimeoutRef.current);
                 cashOutFxTimeoutRef.current = null;
+            }
+            if (stepAdvanceTimeoutRef.current) {
+                clearTimeout(stepAdvanceTimeoutRef.current);
+                stepAdvanceTimeoutRef.current = null;
             }
         };
     }, []);
@@ -175,6 +356,7 @@ export default function AlphaTreePage() {
         setLastStepResult(null);
         setLastBandLabel(null);
         setPathSteps([]);
+        setBranchPreview(null);
         try {
             const data = await alphaTreeStart({ betAmount: bet }, dispatch, history);
             setTreeState(data.alphaTree ?? null);
@@ -232,9 +414,12 @@ export default function AlphaTreePage() {
                 setLastStepResult("0");
                 setLastBandLabel("0 (bust)");
                 setPathSteps([]);
+                setBranchPreview(null);
                 toast.error("Round ended — result was 0");
                 return;
             }
+            let pathParentForBranchPreview = null;
+
             if (ld?.kind === "fixed_a" && typeof ld.value === "number") {
                 const v = ld.value;
                 setPathSteps([
@@ -267,15 +452,72 @@ export default function AlphaTreePage() {
                               ])
                           )
                         : undefined;
-                setPathSteps((prev) => [
-                    ...prev,
-                    {
-                        step: ld.step,
-                        letter: L,
-                        value: ld.value,
-                        letterResults,
-                    },
-                ]);
+                setPathSteps((prev) => {
+                    pathParentForBranchPreview = prev.length ? prev[prev.length - 1] : null;
+                    return [
+                        ...prev,
+                        {
+                            step: ld.step,
+                            letter: L,
+                            value: ld.value,
+                            letterResults,
+                        },
+                    ];
+                });
+            }
+            const stepNum = Number(ld?.step);
+            const rawLetterResults = ld?.letterResults;
+            const normLetterResults =
+                rawLetterResults && typeof rawLetterResults === "object"
+                    ? Object.fromEntries(
+                          Object.entries(rawLetterResults).map(([k, v]) => [
+                              String(k).toUpperCase(),
+                              Number(v),
+                          ])
+                      )
+                    : {};
+            const pickedVal = Number(ld?.value);
+            const optionLettersAtStep =
+                stepNum >= 2 && stepNum <= 9 ? ALPHA_TREE_STEP_LETTERS[stepNum - 1] : null;
+
+            /** Steps 2–9: non-bust pick → show prev + all three branch values and lines, then 1s, then next step UI */
+            const isThreeWayNonBustReveal =
+                ld &&
+                !ld.busted &&
+                !ld.kind &&
+                stepNum >= 2 &&
+                stepNum <= 9 &&
+                Number.isFinite(pickedVal) &&
+                pickedVal > 1e-12 &&
+                Array.isArray(optionLettersAtStep) &&
+                optionLettersAtStep.length === 3 &&
+                optionLettersAtStep.every((ch) => Number.isFinite(normLetterResults[String(ch).toUpperCase()])) &&
+                pathParentForBranchPreview &&
+                data.alphaTree &&
+                data.alphaTree.phase === "playing";
+
+            if (isThreeWayNonBustReveal) {
+                const opts = optionLettersAtStep.map((c) => String(c).toUpperCase());
+                const parentLetter = String(pathParentForBranchPreview.letter || "").toUpperCase();
+                const parentVal = Number(pathParentForBranchPreview.value);
+                setBranchPreview({
+                    step: stepNum,
+                    chosen: String(ld.letter).toUpperCase(),
+                    letterResults: normLetterResults,
+                    prevLetter: parentLetter,
+                    prevValue: Number.isFinite(parentVal) ? parentVal : null,
+                    optionLetters: opts,
+                });
+                await new Promise((resolve) => {
+                    if (stepAdvanceTimeoutRef.current) {
+                        clearTimeout(stepAdvanceTimeoutRef.current);
+                    }
+                    stepAdvanceTimeoutRef.current = setTimeout(() => {
+                        stepAdvanceTimeoutRef.current = null;
+                        resolve();
+                    }, 1000);
+                });
+                setBranchPreview(null);
             }
             setTreeState(data.alphaTree ?? null);
         } catch (err) {
@@ -299,6 +541,7 @@ export default function AlphaTreePage() {
             setLastStepResult(null);
             setLastBandLabel(null);
             setPathSteps([]);
+            setBranchPreview(null);
             const amountStr =
                 win != null && Number.isFinite(Number(win))
                     ? Number(win).toFixed(2)
@@ -754,74 +997,165 @@ export default function AlphaTreePage() {
                                                         : null;
 
                                                 const prevLetter = lastPath?.letter || null;
-                                                const prevResultVal =
-                                                    prevLetter &&
-                                                    lastPath?.letterResults &&
-                                                    typeof lastPath.letterResults[prevLetter] === "number"
-                                                        ? lastPath.letterResults[prevLetter]
-                                                        : typeof lastPath?.value === "number"
-                                                          ? lastPath.value
-                                                          : null;
 
-                                                const isPrevBust =
-                                                    prevResultVal != null &&
-                                                    Number.isFinite(Number(prevResultVal)) &&
-                                                    Number(prevResultVal) <= 1e-12;
+                                                /** Center A-only and A→B/C/D fan in the play area (middle of the card on X, balanced on Y). */
+                                                const centerGameDiagram = (node) => (
+                                                    <Box
+                                                        w="100%"
+                                                        display="flex"
+                                                        flexDirection="column"
+                                                        alignItems="center"
+                                                        justifyContent="center"
+                                                        minH={{ base: "200px", sm: "240px" }}
+                                                        py={2}
+                                                    >
+                                                        {node}
+                                                    </Box>
+                                                );
 
-                                                const renderResolvedButton = (ch, resultVal) => {
-                                                    const resultColor = isPrevBust
-                                                        ? "#E74C3C"
-                                                        : "#FFD700";
+                                                const renderResolvedButton = (ch, resultValue = null) => {
+                                                    const hasValue = Number.isFinite(Number(resultValue));
                                                     return (
-                                                        <Button
-                                                            type="button"
-                                                            minW="56px"
-                                                            h="62px"
-                                                            p="0"
-                                                            bg="transparent"
-                                                            border="1px solid rgba(255,255,255,0.08)"
-                                                            borderRadius="12px"
-                                                            boxShadow="none"
-                                                            isDisabled
-                                                        >
-                                                            <Flex
-                                                                direction="column"
-                                                                justify="space-between"
-                                                                align="center"
-                                                                w="100%"
-                                                                h="100%"
-                                                                py="6px"
+                                                        <VStack spacing="2px">
+                                                            <Button
+                                                                type="button"
+                                                                minW="56px"
+                                                                h="52px"
+                                                                fontSize="xl"
+                                                                fontWeight="bold"
+                                                                color="#000"
+                                                                bg="#FFD700"
+                                                                border="2px solid #000"
+                                                                borderRadius="12px"
+                                                                boxShadow="3px 3px 0 #000"
+                                                                isDisabled
+                                                                _hover={{ bg: "#ffe066" }}
                                                             >
-                                                                <Text
-                                                                    fontSize="xl"
-                                                                    fontWeight="bold"
-                                                                    color="#FFD700"
-                                                                    lineHeight="1"
-                                                                >
-                                                                    {ch}
+                                                                {ch}
+                                                            </Button>
+                                                            {hasValue ? (
+                                                                <Text mt="2px" fontSize="11px" fontWeight="bold" color="#FFD700" lineHeight="1">
+                                                                    {Number(resultValue).toFixed(2)}
                                                                 </Text>
-                                                                {resultVal != null ? (
-                                                                    <Text
-                                                                        fontSize="10px"
-                                                                        color={resultColor}
-                                                                        fontWeight={700}
-                                                                        lineHeight="1"
-                                                                    >
-                                                                        {Number(resultVal).toFixed(2)}
-                                                                    </Text>
-                                                                ) : (
-                                                                    <Text fontSize="10px" opacity={0}>
-                                                                        0.00
-                                                                    </Text>
-                                                                )}
-                                                            </Flex>
-                                                        </Button>
+                                                            ) : (
+                                                                <Text mt="2px" fontSize="11px" opacity={0}>
+                                                                    0.00
+                                                                </Text>
+                                                            )}
+                                                        </VStack>
                                                     );
                                                 };
 
-                                                if (treeState.phase === "await_a") {
+                                                /** Single pick letter button — shared by step 2 (B/C/D) and step 3+ columns. */
+                                                const pickLetterButtonEl = (ch, keyPrefix) => (
+                                                    <Button
+                                                        key={`${keyPrefix}-${ch}`}
+                                                        type="button"
+                                                        minW="56px"
+                                                        h="52px"
+                                                        fontSize="xl"
+                                                        fontWeight="bold"
+                                                        color="#000"
+                                                        bg="#FFD700"
+                                                        border="2px solid #000"
+                                                        borderRadius="12px"
+                                                        boxShadow="3px 3px 0 #000"
+                                                        isLoading={pickLoading}
+                                                        isDisabled={pickLoading}
+                                                        onClick={() => handlePickLetter(ch)}
+                                                        _hover={{ bg: "#ffe066" }}
+                                                    >
+                                                        {ch}
+                                                    </Button>
+                                                );
+
+                                                /** Three vertical pick buttons — used for step 10 (single Z) and fallbacks. */
+                                                const renderLetterPickColumn = (letterList, keyPrefix) => (
+                                                    <VStack
+                                                        minW="86px"
+                                                        minH="132px"
+                                                        justify="space-between"
+                                                        align="center"
+                                                    >
+                                                        {(letterList || []).map((ch) => pickLetterButtonEl(ch, keyPrefix))}
+                                                    </VStack>
+                                                );
+
+                                                /** Same 2×3 grid every step with 3 picks: [top] [p0], [mid] resolved + [p1], [bot] [p2]. */
+                                                const renderFourPickGrid = (resolvedLetter, resolvedValue, picks, keyPrefix) => {
+                                                    const [p0, p1, p2] = picks || [];
+                                                    if (!p0 || !p1 || !p2) return null;
                                                     return (
-                                                        <VStack minH="132px" justify="center" align="center" spacing="10px">
+                                                        <Grid
+                                                            mx="auto"
+                                                            templateColumns="auto auto"
+                                                            templateRows="auto auto auto"
+                                                            columnGap={FOUR_PICK_GRID_COL_GAP}
+                                                            rowGap="10px"
+                                                            alignItems="flex-start"
+                                                            justifyItems="center"
+                                                        >
+                                                            <GridItem colStart={1} rowStart={1} />
+                                                            <GridItem colStart={2} rowStart={1}>
+                                                                {pickLetterButtonEl(p0, keyPrefix)}
+                                                            </GridItem>
+                                                            <GridItem colStart={1} rowStart={2} alignSelf="flex-start">
+                                                                {resolvedLetter ? renderResolvedButton(resolvedLetter, resolvedValue) : cellSpacer}
+                                                            </GridItem>
+                                                            <GridItem colStart={2} rowStart={2} alignSelf="flex-start">
+                                                                {pickLetterButtonEl(p1, keyPrefix)}
+                                                            </GridItem>
+                                                            <GridItem colStart={1} rowStart={3} />
+                                                            <GridItem colStart={2} rowStart={3}>
+                                                                {pickLetterButtonEl(p2, keyPrefix)}
+                                                            </GridItem>
+                                                        </Grid>
+                                                    );
+                                                };
+
+                                                /** Step 10 only Z: final two buttons on the same row (prev letter | Z). */
+                                                const renderStepTenGrid = (resolvedLetter, resolvedValue, pickLetter, keyPrefix) => {
+                                                    const cellSpacer = (
+                                                        <Box
+                                                            minW="56px"
+                                                            h="52px"
+                                                            visibility="hidden"
+                                                            pointerEvents="none"
+                                                            aria-hidden
+                                                        />
+                                                    );
+                                                    return (
+                                                        <Grid
+                                                            mx="auto"
+                                                            templateColumns="auto auto"
+                                                            templateRows="auto auto auto"
+                                                            columnGap={FOUR_PICK_GRID_COL_GAP}
+                                                            rowGap="10px"
+                                                            alignItems="flex-start"
+                                                            justifyItems="center"
+                                                        >
+                                                            <GridItem colStart={1} rowStart={1} />
+                                                            <GridItem colStart={2} rowStart={1}>
+                                                                {cellSpacer}
+                                                            </GridItem>
+                                                            <GridItem colStart={1} rowStart={2} alignSelf="flex-start">
+                                                                {resolvedLetter ? renderResolvedButton(resolvedLetter, resolvedValue) : cellSpacer}
+                                                            </GridItem>
+                                                            <GridItem colStart={2} rowStart={2} alignSelf="flex-start">
+                                                                {pickLetterButtonEl(pickLetter || "Z", keyPrefix)}
+                                                            </GridItem>
+                                                            <GridItem colStart={1} rowStart={3} />
+                                                            <GridItem colStart={2} rowStart={3}>
+                                                                {cellSpacer}
+                                                            </GridItem>
+                                                        </Grid>
+                                                    );
+                                                };
+
+                                                /** Step 1: only A is clickable; B/C/D placeholders — same positions as step 2 */
+                                                const renderAwaitStepOneFan = () => {
+                                                    return (
+                                                        <VStack justify="center" align="center" spacing="10px">
                                                             <Button
                                                                 type="button"
                                                                 minW="56px"
@@ -842,45 +1176,66 @@ export default function AlphaTreePage() {
                                                             </Button>
                                                         </VStack>
                                                     );
+                                                };
+
+                                                if (treeState.phase === "await_a") {
+                                                    return centerGameDiagram(renderAwaitStepOneFan());
                                                 }
 
                                                 if (treeState.phase === "playing") {
                                                     const options = lettersForStepNum(treeState.step);
+                                                    if (branchPreview) {
+                                                        return centerGameDiagram(
+                                                            <AlphaTreeBranchPreview entry={branchPreview} />
+                                                        );
+                                                    }
+                                                    if (
+                                                        (options || []).length === 3 &&
+                                                        prevLetter &&
+                                                        treeState.step >= 2 &&
+                                                        treeState.step <= 9
+                                                    ) {
+                                                        const resolvedValue =
+                                                            lastPath?.letter === prevLetter &&
+                                                            Number.isFinite(Number(lastPath?.value))
+                                                                ? Number(lastPath.value)
+                                                                : null;
+                                                        const keyP =
+                                                            treeState.step === 2 ? "play2" : `opt-${treeState.step}`;
+                                                        const grid = renderFourPickGrid(
+                                                            prevLetter,
+                                                            resolvedValue,
+                                                            options,
+                                                            keyP
+                                                        );
+                                                        return centerGameDiagram(grid);
+                                                    }
+                                                    if (
+                                                        treeState.step === 10 &&
+                                                        (options || []).length === 1
+                                                    ) {
+                                                        const resolvedValue10 =
+                                                            lastPath?.letter === prevLetter &&
+                                                            Number.isFinite(Number(lastPath?.value))
+                                                                ? Number(lastPath.value)
+                                                                : null;
+                                                        return centerGameDiagram(
+                                                            renderStepTenGrid(
+                                                                prevLetter || "",
+                                                                resolvedValue10,
+                                                                options[0],
+                                                                `opt-${treeState.step}`
+                                                            )
+                                                        );
+                                                    }
                                                     return (
                                                         <Flex wrap="nowrap" gap="18px" justify="center" align="flex-start">
                                                             <VStack minW="86px" minH="132px" justify="center" align="center">
                                                                 {prevLetter
-                                                                    ? renderResolvedButton(prevLetter, prevResultVal)
+                                                                    ? renderResolvedButton(prevLetter, lastPath?.value)
                                                                     : null}
                                                             </VStack>
-                                                            <VStack
-                                                                minW="86px"
-                                                                minH="132px"
-                                                                justify="space-between"
-                                                                align="center"
-                                                            >
-                                                                {(options || []).map((ch) => (
-                                                                    <Button
-                                                                        key={`opt-${treeState.step}-${ch}`}
-                                                                        type="button"
-                                                                        minW="56px"
-                                                                        h="52px"
-                                                                        fontSize="xl"
-                                                                        fontWeight="bold"
-                                                                        color="#000"
-                                                                        bg="#FFD700"
-                                                                        border="2px solid #000"
-                                                                        borderRadius="12px"
-                                                                        boxShadow="3px 3px 0 #000"
-                                                                        isLoading={pickLoading}
-                                                                        isDisabled={pickLoading}
-                                                                        onClick={() => handlePickLetter(ch)}
-                                                                        _hover={{ bg: "#ffe066" }}
-                                                                    >
-                                                                        {ch}
-                                                                    </Button>
-                                                                ))}
-                                                            </VStack>
+                                                            {renderLetterPickColumn(options || [], `opt-${treeState.step}`)}
                                                         </Flex>
                                                     );
                                                 }
@@ -888,7 +1243,7 @@ export default function AlphaTreePage() {
                                                 if (treeState.phase === "await_cashout") {
                                                     return (
                                                         <VStack minH="132px" justify="center" align="center" spacing="10px">
-                                                            {prevLetter ? renderResolvedButton(prevLetter, prevResultVal) : null}
+                                                            {prevLetter ? renderResolvedButton(prevLetter, lastPath?.value) : null}
                                                         </VStack>
                                                     );
                                                 }
