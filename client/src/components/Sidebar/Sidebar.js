@@ -71,7 +71,6 @@ function Sidebar(props) {
               <SidebarButtonLink value={Rocket} />
               <SidebarButtonLink value={Jackal} />
               <SidebarButtonLink value={Mines} />
-              <SidebarButtonLink value={CoinGame} />
               <SidebarButtonLink value={DoveGame} />
               <SidebarButtonLink value={CocoGame} />
               <SidebarButtonLink value={AToZGame} />
@@ -225,7 +224,6 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={Gravity} />
                 <SidebarButtonLink value={Rocket} />
                 <SidebarButtonLink value={Jackal} />
-                <SidebarButtonLink value={CoinGame} />
                 <SidebarButtonLink value={Mines} />
                 <SidebarButtonLink value={DoveGame} />
                 <SidebarButtonLink value={CocoGame} />
