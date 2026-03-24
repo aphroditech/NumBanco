@@ -17,6 +17,8 @@ import { initializeJokerCrashLimits } from './jokerCrashLimits.js';
 import { initializeJokerCrashIncreases } from './jokerCrashIncreases.js';
 import { initializeJokerCrashCards } from './jokerCrashCards.js';
 import { initializeJokerCrashPercentages } from './jokerCrashPercentages.js';
+import { initAToZSetting } from './initAtoZSettings.js';
+import { initCloudSpreadSetting } from './initCloudSpreadSetting.js';
 
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
