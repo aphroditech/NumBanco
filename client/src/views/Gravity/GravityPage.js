@@ -428,7 +428,23 @@ export default function GravityPage() {
       const betId = res?.betId || res?.row?.betId;
       const betAmount = res?.betAmount ?? Number(amount);
       const roundId = res?.roundId ?? state?.roundId;
+      const dirNorm = String(dir || "").toLowerCase();
       setOptimisticPlacedSides((prev) => ({ ...prev, [String(dir).toLowerCase()]: true }));
+
+      // Optimistically show the user's own bet in the right-side Up/Down list
+      // so UI reflects the click instantly, even if socket echo is delayed/skipped.
+      const optimisticRow = {
+        ...(res?.row || {}),
+        betId: betId ?? res?.row?.betId,
+        roundId: roundId ?? res?.row?.roundId,
+        direction: dirNorm || String(res?.row?.direction || "").toLowerCase(),
+        betAmount,
+        amount: betAmount,
+        userId: res?.row?.userId ?? res?.user?.userId,
+        userName: res?.row?.userName ?? res?.user?.altas,
+        avatar: res?.row?.avatar ?? res?.user?.avatar,
+      };
+      setLiveRows((prev) => dedupeLiveRows([optimisticRow, ...(Array.isArray(prev) ? prev : [])]));
 
       // Mark as own bet so the immediate Ably echo doesn't trigger duplicate heavy list work.
       if (betId) {
