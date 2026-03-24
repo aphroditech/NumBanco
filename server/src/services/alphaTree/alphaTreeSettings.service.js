@@ -1,7 +1,7 @@
 import AlphaTreeSettings from "../../models/AlphaTreeSettings.js";
 
 export const DEFAULT_ALPHA_TREE_SETTINGS = {
-    highBandRate: 0.4,
+    highBandRate: 0.5,
 };
 
 function pickDefined(doc) {
