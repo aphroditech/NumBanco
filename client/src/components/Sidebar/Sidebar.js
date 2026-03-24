@@ -28,7 +28,7 @@ import Landing_logo from "assets/img/logo_Landing.png";
 function Sidebar(props) {
   let variantChange = "0.2s linear";
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState(null);
+  const [activeMenu, setActiveMenu] = React.useState("menu");
   const toggleMenu = (menu) => {
     setActiveMenu(prev => prev === menu ? null : menu);
   };
