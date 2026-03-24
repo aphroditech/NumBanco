@@ -32,6 +32,7 @@ function useQuery() {
 }
 
 function SignUp({ setIsAuth }) {
+    const [isLoading, setIsLoading] = useState(false);
     const dispatch = useDispatch();
     const history = useHistory();
     const query = useQuery();
@@ -151,7 +152,7 @@ function SignUp({ setIsAuth }) {
 
     const onClick = async () => {
         if (!validate()) return;
-
+        setIsLoading(true);
         const payload = {
             userAuthId: data.userAuthId,
             altas: data.altas,
@@ -164,7 +165,12 @@ function SignUp({ setIsAuth }) {
             payload.email = data.email;
         }
 
-        register(payload, history, dispatch, setIsAuth);
+        const res = await register(payload, history, dispatch, setIsAuth);
+        if (res === "Success") {
+            setIsLoading(false);
+        } else {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -316,6 +322,7 @@ function SignUp({ setIsAuth }) {
                                 label="SIGN UP"
                                 mt="28px"
                                 onClick={onClick}
+                                isLoading={isLoading}
                             />
                         </FormControl>
 
