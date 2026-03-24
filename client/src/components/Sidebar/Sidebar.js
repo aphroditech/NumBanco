@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, CloudSpread, Pumping, Fishing, Gravity, DoveGame, CocoGame, AToZGame, AlphaTreeGame, CoinGame } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, CardGame, JokerCrash, Gravity, DoveGame, CocoGame, AToZGame, AlphaTreeGame } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -39,47 +39,49 @@ function Sidebar(props) {
         return null;
       }
       if (prop.name == "NUMEXA") {
-        return( 
+        return (
           <Box key={key}>
             <SideBarToggle
-            value={prop}
-            isExpanded={activeMenu === "menu"}
-            onClick={() => toggleMenu("menu")} />
-              <Collapse in={activeMenu === "menu"} animateOpacity>
-                <SidebarButtonLink value={TierA} />
-                <SidebarButtonLink value={TierB} />
-                <SidebarButtonLink value={TierC} />
-              </Collapse>
+              value={prop}
+              isExpanded={activeMenu === "menu"}
+              onClick={() => toggleMenu("menu")} />
+            <Collapse in={activeMenu === "menu"} animateOpacity>
+              <SidebarButtonLink value={TierA} />
+              <SidebarButtonLink value={TierB} />
+              <SidebarButtonLink value={TierC} />
+            </Collapse>
           </Box>
-          )
+        )
       }
       if (prop.name === "GAMES") {
-        return( 
+        return (
           <Box key={key}>
             <SideBarToggle
-            value={prop}
-            isExpanded={activeMenu === "games"}
-            onClick={() => toggleMenu("games")} />
-              <Collapse in={activeMenu === "games"} animateOpacity>
-                <SidebarButtonLink value={Rubic} />
-                <SidebarButtonLink value={Pumping} />
-                <SidebarButtonLink value={Fishing} />
-                <SidebarButtonLink value={Gravity} />
-                <SidebarButtonLink value={CloudSpread} />
-                <SidebarButtonLink value={Rocket} />
-                <SidebarButtonLink value={Jackal} />
-                <SidebarButtonLink value={Mines} />
-                <SidebarButtonLink value={CoinGame} />
-                <SidebarButtonLink value={DoveGame} />
-                <SidebarButtonLink value={CocoGame} />
-                <SidebarButtonLink value={AToZGame} />
-                <SidebarButtonLink value={AlphaTreeGame} />
-              </Collapse>
+              value={prop}
+              isExpanded={activeMenu === "games"}
+              onClick={() => toggleMenu("games")} />
+            <Collapse in={activeMenu === "games"} animateOpacity>
+              <SidebarButtonLink value={Rubic} />
+              <SidebarButtonLink value={Pumping} />
+              <SidebarButtonLink value={Fishing} />
+              <SidebarButtonLink value={CardGame} />
+              <SidebarButtonLink value={JokerCrash} />
+              <SidebarButtonLink value={Gravity} />
+              <SidebarButtonLink value={CloudSpread} />
+              <SidebarButtonLink value={Rocket} />
+              <SidebarButtonLink value={Jackal} />
+              <SidebarButtonLink value={Mines} />
+              <SidebarButtonLink value={CoinGame} />
+              <SidebarButtonLink value={DoveGame} />
+              <SidebarButtonLink value={CocoGame} />
+              <SidebarButtonLink value={AToZGame} />
+              <SidebarButtonLink value={AlphaTreeGame} />
+            </Collapse>
           </Box>
-          )
+        )
       }
       if (prop.name == "LOTTERY") {
-        return( 
+        return (
           <Box key={key}>
             {/* <SideBarToggle
             value={prop}
@@ -99,8 +101,8 @@ function Sidebar(props) {
   const { logoText, routes } = props;
 
   var links = <>{createLinks(routes)}</>;
-  
-  let sidebarBg = "#2a2d2e";  
+
+  let sidebarBg = "#2a2d2e";
   let sidebarRadius = "16px";
   let sidebarMargins = "16px 0px 16px 16px";
   var brand = (
@@ -186,7 +188,7 @@ export function SidebarResponsive(props) {
             {/* Main toggle */}
             <SideBarToggle
               value={prop}
-              
+
               isExpanded={activeMenu === "menu"}
               onClick={() => toggleMenu("menu")}
             />
@@ -206,13 +208,13 @@ export function SidebarResponsive(props) {
         );
       }
       if (prop.name === "GAMES") {
-        return( 
+        return (
           <Box key={key}>
             <SideBarToggle
-            value={prop}
-            isExpanded={activeMenu === "games"}
-            onClick={() => toggleMenu("games")} />
-              <Collapse in={activeMenu === "games"} animateOpacity>
+              value={prop}
+              isExpanded={activeMenu === "games"}
+              onClick={() => toggleMenu("games")} />
+            <Collapse in={activeMenu === "games"} animateOpacity>
               <Stack
                 spacing={2}
                 mt={2}
@@ -229,9 +231,9 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={CocoGame} />
                 <SidebarButtonLink value={AToZGame} />
               </Stack>
-              </Collapse>
+            </Collapse>
           </Box>
-          )
+        )
       }
 
       if (prop.name === "LOTTERY") {
@@ -311,26 +313,26 @@ export function SidebarResponsive(props) {
             _focus={{ boxShadow: "none" }}
           />
 
-            <DrawerBody
-              ps="20px"
-              pe="20px"
-              pt="1rem"
-              overflowY="auto"
-              overflowX="hidden"
-              maxH="100vh"
-              css={{
-                "&::-webkit-scrollbar": {
-                  width: "6px",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  background: "transparent",
-                  borderRadius: "10px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  background: "transparent",
-                },
-              }}
-            >
+          <DrawerBody
+            ps="20px"
+            pe="20px"
+            pt="1rem"
+            overflowY="auto"
+            overflowX="hidden"
+            maxH="100vh"
+            css={{
+              "&::-webkit-scrollbar": {
+                width: "6px",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                background: "transparent",
+                borderRadius: "10px",
+              },
+              "&::-webkit-scrollbar-track": {
+                background: "transparent",
+              },
+            }}
+          >
 
             <Box h="100vh">
               {brand}

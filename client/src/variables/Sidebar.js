@@ -14,12 +14,14 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import RubicPage from "views/Rubic/RubicPage";
 import PumpingPage from "views/Pumping/PumpingPage";
 import FishingPage from "views/Fishing/FishingPage";
+import JokerCrashPage from "views/JokerCrash/JokerCrashPage";
 import GravityPage from "views/Gravity/GravityPage";
 import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
 import AToZPage from "views/AToZ/AToZ";
+import CardGamePage from "views/CardGame/CardGamePage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
 // Load Icons
@@ -28,6 +30,9 @@ import CasinoIcon from '@mui/icons-material/Casino';
 import GavelIcon from '@mui/icons-material/Gavel';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import DiamondIcon from '@mui/icons-material/Diamond';
+import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
+import WhatshotIcon from '@mui/icons-material/Whatshot';
+import StyleIcon from '@mui/icons-material/Style';
 import NumbersIcon from '@mui/icons-material/Numbers';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import ForestIcon from '@mui/icons-material/Forest';
@@ -125,6 +130,22 @@ export const Fishing = {
     name: "FISHING",
     icon: <GiFishingHook style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: FishingPage,
+    layout: "/game",
+}
+
+export const JokerCrash = {
+    path: "/joker-crash",
+    name: "JOKER CRASH",
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: JokerCrashPage,
+    layout: "/game",
+}
+
+export const CardGame = {
+    path: "/card-game",
+    name: "CARD GAME",
+    icon: <StyleIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CardGamePage,
     layout: "/game",
 }
 

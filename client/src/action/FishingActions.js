@@ -1,5 +1,6 @@
 import axiosInstance from "../api/axiosConfig";
 import { setUserRedux } from ".";
+import { toast } from "react-toastify";
 
 export const fishingBet = async (data, dispatch, history) => {
     try {
@@ -21,7 +22,8 @@ export const fishingPullStay = async (data, dispatch, history) => {
         setUserRedux(res, dispatch);
         return res.data;
     } catch (err) {
-        console.error(err);
+        toast.error(err.error);
+        console.error(err.error);
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
         }

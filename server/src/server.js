@@ -29,6 +29,10 @@ import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
+import { cardGameBot } from "./services/cardGame/cardGameBot.service.js";
+import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
+
+
 dotenv.config();
 
 const PORT = process.env.API_PORT || 5000;
@@ -72,8 +76,9 @@ connectDB()
         // startPartnerDepositCron(ably);
         // startWithdrawApprovalCron(ably);
         // getUserStatusChannel(ably);
-
+        // cardGameBot(ably);
         // pumpingBot(ably);
+        // jokerCrashBot(ably);
         // rubicBot(ably);
         // pumpingBot(ably);
         // miningBot(ably);
