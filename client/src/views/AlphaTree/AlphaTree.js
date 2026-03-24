@@ -55,6 +55,7 @@ import AlphaTreeRealView from "./AlphaTreeItem/AlphaTreeView";
 import BetHistory from "./AlphaTreeItem/BetHistory";
 import AlphaTreeLetterDiagram from "./AlphaTreeItem/AlphaTreeLetterDiagram";
 import WinFireworksEffect from "components/Effects/WinFireworksEffect";
+import BangBurstEffect from "components/Effects/BangBurstEffect";
 
 const MIN_AMOUNT = 0.1;
 const MAX_AMOUNT = 20;
@@ -85,7 +86,9 @@ function AlphaTreeBranchPreview({ entry }) {
     const lr = entry?.letterResults;
     const chosen = String(entry?.chosen || "").toUpperCase();
     const prevLetter = String(entry?.prevLetter || "").toUpperCase();
-    const optionLetters = Array.isArray(entry?.optionLetters) ? entry.optionLetters.map((x) => String(x).toUpperCase()) : [];
+    const optionLetters = Array.isArray(entry?.optionLetters)
+        ? entry.optionLetters.map((x) => String(x).toUpperCase())
+        : [];
     const [o0, o1, o2] = optionLetters;
 
     useLayoutEffect(() => {
@@ -273,9 +276,12 @@ export default function AlphaTreePage() {
         subtitle: "",
     });
     const [cashOutFxAnchorRect, setCashOutFxAnchorRect] = useState(null);
-    /** Steps 2–9: show all branch values + lines for 1s before advancing tree state. */
+    /** Bust (chosen letter → 0): comic bang burst on main card. */
+    const [bustBangFx, setBustBangFx] = useState({ visible: false, anchorRect: null });
+    /** Steps 2–9: show all branch values + lines briefly before advancing tree state. */
     const [branchPreview, setBranchPreview] = useState(null);
     const cashOutFxTimeoutRef = useRef(null);
+    const bustBangTimeoutRef = useRef(null);
     const stepAdvanceTimeoutRef = useRef(null);
     const alphaTreeMainCardRef = useRef(null);
     const amountRef = useRef('0.10');
@@ -297,6 +303,10 @@ export default function AlphaTreePage() {
             if (stepAdvanceTimeoutRef.current) {
                 clearTimeout(stepAdvanceTimeoutRef.current);
                 stepAdvanceTimeoutRef.current = null;
+            }
+            if (bustBangTimeoutRef.current) {
+                clearTimeout(bustBangTimeoutRef.current);
+                bustBangTimeoutRef.current = null;
             }
         };
     }, []);
@@ -364,6 +374,7 @@ export default function AlphaTreePage() {
         setLastBandLabel(null);
         setPathSteps([]);
         setBranchPreview(null);
+        setBustBangFx({ visible: false, anchorRect: null });
         try {
             const data = await alphaTreeStart({ betAmount: bet }, dispatch, history);
             setTreeState(data.alphaTree ?? null);
@@ -417,6 +428,23 @@ export default function AlphaTreePage() {
                 }
             }
             if (ld?.busted) {
+                const cardRect = alphaTreeMainCardRef.current?.getBoundingClientRect?.();
+                const anchorRect = cardRect
+                    ? {
+                          left: cardRect.left,
+                          top: cardRect.top,
+                          width: cardRect.width,
+                          height: cardRect.height,
+                      }
+                    : null;
+                setBustBangFx({ visible: true, anchorRect });
+                if (bustBangTimeoutRef.current) {
+                    clearTimeout(bustBangTimeoutRef.current);
+                }
+                bustBangTimeoutRef.current = setTimeout(() => {
+                    bustBangTimeoutRef.current = null;
+                    setBustBangFx((s) => ({ ...s, visible: false }));
+                }, 1100);
                 setTreeState(null);
                 setLastStepResult("0");
                 setLastBandLabel("0 (bust)");
@@ -487,7 +515,6 @@ export default function AlphaTreePage() {
             const optionLettersAtStep =
                 stepNum >= 2 && stepNum <= 9 ? ALPHA_TREE_STEP_LETTERS[stepNum - 1] : null;
 
-            /** Steps 2–9: non-bust pick → show prev + all three branch values and lines, then 1s, then next step UI */
             const isThreeWayNonBustReveal =
                 ld &&
                 !ld.busted &&
@@ -498,7 +525,9 @@ export default function AlphaTreePage() {
                 pickedVal > 1e-12 &&
                 Array.isArray(optionLettersAtStep) &&
                 optionLettersAtStep.length === 3 &&
-                optionLettersAtStep.every((ch) => Number.isFinite(normLetterResults[String(ch).toUpperCase()])) &&
+                optionLettersAtStep.every((ch) =>
+                    Number.isFinite(normLetterResults[String(ch).toUpperCase()])
+                ) &&
                 pathParentForBranchPreview &&
                 data.alphaTree &&
                 data.alphaTree.phase === "playing";
@@ -619,6 +648,11 @@ export default function AlphaTreePage() {
                 subtitle={cashOutWinFx.subtitle}
                 duration={2600}
                 anchorRect={cashOutFxAnchorRect}
+            />
+            <BangBurstEffect
+                isVisible={bustBangFx.visible}
+                anchorRect={bustBangFx.anchorRect}
+                duration={950}
             />
             <Grid
                 templateAreas={{
