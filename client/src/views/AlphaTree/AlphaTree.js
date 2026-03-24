@@ -65,8 +65,24 @@ const ALPHA_TREE_PICK_BTN_H = "44px";
 const ALPHA_TREE_PICK_COL_MIN_H = "114px";
 const ALPHA_TREE_ROW_GAP = "6px";
 
-/** Column gap for 4-button grid (step 2 + steps 3–9) — shared by play UI and step-2 line overlay. */
+/** Column gap between resolved letter column and B/C/D column (step 2 + steps 3–9 + branch preview). */
 const FOUR_PICK_GRID_COL_GAP = { base: "44px", sm: "64px" };
+
+/** Matches resolved letter + value block height for branch preview top/bottom spacers (pairs with `resolvedCell`). */
+const ALPHA_TREE_RESOLVED_VALUE_BLOCK_MINH = "58px";
+
+/** Invisible block matching a pick button row so B–C and C–D spacing stays even (grid row height was stretched by A’s value text). */
+function pickRowHeightSpacer() {
+    return (
+        <Box
+            minW={ALPHA_TREE_PICK_BTN_MIN_W}
+            h={ALPHA_TREE_PICK_BTN_H}
+            visibility="hidden"
+            pointerEvents="none"
+            aria-hidden
+        />
+    );
+}
 
 function colorForAlphaTreeBranchValue(v) {
     const x = Number(v);
@@ -212,31 +228,36 @@ function AlphaTreeBranchPreview({ entry }) {
                     })}
                 </svg>
             ) : null}
-            <Grid
+            <Flex
                 position="relative"
                 zIndex={2}
-                templateColumns="auto auto"
-                templateRows="auto auto auto"
                 columnGap={FOUR_PICK_GRID_COL_GAP}
-                rowGap={ALPHA_TREE_ROW_GAP}
-                alignItems="flex-start"
-                justifyItems="center"
+                align="flex-start"
+                justify="center"
             >
-                <GridItem colStart={1} rowStart={1} />
-                <GridItem colStart={2} rowStart={1}>
-                    {resolvedCell(o0, valueByLetter[o0], o0)}
-                </GridItem>
-                <GridItem colStart={1} rowStart={2} alignSelf="flex-start">
+                <VStack spacing={ALPHA_TREE_ROW_GAP} align="center">
+                    <Box
+                        minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                        minH={ALPHA_TREE_RESOLVED_VALUE_BLOCK_MINH}
+                        visibility="hidden"
+                        pointerEvents="none"
+                        aria-hidden
+                    />
                     {resolvedCell(prevLetter, prevDisplay, prevLetter)}
-                </GridItem>
-                <GridItem colStart={2} rowStart={2} alignSelf="flex-start">
+                    <Box
+                        minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                        minH={ALPHA_TREE_RESOLVED_VALUE_BLOCK_MINH}
+                        visibility="hidden"
+                        pointerEvents="none"
+                        aria-hidden
+                    />
+                </VStack>
+                <VStack spacing={ALPHA_TREE_ROW_GAP} align="center">
+                    {resolvedCell(o0, valueByLetter[o0], o0)}
                     {resolvedCell(o1, valueByLetter[o1], o1)}
-                </GridItem>
-                <GridItem colStart={1} rowStart={3} />
-                <GridItem colStart={2} rowStart={3}>
                     {resolvedCell(o2, valueByLetter[o2], o2)}
-                </GridItem>
-            </Grid>
+                </VStack>
+            </Flex>
         </Box>
     );
 }
@@ -450,7 +471,9 @@ export default function AlphaTreePage() {
                 setLastBandLabel("0 (bust)");
                 setPathSteps([]);
                 setBranchPreview(null);
-                toast.error("Round ended — result was 0");
+                toast.error(
+                    "You failed in the Alpha Tree game. Good luck next time!"
+                );
                 return;
             }
             let pathParentForBranchPreview = null;
@@ -591,6 +614,9 @@ export default function AlphaTreePage() {
                 win != null && Number.isFinite(Number(win))
                     ? Number(win).toFixed(2)
                     : "0.00";
+            toast.success(
+                `You get $${amountStr} in the Alpha Tree game.`
+            );
             const subtitle =
                 totalMult != null && Number.isFinite(Number(totalMult))
                     ? `Total multiplier ×${Number(totalMult).toFixed(2)}`
@@ -1137,35 +1163,30 @@ export default function AlphaTreePage() {
                                                     </VStack>
                                                 );
 
-                                                /** Same 2×3 grid every step with 3 picks: [top] [p0], [mid] resolved + [p1], [bot] [p2]. */
+                                                /** Two columns: left = spacer / resolved prev / spacer; right = p0,p1,p2. VStacks share one `spacing` so B–C and C–D gaps match (grid mixed row heights broke that). */
                                                 const renderFourPickGrid = (resolvedLetter, resolvedValue, picks, keyPrefix) => {
                                                     const [p0, p1, p2] = picks || [];
                                                     if (!p0 || !p1 || !p2) return null;
                                                     return (
-                                                        <Grid
+                                                        <Flex
                                                             mx="auto"
-                                                            templateColumns="auto auto"
-                                                            templateRows="auto auto auto"
                                                             columnGap={FOUR_PICK_GRID_COL_GAP}
-                                                            rowGap={ALPHA_TREE_ROW_GAP}
-                                                            alignItems="flex-start"
-                                                            justifyItems="center"
+                                                            align="flex-start"
+                                                            justify="center"
                                                         >
-                                                            <GridItem colStart={1} rowStart={1} />
-                                                            <GridItem colStart={2} rowStart={1}>
+                                                            <VStack spacing={ALPHA_TREE_ROW_GAP} align="center">
+                                                                {pickRowHeightSpacer()}
+                                                                {resolvedLetter
+                                                                    ? renderResolvedButton(resolvedLetter, resolvedValue)
+                                                                    : pickRowHeightSpacer()}
+                                                                {pickRowHeightSpacer()}
+                                                            </VStack>
+                                                            <VStack spacing={ALPHA_TREE_ROW_GAP} align="center">
                                                                 {pickLetterButtonEl(p0, keyPrefix)}
-                                                            </GridItem>
-                                                            <GridItem colStart={1} rowStart={2} alignSelf="flex-start">
-                                                                {resolvedLetter ? renderResolvedButton(resolvedLetter, resolvedValue) : cellSpacer}
-                                                            </GridItem>
-                                                            <GridItem colStart={2} rowStart={2} alignSelf="flex-start">
                                                                 {pickLetterButtonEl(p1, keyPrefix)}
-                                                            </GridItem>
-                                                            <GridItem colStart={1} rowStart={3} />
-                                                            <GridItem colStart={2} rowStart={3}>
                                                                 {pickLetterButtonEl(p2, keyPrefix)}
-                                                            </GridItem>
-                                                        </Grid>
+                                                            </VStack>
+                                                        </Flex>
                                                     );
                                                 };
 

@@ -77,9 +77,9 @@ connectDB()
             // startPartnerDepositCron(ably);
             // startWithdrawApprovalCron(ably);
             // getUserStatusChannel(ably);
-            cardGameBot(ably);
-            pumpingBot(ably);
-            jokerCrashBot(ably);
+            // cardGameBot(ably);
+            // pumpingBot(ably);
+            // jokerCrashBot(ably);
             // rubicBot(ably);
             // miningBot(ably);
             // minesBot(ably);
@@ -91,16 +91,16 @@ connectDB()
             // cloudSpreadBot().catch((err) => {
             //     console.error("[cloud-spread] bot failed to start:", err);
             // });
-            cocoBot(ably);
+            // cocoBot(ably);
             // alphaTreeBot(ably);
             // doveBot(ably);
             // fundMergeEngine();
             // tankCheckEngine();
             // getWithdrawWallet();
 
-            startBetEngine(ably, 0);
-            startBetEngine(ably, 1);
-            startBetEngine(ably, 2);
+            // startBetEngine(ably, 0);
+            // startBetEngine(ably, 1);
+            // startBetEngine(ably, 2);
 
             try {
                 startCronJobs();
