@@ -23,7 +23,6 @@ import MinesPage from "views/Mines/MinesPage";
 import AToZPage from "views/AToZ/AToZ";
 import CardGamePage from "views/CardGame/CardGamePage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
-import CoinPage from "views/Coin/CoinPage";
 // Load Icons
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import CasinoIcon from '@mui/icons-material/Casino';
@@ -181,13 +180,7 @@ export const CocoGame = {
     layout: "/game",
 }
 
-export const CoinGame = {
-    path: "/coin",
-    name: "COIN",
-    icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    component: CoinPage,
-    layout: "/game",
-}
+
 
 export const AToZGame = {
     path: "/digits",
