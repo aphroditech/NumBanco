@@ -58,6 +58,11 @@ import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 
 const MIN_AMOUNT = 0.1;
 const MAX_AMOUNT = 20;
+const ALPHA_TREE_MAIN_CARD_HEIGHT = "450px";
+const ALPHA_TREE_PICK_BTN_MIN_W = "48px";
+const ALPHA_TREE_PICK_BTN_H = "44px";
+const ALPHA_TREE_PICK_COL_MIN_H = "114px";
+const ALPHA_TREE_ROW_GAP = "6px";
 
 /** Column gap for 4-button grid (step 2 + steps 3–9) — shared by play UI and step-2 line overlay. */
 const FOUR_PICK_GRID_COL_GAP = { base: "44px", sm: "64px" };
@@ -138,8 +143,8 @@ function AlphaTreeBranchPreview({ entry }) {
                 <VStack spacing="2px" align="center">
                     <Button
                         type="button"
-                        minW="56px"
-                        h="52px"
+                        minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                        h={ALPHA_TREE_PICK_BTN_H}
                         fontSize="xl"
                         fontWeight="bold"
                         color="#000"
@@ -210,7 +215,7 @@ function AlphaTreeBranchPreview({ entry }) {
                 templateColumns="auto auto"
                 templateRows="auto auto auto"
                 columnGap={FOUR_PICK_GRID_COL_GAP}
-                rowGap="10px"
+                rowGap={ALPHA_TREE_ROW_GAP}
                 alignItems="flex-start"
                 justifyItems="center"
             >
@@ -267,10 +272,12 @@ export default function AlphaTreePage() {
         amount: "0.00",
         subtitle: "",
     });
+    const [cashOutFxAnchorRect, setCashOutFxAnchorRect] = useState(null);
     /** Steps 2–9: show all branch values + lines for 1s before advancing tree state. */
     const [branchPreview, setBranchPreview] = useState(null);
     const cashOutFxTimeoutRef = useRef(null);
     const stepAdvanceTimeoutRef = useRef(null);
+    const alphaTreeMainCardRef = useRef(null);
     const amountRef = useRef('0.10');
     const updateAmount = (value) => {
         setAmount(value);
@@ -534,6 +541,15 @@ export default function AlphaTreePage() {
     const handleCashOutGame = async () => {
         setCashLoading(true);
         try {
+            const cardRect = alphaTreeMainCardRef.current?.getBoundingClientRect?.();
+            if (cardRect) {
+                setCashOutFxAnchorRect({
+                    left: cardRect.left,
+                    top: cardRect.top,
+                    width: cardRect.width,
+                    height: cardRect.height,
+                });
+            }
             const data = await alphaTreeCashOut(dispatch, history);
             const win = data.cashout?.win;
             const totalMult = data.cashout?.totalMultiplier;
@@ -602,6 +618,7 @@ export default function AlphaTreePage() {
                 totalEarn={cashOutWinFx.amount}
                 subtitle={cashOutWinFx.subtitle}
                 duration={2600}
+                anchorRect={cashOutFxAnchorRect}
             />
             <Grid
                 templateAreas={{
@@ -904,29 +921,35 @@ export default function AlphaTreePage() {
                         </CardBody>
                     </Card>
                 </GridItem>
-                <GridItem area="game" minH={'450px'}>
-                    <Card pt="30px" pb="22px" px="22px" minH="100%" alignItems="center" w="100%">
+                <GridItem area="game" minH={ALPHA_TREE_MAIN_CARD_HEIGHT}>
+                    <Card
+                        ref={alphaTreeMainCardRef}
+                        pt="30px"
+                        pb="22px"
+                        px="22px"
+                        h={ALPHA_TREE_MAIN_CARD_HEIGHT}
+                        minH={ALPHA_TREE_MAIN_CARD_HEIGHT}
+                        maxH={ALPHA_TREE_MAIN_CARD_HEIGHT}
+                        alignItems="center"
+                        w="100%"
+                    >
                         <CardHeader>
                             <Text fontSize="lg" color="#fff" fontWeight="bold" textAlign="center" w="100%">
                                 Alpha Tree
                             </Text>
                         </CardHeader>
-                        <CardBody minH="100%" w={{ base: '100%' }} minW={{ base: '100%', sm: '450px' }} maxW="450px" mx="auto" overflow="visible" position="relative">
-                            {!treeState ? (
-                                <Text color="rgba(255,255,255,0.75)" textAlign="center" py="40px">
-                                    Press <Text as="span" color="#00D4FF" fontWeight="bold">Play Game</Text> to
-                                    start. Step 1: choose <Text as="span" fontWeight="bold">A</Text> (result{" "}
-                                    <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)}</Text>). Steps 2–9: three letters — each step
-                                    each letter independently becomes <Text as="span" color="#FFD700">0</Text> (bust), a value in{" "}
-                                    <Text as="span" color="#FFD700">(0.1, 1)</Text>, or a value in{" "}
-                                    <Text as="span" color="#FFD700">(1, max)</Text> (max ={" "}
-                                    <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)}</Text> ×
-                                    2^(step − 1). Probabilities controlled in Alpha Tree Settings). Step 9: W, X, Y. Step 10: only{" "}
-                                    <Text as="span" fontWeight="bold">Z</Text>, fixed{" "}
-                                    <Text as="span" color="#FFD700">{effectiveBase.toFixed(2)} × 2^9</Text> (plus mode settings).
-                                </Text>
-                            ) : (
-                                <VStack spacing="20px" w="100%" align="stretch">
+                        <CardBody
+                            h="100%"
+                            w={{ base: '100%' }}
+                            minW={{ base: '100%', sm: '450px' }}
+                            maxW="450px"
+                            mx="auto"
+                            overflowY="hidden"
+                            overflowX="hidden"
+                            position="relative"
+                        >
+                            {!treeState ? null : (
+                                <VStack spacing="12px" w="100%" align="stretch">
                                     <Flex justify="space-between" wrap="wrap" gap={2}>
                                         <Text fontSize="sm" color="rgba(255,255,255,0.85)">
                                             Step:{" "}
@@ -942,52 +965,8 @@ export default function AlphaTreePage() {
                                             </Text>
                                         </Text>
                                     </Flex>
-                                    {lastStepResult != null && (
-                                        <Box
-                                            bg="rgba(0, 212, 255, 0.12)"
-                                            border="1px solid rgba(0, 212, 255, 0.35)"
-                                            borderRadius="12px"
-                                            py="12px"
-                                            textAlign="center"
-                                        >
-                                            <Text fontSize="xs" color="rgba(255,255,255,0.7)" mb="4px">
-                                                Last result
-                                            </Text>
-                                            <Text fontSize="2xl" fontWeight="black" color="#FFD700">
-                                                {lastStepResult}
-                                            </Text>
-                                            {lastBandLabel ? (
-                                                <Text fontSize="xs" color="rgba(255,255,255,0.65)" mt="8px">
-                                                    {lastBandLabel}
-                                                </Text>
-                                            ) : null}
-                                        </Box>
-                                    )}
-                                    {treeState.phase === "await_cashout" ? (
-                                        <Text color="#68d391" textAlign="center" fontWeight="bold">
-                                            All 10 steps done — use Cash Out in the panel to collect.
-                                        </Text>
-                                    ) : (
+                                    {treeState.phase === "await_cashout" ? null : (
                                         <>
-                                            {treeState.phase === "playing" ? (
-                                                <Text
-                                                    fontSize="sm"
-                                                    color="rgba(255,255,255,0.75)"
-                                                    textAlign="center"
-                                                >
-                                                    You can <Text as="span" fontWeight="bold">Cash Out</Text> in the
-                                                    panel after each step to lock in{" "}
-                                                    <Text as="span" color="#FFD700" fontWeight="bold">
-                                                        ≈ $
-                                                        {(
-                                                            Number(treeState.betAmount ?? 0) *
-                                                            Number(treeState.cumulativeMultiplier ?? 1)
-                                                        ).toFixed(2)}
-                                                    </Text>{" "}
-                                                    (bet × {Number(treeState.cumulativeMultiplier ?? 1).toFixed(4)}),
-                                                    or keep playing.
-                                                </Text>
-                                            ) : null}
                                             {(() => {
                                                 if (!treeState) return null;
 
@@ -1006,8 +985,8 @@ export default function AlphaTreePage() {
                                                         flexDirection="column"
                                                         alignItems="center"
                                                         justifyContent="center"
-                                                        minH={{ base: "200px", sm: "240px" }}
-                                                        py={2}
+                                                        minH={{ base: "170px", sm: "190px" }}
+                                                        py={1}
                                                     >
                                                         {node}
                                                     </Box>
@@ -1019,8 +998,8 @@ export default function AlphaTreePage() {
                                                         <VStack spacing="2px">
                                                             <Button
                                                                 type="button"
-                                                                minW="56px"
-                                                                h="52px"
+                                                                minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                                                                h={ALPHA_TREE_PICK_BTN_H}
                                                                 fontSize="xl"
                                                                 fontWeight="bold"
                                                                 color="#000"
@@ -1051,8 +1030,8 @@ export default function AlphaTreePage() {
                                                     <Button
                                                         key={`${keyPrefix}-${ch}`}
                                                         type="button"
-                                                        minW="56px"
-                                                        h="52px"
+                                                        minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                                                        h={ALPHA_TREE_PICK_BTN_H}
                                                         fontSize="xl"
                                                         fontWeight="bold"
                                                         color="#000"
@@ -1073,7 +1052,7 @@ export default function AlphaTreePage() {
                                                 const renderLetterPickColumn = (letterList, keyPrefix) => (
                                                     <VStack
                                                         minW="86px"
-                                                        minH="132px"
+                                                        minH={ALPHA_TREE_PICK_COL_MIN_H}
                                                         justify="space-between"
                                                         align="center"
                                                     >
@@ -1091,7 +1070,7 @@ export default function AlphaTreePage() {
                                                             templateColumns="auto auto"
                                                             templateRows="auto auto auto"
                                                             columnGap={FOUR_PICK_GRID_COL_GAP}
-                                                            rowGap="10px"
+                                                            rowGap={ALPHA_TREE_ROW_GAP}
                                                             alignItems="flex-start"
                                                             justifyItems="center"
                                                         >
@@ -1117,8 +1096,8 @@ export default function AlphaTreePage() {
                                                 const renderStepTenGrid = (resolvedLetter, resolvedValue, pickLetter, keyPrefix) => {
                                                     const cellSpacer = (
                                                         <Box
-                                                            minW="56px"
-                                                            h="52px"
+                                                            minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                                                            h={ALPHA_TREE_PICK_BTN_H}
                                                             visibility="hidden"
                                                             pointerEvents="none"
                                                             aria-hidden
@@ -1130,7 +1109,7 @@ export default function AlphaTreePage() {
                                                             templateColumns="auto auto"
                                                             templateRows="auto auto auto"
                                                             columnGap={FOUR_PICK_GRID_COL_GAP}
-                                                            rowGap="10px"
+                                                            rowGap={ALPHA_TREE_ROW_GAP}
                                                             alignItems="flex-start"
                                                             justifyItems="center"
                                                         >
@@ -1158,8 +1137,8 @@ export default function AlphaTreePage() {
                                                         <VStack justify="center" align="center" spacing="10px">
                                                             <Button
                                                                 type="button"
-                                                                minW="56px"
-                                                                h="52px"
+                                                                minW={ALPHA_TREE_PICK_BTN_MIN_W}
+                                                                h={ALPHA_TREE_PICK_BTN_H}
                                                                 fontSize="xl"
                                                                 fontWeight="bold"
                                                                 color="#000"
@@ -1230,7 +1209,7 @@ export default function AlphaTreePage() {
                                                     }
                                                     return (
                                                         <Flex wrap="nowrap" gap="18px" justify="center" align="flex-start">
-                                                            <VStack minW="86px" minH="132px" justify="center" align="center">
+                                                            <VStack minW="86px" minH={ALPHA_TREE_PICK_COL_MIN_H} justify="center" align="center">
                                                                 {prevLetter
                                                                     ? renderResolvedButton(prevLetter, lastPath?.value)
                                                                     : null}
@@ -1242,7 +1221,7 @@ export default function AlphaTreePage() {
 
                                                 if (treeState.phase === "await_cashout") {
                                                     return (
-                                                        <VStack minH="132px" justify="center" align="center" spacing="10px">
+                                                        <VStack minH={ALPHA_TREE_PICK_COL_MIN_H} justify="center" align="center" spacing="6px">
                                                             {prevLetter ? renderResolvedButton(prevLetter, lastPath?.value) : null}
                                                         </VStack>
                                                     );
@@ -1250,52 +1229,6 @@ export default function AlphaTreePage() {
 
                                                 return null;
                                             })()}
-                                            {treeState.phase === "playing" &&
-                                            treeState.step >= 2 &&
-                                            treeState.step <= 9 &&
-                                            (lettersToShow || []).length === 3 ? (
-                                                <Text
-                                                    fontSize="xs"
-                                                    color="rgba(255,255,255,0.65)"
-                                                    textAlign="center"
-                                                    lineHeight="1.5"
-                                                    px={1}
-                                                >
-                                                    Each letter is one of:{" "}
-                                                    <Text as="span" fontWeight="semibold">
-                                                        0 (bust)
-                                                    </Text>
-                                                    ,{" "}
-                                                    <Text as="span" fontWeight="semibold">
-                                                        (0.1, 1)
-                                                    </Text>
-                                                    , or{" "}
-                                                    <Text as="span" fontWeight="semibold">
-                                                        (1, {treeState.nextRandomMax != null
-                                                            ? Number(treeState.nextRandomMax).toFixed(2)
-                                                            : "…"}
-                                                        )
-                                                    </Text>{" "}
-                                                    — assigned randomly to B/C/D (or this step’s letters) each step.
-                                                </Text>
-                                            ) : null}
-                                            {treeState.phase === "playing" &&
-                                            treeState.step === 10 &&
-                                            (lettersToShow || []).length === 1 ? (
-                                                <Text
-                                                    fontSize="xs"
-                                                    color="rgba(255,255,255,0.65)"
-                                                    textAlign="center"
-                                                    lineHeight="1.5"
-                                                    px={1}
-                                                >
-                                                    Z → fixed{" "}
-                                                    {treeState.nextRandomMax != null
-                                                        ? Number(treeState.nextRandomMax).toFixed(2)
-                                                        : alphaTreeMaxForRandomStep(10, effectiveBase)?.toFixed(2) ?? "…"}{" "}
-                                                    (from server; includes base × 2^9 and mode)
-                                                </Text>
-                                            ) : null}
                                         </>
                                     )}
                                     <AlphaTreeLetterDiagram

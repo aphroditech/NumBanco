@@ -321,7 +321,7 @@ export default function CloudSpreadPage() {
 
               <Grid
                 mt="14px"
-                templateColumns={{ base: "1fr", lg: "minmax(0,1fr) 230px 190px" }}
+                templateColumns={{ base: "1fr", lg: "minmax(0,1fr) minmax(220px, 320px)" }}
                 gap="12px"
                 alignItems="stretch"
               >
@@ -411,7 +411,7 @@ export default function CloudSpreadPage() {
 
                 </VStack>
 
-                <VStack align="stretch" spacing="8px" w={{ base: "100%", lg: "320px" }} justify="flex-end" justifySelf={{ base: "stretch", lg: "end" }}>
+                <VStack align="stretch" spacing="8px" w="100%" maxW={{ lg: "320px" }} justify="flex-end" justifySelf={{ base: "stretch", lg: "end" }}>
                   {myBetCount > 0 ? (
                     <HStack spacing="8px" w="100%" flexWrap="wrap">
                       <Button
@@ -477,40 +477,6 @@ export default function CloudSpreadPage() {
                   )}
                 </VStack>
 
-                <VStack align="stretch" spacing="8px" w="100%" justify="flex-end">
-                  {/* <HStack
-                    minH="38px"
-                    bg={S.innerBg}
-                    border="1px solid"
-                    borderColor={S.border}
-                    borderRadius="8px"
-                    px="10px"
-                    minW={0}
-                    w="100%"
-                  >
-                    <Text color={S.text} fontSize="sm" fontWeight="700" noOfLines={2}>
-                      {canBet
-                        ? `Next: Step ${nextBetStep} (x${multiplierForStep(nextBetStep).toFixed(2)})`
-                        : myBetCount >= maxBetsPerRound
-                          ? `All ${maxBetsPerRound} steps done`
-                          : "—"}
-                    </Text>
-                  </HStack> */}
-
-                  {/* <HStack
-                    minH="38px"
-                    bg={S.innerBg}
-                    border="1px solid"
-                    borderColor={S.border}
-                    borderRadius="8px"
-                    px="10px"
-                    justify="center"
-                  >
-                    <Text color={S.accentText} fontSize="sm" fontWeight="800" textAlign="center" title="Stake × product of cloud multipliers (paid once at first play)">
-                      {myBetCount > 0 ? "Cash-out payout" : "If you start"}: ${potentialWin}
-                    </Text>
-                  </HStack> */}
-                </VStack>
               </Grid>
             </CardBody>
           </Card>

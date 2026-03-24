@@ -30,6 +30,16 @@ export const userReducer = (state = initialState, action) => {
                 ...state,
                 userInfo: action.payload,
             };
+        case "MERGE_USER":
+            return {
+                ...state,
+                userInfo: state.userInfo
+                    ? {
+                          ...state.userInfo,
+                          ...(action.payload || {}),
+                      }
+                    : action.payload,
+            };
         case "ACTIVE_USER":
             return {
                 ...state,

@@ -42,89 +42,89 @@ const ably = createAblyClient();
 app.locals.ably = ably;
 
 connectDB()
-  .then(async () => {
-    try {
-        await initializeDatabase();
-    } catch (err) {
-        console.error("❌ Database initialization failed:", err);
-        process.exit(1);
-    }
+    .then(async () => {
+        try {
+            await initializeDatabase();
+        } catch (err) {
+            console.error("❌ Database initialization failed:", err);
+            process.exit(1);
+        }
 
-    // Cloud Spread game loop (per-user rounds). Live feed uses Ably after `setCloudSpreadAbly` on connect.
-    startCloudSpreadGameLoop().catch((err) => {
-        console.error("[cloud-spread] failed to start game loop:", err);
-    });
+        // Cloud Spread game loop (per-user rounds). Live feed uses Ably after `setCloudSpreadAbly` on connect.
+        startCloudSpreadGameLoop().catch((err) => {
+            console.error("[cloud-spread] failed to start game loop:", err);
+        });
 
-    // Load SSL certificates
-    const sslOptions = {
-        key: fs.readFileSync(process.env.SSL_KEY_PATH || './certs/key.pem'),
-        cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
-    };
+        // Load SSL certificates
+        const sslOptions = {
+            key: fs.readFileSync(process.env.SSL_KEY_PATH || './certs/key.pem'),
+            cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
+        };
 
-    /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
-    http.createServer(app).listen(PORT, () => {
-        console.log(`🚀 HTTP Server listening on ${PORT} port.`);
-    });
-    // https.createServer(sslOptions, app).listen(PORT, () => {
-    //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
+        /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
+        http.createServer(app).listen(PORT, () => {
+            console.log(`🚀 HTTP Server listening on ${PORT} port.`);
+        });
+        // https.createServer(sslOptions, app).listen(PORT, () => {
+        //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
 
-    // });
-    
-    ably.connection.once("connected", () => {
-        console.log("✅ Ably connected");
-        // confirmDepositEngine(ably);
-        // tronEngine(ably);
-        // startPartnerDepositCron(ably);
-        // startWithdrawApprovalCron(ably);
-        // getUserStatusChannel(ably);
-        // cardGameBot(ably);
-        // pumpingBot(ably);
-        // jokerCrashBot(ably);
-        // rubicBot(ably);
-        // miningBot(ably);
-        minesBot(ably);
-        // rocketBot(ably);
-        // aToZBot(ably);
-        // fishingBot(ably);
-        startGravityGameLoop(ably);
-        // setCloudSpreadAbly(ably);
-        // cloudSpreadBot().catch((err) => {
-        //     console.error("[cloud-spread] bot failed to start:", err);
         // });
-        // cocoBot(ably);
-        // alphaTreeBot(ably);
-        // doveBot(ably);
-        // fundMergeEngine();
-        // tankCheckEngine();
-        // getWithdrawWallet();
+    
+        ably.connection.once("connected", () => {
+            console.log("✅ Ably connected");
+            confirmDepositEngine(ably);
+            tronEngine(ably);
+            startPartnerDepositCron(ably);
+            startWithdrawApprovalCron(ably);
+            getUserStatusChannel(ably);
+            cardGameBot(ably);
+            pumpingBot(ably);
+            jokerCrashBot(ably);
+            rubicBot(ably);
+            miningBot(ably);
+            minesBot(ably);
+            rocketBot(ably);
+            aToZBot(ably);
+            fishingBot(ably);
+            startGravityGameLoop(ably);
+            setCloudSpreadAbly(ably);
+            cloudSpreadBot().catch((err) => {
+                console.error("[cloud-spread] bot failed to start:", err);
+            });
+            cocoBot(ably);
+            alphaTreeBot(ably);
+            doveBot(ably);
+            fundMergeEngine();
+            tankCheckEngine();
+            getWithdrawWallet();
 
-        // startBetEngine(ably, 0);
-        // startBetEngine(ably, 1);
-        // startBetEngine(ably, 2);
+            startBetEngine(ably, 0);
+            startBetEngine(ably, 1);
+            startBetEngine(ably, 2);
+
+            try {
+                startCronJobs();
+            } catch (err) {
+                console.warn('Failed to start cron jobs:', err);
+            }
+        });
 
         try {
-            startCronJobs();
+            await initMoralis();
         } catch (err) {
-            console.warn('Failed to start cron jobs:', err);
+            console.warn("⚠️ Moralis failed to start (optional for many routes):", err?.message || err);
         }
-    });
-
-    try {
-        await initMoralis();
-    } catch (err) {
-        console.warn("⚠️ Moralis failed to start (optional for many routes):", err?.message || err);
-    }
 
 
-    // Check and create yesterday's wallet if it doesn't exist
-    try {
-        await ensureYesterdayWalletExists();
-    } catch (err) {
-        console.warn('Failed to ensure yesterday\'s wallet exists:', err);
-    }
-  })
-  .catch((err) => {
-    console.error("❌ Failed to start server (MongoDB or startup error):", err?.message || err);
-    console.error("Check MONGO_URI in .env and that MongoDB is running.");
-    process.exit(1);
-  });
+        // Check and create yesterday's wallet if it doesn't exist
+        try {
+            await ensureYesterdayWalletExists();
+        } catch (err) {
+            console.warn('Failed to ensure yesterday\'s wallet exists:', err);
+        }
+    })
+    .catch((err) => {
+        console.error("❌ Failed to start server (MongoDB or startup error):", err?.message || err);
+        console.error("Check MONGO_URI in .env and that MongoDB is running.");
+        process.exit(1);
+});

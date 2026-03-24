@@ -253,6 +253,8 @@ export const startGame = async (req, res) => {
       mode,
       minesCount,
       gridSize: GRID_SIZE,
+      // Use multiplier/win-rate driven reveal logic (DB-configured bands).
+      // When rate is 1 for the current band, blast will not happen.
       mineIndices: [],
       revealedIndices: [],
       status: "playing",
@@ -318,17 +320,10 @@ export const reveal = async (req, res) => {
     } else {
       const nextRevealedCount = (game.revealedIndices?.length || 0) + 1;
       const multiplier = getMultiplierForRevealed(GRID_SIZE, game.minesCount, nextRevealedCount);
-      // Use cached win-rate config. If cache is cold (e.g. getPrefix was not called),
-      // refresh here so reveal uses DB-configured bands.
-      let cached = getMinesWinRateCache();
-      if (
-        !Array.isArray(cached?.winRateBands) ||
-        cached.winRateBands.length === 0 ||
-        cached.minesMode2RateFactor == null
-      ) {
-        await refreshMinesMultiplierCache();
-        cached = getMinesWinRateCache();
-      }
+      // Always refresh before reveal so DB winRateBands changes apply immediately.
+      // Without this, stale in-memory cache can allow outcomes inconsistent with DB.
+      await refreshMinesMultiplierCache();
+      const cached = getMinesWinRateCache();
       const rateBands = cached?.winRateBands ?? undefined;
       const minesMode2RateFactor = cached?.minesMode2RateFactor ?? 0.7;
 
