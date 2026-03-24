@@ -351,8 +351,8 @@ export default function RocketShotPage() {
                                         <Flex align="center" justify="center" gap="6px" flexWrap="wrap" w="100%">
                                             <Button
                                                 size="sm"
-                                                h="32px"
-                                                minW="44px"
+                                                h="62px"
+                                                minW="54px"
                                                 px="10px"
                                                 fontSize="xs"
                                                 fontWeight="bold"
@@ -370,7 +370,7 @@ export default function RocketShotPage() {
                                                 bg="#323738"
                                                 borderRadius="8px"
                                                 px="6px"
-                                                h="36px"
+                                                h="63px"
                                                 border="1px solid rgba(255, 255, 255, 0.1)"
                                             >
                                                 <IconButton
@@ -394,8 +394,10 @@ export default function RocketShotPage() {
                                                     min={MIN_AMOUNT}
                                                     max={maxAmount}
                                                     step={AMOUNT_STEP}
-                                                    w={{ base: '72px', sm: '80px' }}
+                                                    // w={{ base: '102px', sm: '110px' }}
                                                     textAlign="center"
+                                                    minH="66px"
+                                                    minW="120px"
                                                     fontSize="md"
                                                     fontWeight="bold"
                                                     color="#fff"
@@ -433,8 +435,8 @@ export default function RocketShotPage() {
                                             </HStack>
                                             <Button
                                                 size="sm"
-                                                h="32px"
-                                                minW="44px"
+                                                h="62px"
+                                                minW="54px"
                                                 px="10px"
                                                 fontSize="xs"
                                                 fontWeight="bold"
@@ -448,72 +450,6 @@ export default function RocketShotPage() {
                                                 Max
                                             </Button>
                                         </Flex>
-
-                                        <HStack spacing="10px" align="center" flexWrap="wrap" justify="center" w="100%">
-                                            <HStack spacing="6px" align="center">
-                                                <Text as="span" fontSize="xs" color="rgba(255,255,255,0.8)" whiteSpace="nowrap">
-                                                    Difficulty:
-                                                </Text>
-                                                <Select
-                                                    size="sm"
-                                                    w={{ base: "100px", sm: "110px" }}
-                                                    h="32px"
-                                                    fontSize="xs"
-                                                    bg="#323738"
-                                                    color="#fff"
-                                                    borderColor="rgba(0, 212, 255, 0.3)"
-                                                    borderRadius="6px"
-                                                    value={mode}
-                                                    onChange={(e) => setMode(e.target.value)}
-                                                    sx={{ option: { bg: "#323738", color: "#fff" } }}
-                                                >
-                                                    <option value="easy">Easy</option>
-                                                    <option value="normal">Normal</option>
-                                                    <option value="hard">Hard</option>
-                                                </Select>
-                                            </HStack>
-
-                                            <HStack
-                                                spacing="0"
-                                                bg="#323738"
-                                                borderRadius="6px"
-                                                p="2px"
-                                                border="1px solid rgba(0, 212, 255, 0.2)"
-                                            >
-                                                <Button
-                                                    size="xs"
-                                                    h="26px"
-                                                    px="10px"
-                                                    fontSize="xs"
-                                                    fontWeight="bold"
-                                                    bg={winMode === "flat" ? "#00D4FF" : "transparent"}
-                                                    color={winMode === "flat" ? "#000" : "#fff"}
-                                                    borderRadius="4px"
-                                                    _hover={{
-                                                        bg: winMode === "flat" ? "#00D4FF" : "rgba(255,255,255,0.1)",
-                                                    }}
-                                                    onClick={() => setWinMode("flat")}
-                                                >
-                                                    Flat Win
-                                                </Button>
-                                                <Button
-                                                    size="xs"
-                                                    h="26px"
-                                                    px="10px"
-                                                    fontSize="xs"
-                                                    fontWeight="bold"
-                                                    bg={winMode === "multiplier" ? "#00D4FF" : "transparent"}
-                                                    color={winMode === "multiplier" ? "#000" : "#fff"}
-                                                    borderRadius="4px"
-                                                    _hover={{
-                                                        bg: winMode === "multiplier" ? "#00D4FF" : "rgba(255,255,255,0.1)",
-                                                    }}
-                                                    onClick={() => setWinMode("multiplier")}
-                                                >
-                                                    Multiplier
-                                                </Button>
-                                            </HStack>
-                                        </HStack>
 
                                     </VStack>
                                     <Button
@@ -612,13 +548,6 @@ export default function RocketShotPage() {
                                 </Text>
                                 <Text mb={1}>
                                      - If you hit the rocket, you will win the multiplier. (min 0.1x - max 10x)
-                                </Text>
-                                <Text mb={1}>
-                                     - The faster the rocket moves, the harder it is to hit high multipliers — but that’s where the big rewards are.
-                                </Text>
-
-                                <Text mb={1}>
-                                    - In normal mode winingAmount is 110% of easy mode. In hard mode it is 120% of easy mode. But the speed is more fast.
                                 </Text>
                             </Box>
                         </VStack>
