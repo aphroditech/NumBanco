@@ -41,25 +41,17 @@ const AMOUNT_STEP = 0.5;
 const FIRE_COOLDOWN_MS = 500;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
 
-/** One “tick” of wait — MUST resolve even if rAF is paused (background tab) or never fires. */
-function waitNextFrameOrTimeout(ms = 48) {
-    return Promise.race([
-        new Promise((resolve) => {
-            if (typeof requestAnimationFrame !== 'undefined') {
-                requestAnimationFrame(() => resolve());
-            } else {
-                setTimeout(resolve, 16);
-            }
-        }),
-        new Promise((resolve) => setTimeout(resolve, ms)),
-    ]);
+/** Small sleep helper used by fast launch retries. */
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Retry until Phaser starts a shot or we time out.
- * Never block only on rAF — that can hang forever when the tab is throttled.
+ * Start the Phaser shot as soon as possible after bet response.
+ * We try immediately, then retry at a very short interval only if scene glue
+ * is not ready for a brief moment.
  */
-async function fireJavelinWhenReady(maxMs = 3500) {
+async function fireJavelinWhenReady(maxMs = 800, retryMs = 12) {
     const now = () =>
         typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
     const start = now();
@@ -73,7 +65,7 @@ async function fireJavelinWhenReady(maxMs = 3500) {
                 console.error(e);
             }
         }
-        await waitNextFrameOrTimeout(48);
+        await sleep(retryMs);
     }
     return false;
 }
@@ -138,7 +130,6 @@ export default function RocketShotPage() {
     );
     
     const user = useSelector((state) => state.user.userInfo) || {};
-    const rocketMultiplier = useSelector((state) => state.rocket?.multiplier ?? 0);
     const walletBalance = user.balance;
     const walletBalanceNum = Number(walletBalance);
     const hasKnownBalance = Number.isFinite(walletBalanceNum) && walletBalanceNum >= 0;
@@ -178,10 +169,9 @@ export default function RocketShotPage() {
             if (typeof window !== 'undefined') {
                 window.__rocketPendingMultiplier = multiplier;
             }
-            // Keep isBetPending true until Phaser actually accepts the shot — prevents double-submit
-            // and avoids isFiring=true when nothing launched (old bug: setIsFiring before fire()).
+            // Keep isBetPending true until Phaser accepts the shot.
             if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
-                const fired = await fireJavelinWhenReady();
+                const fired = await fireJavelinWhenReady(800, 12);
                 setIsBetPending(false);
                 if (fired) {
                     setIsFiring(true);
