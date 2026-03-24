@@ -554,7 +554,7 @@ export default function CocoPage() {
 
                         setAnimState("idle");
 
-                    }, 200);
+                    }, 100);
     
                 } 
                 else {
