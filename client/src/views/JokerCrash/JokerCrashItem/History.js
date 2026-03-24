@@ -155,9 +155,9 @@ function History() {
                                         <JokerCrashHistoryRow
                                             key={globalIndex}
                                             No={globalIndex + 1}
-                                            bet={row.bet}
-                                            multi={row.multi}
-                                            win={row.win}
+                                            bet={row.bet.toFixed(2)}
+                                            multi={row.multi.toFixed(2) > 0 ? row.multi.toFixed(2) : 0}
+                                            win={row.win.toFixed(2) > 0 ? row.win.toFixed(2) : 0}
                                             time={row.createAt}
                                             lastItem={index === arr.length - 1}
                                         />

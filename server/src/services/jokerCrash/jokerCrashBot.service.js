@@ -35,7 +35,6 @@ export const jokerCrashBot = async (ably) => {
                 })
                 
                 await jokerCrashView.save();
-                console.log("jokerCrashBot is running");
                 const oldDocs = await JokerCrashView.find({isUser:  0})
                     .sort({ time: -1 })
                     .skip(12)

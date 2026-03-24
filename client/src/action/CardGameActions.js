@@ -1,10 +1,16 @@
 import axiosInstance from "../api/axiosConfig";
-import { setUserRedux } from ".";
+
+const mergeCardGameUser = (res, dispatch) => {
+    dispatch({
+        type: "MERGE_USER",
+        payload: res?.data?.user || {},
+    });
+};
 
 export const cardGameBet = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/cardGame/bet', data);
-        setUserRedux(res, dispatch);
+        mergeCardGameUser(res, dispatch);
         return res.data.data;
     } catch (err) {
         console.error(err);

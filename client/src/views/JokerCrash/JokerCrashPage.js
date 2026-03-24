@@ -218,6 +218,8 @@ export default function JokerCrashPage() {
         if (pumpingMultiTimeoutRef.current) clearTimeout(pumpingMultiTimeoutRef.current);
         setWin(null);
         const res = await jokerCrashBet({ amount, operator }, dispatch, history);
+
+        console.log("res", res);
         if (res) {
             setBet(true);
             setIsFlipping(true);
