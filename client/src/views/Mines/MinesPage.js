@@ -225,8 +225,8 @@ export default function MinesPage() {
             setExplodingTileIndex(null);
             setGameState("playing");
             toast.info(`Mines game started. Bet $${truncateToTwo(bet)}.`);
-            // Refresh notifications immediately so "Mines started" shows now (not only on game end).
-            getUserData(dispatch);
+            // Avoid immediate full user refetch here: balance is already updated optimistically
+            // in minesStartGame, and refetching right now can trigger extra header balance flips.
         } catch (e) {
             toast.error(e.message || "Failed to start game.");
         } finally {
