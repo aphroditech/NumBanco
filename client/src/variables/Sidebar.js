@@ -16,22 +16,29 @@ import PumpingPage from "views/Pumping/PumpingPage";
 import FishingPage from "views/Fishing/FishingPage";
 import JokerCrashPage from "views/JokerCrash/JokerCrashPage";
 import GravityPage from "views/Gravity/GravityPage";
+import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
 import AToZPage from "views/AToZ/AToZ";
 import CardGamePage from "views/CardGame/CardGamePage";
+import AlphaTreePage from "views/AlphaTree/AlphaTree";
 
 // Load Icons
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import CasinoIcon from '@mui/icons-material/Casino';
 import GavelIcon from '@mui/icons-material/Gavel';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TwitterIcon from '@mui/icons-material/Twitter';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import StyleIcon from '@mui/icons-material/Style';
+import NumbersIcon from '@mui/icons-material/Numbers';
+import CloudQueueIcon from "@mui/icons-material/CloudQueue";
+import ForestIcon from '@mui/icons-material/Forest';
+import Filter9Icon from '@mui/icons-material/Filter9';
+import TrafficIcon from '@mui/icons-material/Traffic';
+
 
 export const TierA = {
     path: "/tierA",
@@ -149,10 +156,18 @@ export const Gravity = {
     layout: "/game",
 }
 
+export const CloudSpread = {
+    path: "/cloud-spread",
+    name: "CLOUD SPREAD",
+    icon: <CloudQueueIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CloudSpreadPage,
+    layout: "/game",
+}
+
 export const DoveGame = {
     path: "/dove",
-    name: "DOVE CROSS",
-    icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    name: "LUCKY HOP",
+    icon: <TrafficIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
     layout: "/game",
 }
@@ -166,9 +181,17 @@ export const CocoGame = {
 }
 
 export const AToZGame = {
-    path: "/a-to-z",
-    name: "A TO Z",
-    icon: <SortByAlphaIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    path: "/digits",
+    name: "DIGITS SLOT",
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
+    layout: "/game",
+}
+
+export const AlphaTreeGame = {
+    path: "/alpha-tree",
+    name: "ALPHA TREE",
+    icon: <ForestIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: AlphaTreePage,
     layout: "/game",
 }

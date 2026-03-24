@@ -1,12 +1,39 @@
-import DoveHistory from "../models/DoveHistory.js";
-import DoveView from "../models/DoveView.js";
+import DoveHistory from "../models/dove/DoveHistory.js";
+import DoveView from "../models/dove/DoveView.js";
 import User from "../models/User.js";
-import DoveSettings from "../models/DoveSettings.js";
-import CalendarDove from "../models/CalendarDove.js";
+import DoveSettings from "../models/dove/DoveSettings.js";
+import CalendarDove from "../models/dove/CalendarDove.js";
 
 const MAX_BET_AMOUNT = 20;
 const VIEW_LIMIT = 22;
 const MAX_LANES = 20;
+
+function buildUserNotification(message, status = "success", from = "Lucky Hop", to = "") {
+    return {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        notification: message,
+        status,
+        from,
+        to,
+        unread: true,
+    };
+}
+
+async function pushUserNotification(userId, message, status = "success") {
+    if (!userId || !message) return;
+    try {
+        await User.updateOne(
+            { _id: userId },
+            {
+                $push: {
+                    notification: buildUserNotification(message, status, "Lucky Hop", ""),
+                },
+            }
+        );
+    } catch (e) {
+        console.warn("[dove] pushUserNotification failed:", e?.message || e);
+    }
+}
 
 function getModeParams(settings, difficulty) {
     if (difficulty === "easy") return settings?.easy || { a: 0.2, b: 0.05 };
@@ -58,7 +85,7 @@ async function enrichDoveViewsWithUser(doveViews) {
                     partnerId: 0,
                     partnerActivity: 0,
                     lastClickDate: 0,
-                    canWithdraw: 0,
+                    
                 }
             );
             const obj = item.toObject();
@@ -108,6 +135,7 @@ export const checkDoveWin = async (req, res) => {
         if (!doveSettings) {
             return res.status(500).json({ error: "Dove settings not found" });
         }
+        const doveHistory = await DoveHistory.findOne({ user: userId });
         if (isStart) {
             user.balance -= bet;
             user.doveAmount += bet;
@@ -140,6 +168,28 @@ export const checkDoveWin = async (req, res) => {
             return res.json({ M1uXj3sZpU : 1, ...(isStart && { balance: user.balance }) });
             
         } else {
+            if(doveHistory) {
+                doveHistory.history.push({
+                    bet: bet,
+                    multiplier: multiplier,
+                    winAmt: 0,
+                    profit: 0,
+                    timestamp: new Date(),
+                });
+            } else {
+                const newDoveHistory = new DoveHistory({
+                    user: userId,
+                    history: [{
+                        bet: bet,
+                        multiplier: multiplier,
+                        winAmt: 0,
+                        profit: 0,
+                        timestamp: new Date(),
+                    }]
+                });
+                await newDoveHistory.save();
+            }
+            await doveHistory.save();
             return res.json({ M1uXj3sZpU: 0 });
         }
 
@@ -284,6 +334,15 @@ export const getDoveEarnings = async (req, res) => {
         });
         await doveView.save();
         publishDoveViewToAbly(req.app);
+
+        // Push in-app notification (appears in Notifications dropdown).
+        // This is the "cash out amount" the user asked to display.
+        const cashOutAmt = Number(winAmount) || 0;
+        await pushUserNotification(
+            userId,
+            `You cashed out $${cashOutAmt.toFixed(2)} in Lucky Hop.`,
+            "success"
+        );
 
         return res.json({ balance: user.balance });
     }

@@ -1,7 +1,7 @@
 import User from "../models/User.js";
-import RubicResult from "../models/RubicResult.js";
-import RubicSetting from "../models/RubicSetting.js";
-import UserRubic from "../models/UserRubic.js";
+import RubicResult from "../models/rubic/RubicResult.js";
+import RubicSetting from "../models/rubic/RubicSetting.js";
+import UserRubic from "../models/rubic/UserRubic.js";
 
 export const handleRubicBet = async (req, res) => {
     try {
@@ -20,7 +20,7 @@ export const handleRubicBet = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
 
@@ -58,6 +58,7 @@ export const handleRubicBet = async (req, res) => {
             userName: user.altas,
             avatar: user.avatar,
             isWin: isWin,
+            multiplier: isWin ? multiplier : 0,
             betAmount: betAmount,
             winAmount: winAmount,
         });
@@ -79,6 +80,7 @@ export const handleRubicBet = async (req, res) => {
                 userName: user.altas,
                 avatar: user.avatar,
                 isWin: isWin,
+                multiplier: isWin ? multiplier : 0,
                 betAmount: betAmount,
                 winAmount: winAmount,
             };
@@ -166,7 +168,7 @@ export const removeUserBalance = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
+                
             }
         );
         const userRubicAmount = user.rubicHistory.reduce((acc, curr) => acc + curr.betAmount, 0);

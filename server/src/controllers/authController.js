@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sendUserResponse } from "../utils/responses.js";
 import RealTimeWinner from "../models/RealTimeWinner.js";
+import MinesHistory from "../models/MinesHistory.js";
+import MiningHistory from "../models/jackal/MiningHistory.js";
 import { generateUserWallets } from "../utils/walletGenerator.js";
 
 import { incrementAuthStat } from "./authStateService.js";
@@ -70,7 +72,6 @@ export const register = async (req, res) => {
                 rubicMode: 0,
                 partnerId: 0,
                 partnerActivity: 0,
-                lastClickDate: 0,
             }
         );
 
@@ -104,7 +105,6 @@ export const login = async (req, res) => {
                 rubicMode: 0,
                 partnerId: 0,
                 partnerActivity: 0,
-                lastClickDate: 0,
             }
         );
 
@@ -197,7 +197,6 @@ export const verify2fa = async (req, res) => {
                 rubicMode: 0,
                 partnerId: 0,
                 partnerActivity: 0,
-                lastClickDate: 0,
             }
         );
         if (!user) return res.status(400).json({ message: "User not found" });
@@ -276,7 +275,6 @@ export const getUserData = async (req, res) => {
                 partnerId: 0,
                 partnerActivity: 0,
                 lastClickDate: 0,
-                canWithdraw: 0,
             }
         );
 
@@ -295,7 +293,258 @@ export const getUserData = async (req, res) => {
 
 export const getWinners = async (req, res) => {
     try {
-        const winners = await User.find({}).sort({ totalEarn: -1 }).limit(10).lean();
+        const userHistoryWinners = await User.aggregate([
+            {
+                $project: {
+                    altas: 1,
+                    avatar: 1,
+                    membership: 1,
+                    allWins: {
+                        $concatArrays: [
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: { $ifNull: ["$alphaTreeHistory", []] },
+                                            as: "h",
+                                            cond: { $gt: ["$$h.profit", 0] }
+                                        }
+                                    },
+                                    as: "h",
+                                    in: { gameType: "AlphaTree", winAmount: "$$h.profit", date: "$$h.createAt" }
+                                }
+                            },
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: { $ifNull: ["$cloudSpreadHistory", []] },
+                                            as: "h",
+                                            cond: { $gt: ["$$h.win", 0] }
+                                        }
+                                    },
+                                    as: "h",
+                                    in: { gameType: "CloudSpread", winAmount: "$$h.win", date: "$$h.createAt" }
+                                }
+                            },
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: { $ifNull: ["$cocoHistory", []] },
+                                            as: "h",
+                                            cond: { $gt: ["$$h.profit", 0] }
+                                        }
+                                    },
+                                    as: "h",
+                                    in: { gameType: "Coco", winAmount: "$$h.profit", date: "$$h.createAt" }
+                                }
+                            },
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: { $ifNull: ["$fishingHistory", []] },
+                                            as: "h",
+                                            cond: { $gt: ["$$h.win", 0] }
+                                        }
+                                    },
+                                    as: "h",
+                                    in: { gameType: "Fishing", winAmount: "$$h.win", date: "$$h.createAt" }
+                                }
+                            },
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: { $ifNull: ["$pumpingHistory", []] },
+                                            as: "h",
+                                            cond: { $gt: ["$$h.win", 0] }
+                                        }
+                                    },
+                                    as: "h",
+                                    in: { gameType: "Pumping", winAmount: "$$h.win", date: "$$h.createAt" }
+                                }
+                            },
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: { $ifNull: ["$updownHistory", []] },
+                                            as: "h",
+                                            cond: { $gt: ["$$h.profit", 0] }
+                                        }
+                                    },
+                                    as: "h",
+                                    in: { gameType: "Gravity", winAmount: "$$h.profit", date: "$$h.createAt" }
+                                }
+                            },
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: { $ifNull: ["$rubicHistory", []] },
+                                            as: "h",
+                                            cond: { $gt: ["$$h.profit", 0] }
+                                        }
+                                    },
+                                    as: "h",
+                                    in: { gameType: "Rubic", winAmount: "$$h.profit", date: "$$h.createAt" }
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                $unwind: {
+                    path: "$allWins",
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $project: {
+                    username: "$altas",
+                    avatar: 1,
+                    membership: 1,
+                    gameType: "$allWins.gameType",
+                    winAmount: "$allWins.winAmount",
+                    date: "$allWins.date"
+                }
+            },
+            {
+                $sort: { gameType: 1, winAmount: -1, date: -1 }
+            },
+            {
+                $group: {
+                    _id: "$gameType",
+                    topWinner: { $first: "$$ROOT" }
+                }
+            },
+            {
+                $replaceRoot: { newRoot: "$topWinner" }
+            },
+            {
+                $sort: { winAmount: -1, date: -1 }
+            }
+        ]);
+
+        const minesTopWinner = await MinesHistory.aggregate([
+            {
+                $unwind: {
+                    path: "$history",
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $match: {
+                    "history.profit": { $gt: 0 }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "user",
+                    foreignField: "_id",
+                    as: "userDoc"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$userDoc",
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $project: {
+                    username: "$userDoc.altas",
+                    avatar: "$userDoc.avatar",
+                    membership: "$userDoc.membership",
+                    gameType: { $literal: "Mines" },
+                    winAmount: "$history.profit",
+                    date: "$history.timestamp"
+                }
+            },
+            {
+                $sort: { winAmount: -1, date: -1 }
+            },
+            {
+                $limit: 1
+            }
+        ]);
+
+        const doveTopWinner = await User.aggregate([
+            {
+                $match: {
+                    doveWinAmount: { $gt: 0 }
+                }
+            },
+            {
+                $project: {
+                    username: "$altas",
+                    avatar: 1,
+                    membership: 1,
+                    gameType: { $literal: "Lucky Hop" },
+                    winAmount: "$doveWinAmount",
+                    date: "$updatedAt"
+                }
+            },
+            {
+                $sort: { winAmount: -1, date: -1 }
+            },
+            {
+                $limit: 1
+            }
+        ]);
+
+        const jackalTopWinner = await MiningHistory.aggregate([
+            {
+                $unwind: {
+                    path: "$history",
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $match: {
+                    "history.winAmount": { $gt: 0 }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "user",
+                    foreignField: "_id",
+                    as: "userDoc"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$userDoc",
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $project: {
+                    username: "$userDoc.altas",
+                    avatar: "$userDoc.avatar",
+                    membership: "$userDoc.membership",
+                    gameType: { $literal: "Jackal" },
+                    winAmount: "$history.winAmount",
+                    date: "$history.date"
+                }
+            },
+            {
+                $sort: { winAmount: -1, date: -1 }
+            },
+            {
+                $limit: 1
+            }
+        ]);
+
+        const winners = [...userHistoryWinners, ...minesTopWinner, ...doveTopWinner, ...jackalTopWinner]
+            .sort((a, b) => (b.winAmount || 0) - (a.winAmount || 0))
+            .slice(0, 10);
+
         return res.json(winners);
     } catch (err) {
         console.log(err)

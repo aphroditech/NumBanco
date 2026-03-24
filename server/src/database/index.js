@@ -33,6 +33,8 @@ export const initializeDatabase = async () => {
     await initDoveSetting();
     await initMiningSetting();
     await initRocketSetting();
+    await initAToZSetting();
+    await initCloudSpreadSetting();
     await initializeFishingPercentages();
     await initializeFishingLimits();
     await initializeCardGamePercentages();

@@ -34,7 +34,8 @@ import PlinkoPage from "views/Plinko/Plinko";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import DiamondIcon from '@mui/icons-material/Diamond';
-import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
+import NumbersIcon from '@mui/icons-material/Numbers';
+import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import SupportPage from "views/Support/Support";
 import GavelIcon from '@mui/icons-material/Gavel';
 import DangerousIcon from '@mui/icons-material/Dangerous';
@@ -45,20 +46,22 @@ import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
 import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
+import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import FishingPage from "views/Fishing/FishingPage";
 import CardGamePage from "views/CardGame/CardGamePage";
 import JokerCrashPage from "views/JokerCrash/JokerCrashPage";
 import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
 import MinesPage from "views/Mines/MinesPage";
-
+import AlphaTreePage from "views/AlphaTree/AlphaTree";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
 import Coco from "views/Coco/CocoPage";
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import AToZPage from "views/AToZ/AToZ";
-
+import ForestIcon from '@mui/icons-material/Forest';
+import Filter9Icon from '@mui/icons-material/Filter9';
 
 import {
   DocumentIcon,
@@ -81,6 +84,22 @@ var dashRoutes = [
     component: Dashboard,
     layout: "/user",
   },
+  {
+    name: "LOTTERY",
+    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    layout: "/admin",
+  },
+  {
+    path: "/affiliation",
+    name: "AFFILIATION",
+    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Partnership,
+    layout: "/user",
+  },
+  // {
+  //   name: "LOTTERY",
+  //   icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+  // },
   {
     name: "NUMEXA",
     icon: <PixIcon style={{ fontSize: "24px", color: "#00D4FF" }} />
@@ -139,17 +158,25 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/cloud-spread",
+    name: "CLOUD SPREAD",
+    icon: <CloudQueueIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CloudSpreadPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/dove",
-    name: "DOVE CROSS",
+    name: "LUCKY HOP",
     icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Dove,
     layout: "/game",
   },
   {
     redirect: true,
-    path: "/a-to-z",
-    name: "A TO Z",
-    icon: <SortByAlphaIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    path: "/digits",
+    name: "DIGITS SLOT",
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AToZPage,
     layout: "/game",
   },
@@ -186,24 +213,15 @@ var dashRoutes = [
     layout: "/game",
   },
   {
-    path: "/affiliation",
-    name: "AFFILIATION",
-    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    component: Partnership,
-    layout: "/user",
+    redirect: true,
+    path: "/alpha-tree",
+    name: "ALPHA TREE",
+    icon: <ForestIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: AlphaTreePage,
+    layout: "/game",
   },
   {
-    name: "LOTTERY",
-    icon: <HandshakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    layout: "/admin",
-  },
-  // {
-  //   name: "LOTTERY",
-  //   icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-  // },
-
-  {
-    // redirect: true,
+    redirect: true,
     path: "/deposit",
     name: "DEPOSIT",
     icon: <CloudUploadRoundedIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -211,7 +229,7 @@ var dashRoutes = [
     layout: "/transaction",
   },
   {
-    // redirect: true,
+    redirect: true,
     path: "/withdraw",
     name: "WITHDRAW",
     icon: <CloudDownloadRoundedIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -219,6 +237,7 @@ var dashRoutes = [
     layout: "/transaction",
   },
   {
+    redirect: true,
     path: "/myprofile",
     name: "MY PROFILE",
     icon: <PersonIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,

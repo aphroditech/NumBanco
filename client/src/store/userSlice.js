@@ -7,13 +7,17 @@ const initialState = {
         rubicUsers: 0,
         pumpingUsers: 0,
         gravityUsers: 0,
+        cloudSpreadUsers: 0,
         doveUsers: 0,
         cocoUsers: 0,
         rocketUsers: 0,
         jackalUsers: 0,
         mineUsers: 0,
         fishingUsers: 0,
-        onlineUsers: 0
+        alphaTreeUsers: 0,
+        onlineUsers: 0,
+        aToZUsers: 0,
+        totalActiveUsers: 0
     },
     lootAvailable: false,
     lootRemainingMs: 0

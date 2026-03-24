@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import RocketSettings from "../../models/RocketSettings.js";
-import RocketResult from "../../models/RocketResult.js";
+import RocketSettings from "../../models/rocketShot/RocketSettings.js";
+import RocketResult from "../../models/rocketShot/RocketResult.js";
 
 const LEVELS = ["easy", "normal", "hard"];
 
@@ -38,7 +38,7 @@ function randomLevel() {
 
 /** Same weighted pick as `getMultiplier` in rocketController */
 function pickMultiplierFromSettings(settings) {
-    const multipliers = settings?.multiple;
+    const multipliers = settings?.normalMultiple;
     if (!multipliers?.length) return 0;
 
     const totalWeight = multipliers.reduce((sum, m) => sum + m.probability, 0);
@@ -86,8 +86,7 @@ export const rocketBot = async (ably) => {
             const level = randomLevel();
             const isWin = Math.random() < rocketSettings.botWinProbability;
 
-            let multiplier = pickMultiplierFromSettings(rocketSettings);
-            multiplier = applyLevelToMultiplier(multiplier, level);
+            let multiplier = isWin ? pickMultiplierFromSettings(rocketSettings) : 0;
             const winAmount = isWin
                 ? Math.round(betAmount * multiplier * 1000) / 1000
                 : 0;
@@ -95,6 +94,7 @@ export const rocketBot = async (ably) => {
             user.totalBet = Math.round((user.totalBet + betAmount) * 1000) / 1000;
             if (isWin) {
                 user.totalEarn = Math.round((user.totalEarn + winAmount) * 1000) / 1000;
+                user.rocketWinAmount = Math.round((user.rocketWinAmount + winAmount) * 1000) / 1000;
             }
             await user.save();
 
@@ -102,11 +102,13 @@ export const rocketBot = async (ably) => {
                 userName: user.altas,
                 avatar: user.avatar,
                 isWin,
+                multiplier,
                 bet: betAmount,
                 win: winAmount,
                 date: new Date(),
             };
-            await RocketResult.create(data);
+            const newResult = new RocketResult(data);
+            await newResult.save();
 
             const recent = await RocketResult.find()
                 .sort({ date: -1 })

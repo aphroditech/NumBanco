@@ -30,15 +30,42 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useHistory } from 'react-router-dom';
+import History from './RocketItems/History';
+
 
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 /** Match Dove Cross step increments for +/- controls */
 const AMOUNT_STEP = 0.5;
+/** Minimum time between bets (Fire stays disabled after a successful click). */
+const FIRE_COOLDOWN_MS = 500;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
 
-async function fireJavelinWhenReady(maxFrames = 40) {
-    for (let i = 0; i < maxFrames; i += 1) {
+/** One “tick” of wait — MUST resolve even if rAF is paused (background tab) or never fires. */
+function waitNextFrameOrTimeout(ms = 48) {
+    return Promise.race([
+        new Promise((resolve) => {
+            if (typeof requestAnimationFrame !== 'undefined') {
+                requestAnimationFrame(() => resolve());
+            } else {
+                setTimeout(resolve, 16);
+            }
+        }),
+        new Promise((resolve) => setTimeout(resolve, ms)),
+    ]);
+}
+
+/**
+ * Retry until Phaser starts a shot or we time out.
+ * Never block only on rAF — that can hang forever when the tab is throttled.
+ */
+async function fireJavelinWhenReady(maxMs = 3500) {
+    const now = () =>
+        typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+    const start = now();
+    while (true) {
+        const elapsed = now() - start;
+        if (elapsed > maxMs) break;
         if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
             try {
                 if (window.fireJavelin() === true) return true;
@@ -46,7 +73,7 @@ async function fireJavelinWhenReady(maxFrames = 40) {
                 console.error(e);
             }
         }
-        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await waitNextFrameOrTimeout(48);
     }
     return false;
 }
@@ -65,6 +92,10 @@ export default function RocketShotPage() {
     const [isFiring, setIsFiring] = useState(false);
     /** True while /rocket/bet request is in flight — prevents double-submit without relying on isFiring alone. */
     const [isBetPending, setIsBetPending] = useState(false);
+    /** True for FIRE_COOLDOWN_MS after each accepted Fire / canvas bet (rate limit). */
+    const [isFireCooldown, setIsFireCooldown] = useState(false);
+    const fireCooldownUntilRef = useRef(0);
+    const fireCooldownTimerRef = useRef(null);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [mode, setMode] = useState("easy");
     /** "flat" = flat win display, "multiplier" = multiplier display (UI; extend payout logic if needed) */
@@ -82,11 +113,38 @@ export default function RocketShotPage() {
             window.__rocketPendingBetAmount = null;
         }
     }, []);
+
+    const beginFireCooldown = useCallback(() => {
+        fireCooldownUntilRef.current = Date.now() + FIRE_COOLDOWN_MS;
+        setIsFireCooldown(true);
+        if (fireCooldownTimerRef.current) {
+            window.clearTimeout(fireCooldownTimerRef.current);
+        }
+        fireCooldownTimerRef.current = window.setTimeout(() => {
+            fireCooldownUntilRef.current = 0;
+            setIsFireCooldown(false);
+            fireCooldownTimerRef.current = null;
+        }, FIRE_COOLDOWN_MS);
+    }, []);
+
+    useEffect(
+        () => () => {
+            if (fireCooldownTimerRef.current) {
+                window.clearTimeout(fireCooldownTimerRef.current);
+                fireCooldownTimerRef.current = null;
+            }
+        },
+        [],
+    );
     
     const user = useSelector((state) => state.user.userInfo) || {};
     const rocketMultiplier = useSelector((state) => state.rocket?.multiplier ?? 0);
     const walletBalance = user.balance;
-    const maxAmount = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalance));
+    const walletBalanceNum = Number(walletBalance);
+    const hasKnownBalance = Number.isFinite(walletBalanceNum) && walletBalanceNum >= 0;
+    const maxAmount = hasKnownBalance
+        ? Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, walletBalanceNum))
+        : MAX_AMOUNT;
     const [isNarrowLayout] = useMediaQuery("(max-width: 1799px)");
 
     const handleAmountChange = (e) => {
@@ -98,7 +156,9 @@ export default function RocketShotPage() {
     };
 
     const handleRocketBet = async (amount, mode, selectedWinMode) => {
+        if (Date.now() < fireCooldownUntilRef.current) return;
         if (firingLockRef.current) return;
+        beginFireCooldown();
         firingLockRef.current = true;
         setIsBetPending(true);
         // Do NOT set isFiring until bet succeeds — avoids UI stuck "firing" during slow/failed API.
@@ -114,19 +174,22 @@ export default function RocketShotPage() {
                 level: mode,
             };
             const multiplier = await rocketBet(data, dispatch, history);
-            setIsBetPending(false);
-            // Store multiplier for the current shot.
+            // Store multiplier for the current shot (Phaser reads it inside `fire()`).
             if (typeof window !== 'undefined') {
                 window.__rocketPendingMultiplier = multiplier;
             }
+            // Keep isBetPending true until Phaser actually accepts the shot — prevents double-submit
+            // and avoids isFiring=true when nothing launched (old bug: setIsFiring before fire()).
             if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
-                setIsFiring(true);
                 const fired = await fireJavelinWhenReady();
-                // If Phaser didn't start a shot, unlock immediately (avoids Fire stuck disabled).
-                if (!fired) {
+                setIsBetPending(false);
+                if (fired) {
+                    setIsFiring(true);
+                } else {
                     unlockShooting();
                 }
             } else {
+                setIsBetPending(false);
                 unlockShooting();
             }
         } catch (error) {
@@ -167,11 +230,12 @@ export default function RocketShotPage() {
         if (typeof window === "undefined") return;
 
         const tryFireFromCanvas = () => {
+            if (Date.now() < fireCooldownUntilRef.current) return;
             if (firingLockRef.current) return;
             const bet = parseFloat(amount);
             if (Number.isNaN(bet) || bet < MIN_AMOUNT) return;
             if (bet > maxAmount) return;
-            if (walletBalance < bet) return;
+            if (hasKnownBalance && bet > walletBalanceNum) return;
             handleRocketBet(bet, mode, winMode);
         };
 
@@ -179,7 +243,7 @@ export default function RocketShotPage() {
         return () => {
             if (window.onRocketShotBet === tryFireFromCanvas) window.onRocketShotBet = undefined;
         };
-    }, [amount, mode, winMode, maxAmount, walletBalance]);
+    }, [amount, mode, winMode, maxAmount, hasKnownBalance, walletBalanceNum, beginFireCooldown]);
 
     // Miss handler: always clear firing lock (onJavelinShotEnd runs first in GameScene, but this is idempotent).
     useEffect(() => {
@@ -287,8 +351,8 @@ export default function RocketShotPage() {
                                         <Flex align="center" justify="center" gap="6px" flexWrap="wrap" w="100%">
                                             <Button
                                                 size="sm"
-                                                h="32px"
-                                                minW="44px"
+                                                h="62px"
+                                                minW="54px"
                                                 px="10px"
                                                 fontSize="xs"
                                                 fontWeight="bold"
@@ -306,7 +370,7 @@ export default function RocketShotPage() {
                                                 bg="#323738"
                                                 borderRadius="8px"
                                                 px="6px"
-                                                h="36px"
+                                                h="63px"
                                                 border="1px solid rgba(255, 255, 255, 0.1)"
                                             >
                                                 <IconButton
@@ -330,8 +394,10 @@ export default function RocketShotPage() {
                                                     min={MIN_AMOUNT}
                                                     max={maxAmount}
                                                     step={AMOUNT_STEP}
-                                                    w={{ base: '72px', sm: '80px' }}
+                                                    // w={{ base: '102px', sm: '110px' }}
                                                     textAlign="center"
+                                                    minH="66px"
+                                                    minW="120px"
                                                     fontSize="md"
                                                     fontWeight="bold"
                                                     color="#fff"
@@ -369,8 +435,8 @@ export default function RocketShotPage() {
                                             </HStack>
                                             <Button
                                                 size="sm"
-                                                h="32px"
-                                                minW="44px"
+                                                h="62px"
+                                                minW="54px"
                                                 px="10px"
                                                 fontSize="xs"
                                                 fontWeight="bold"
@@ -385,110 +451,56 @@ export default function RocketShotPage() {
                                             </Button>
                                         </Flex>
 
-                                        <HStack spacing="10px" align="center" flexWrap="wrap" justify="center" w="100%">
-                                            <HStack spacing="6px" align="center">
-                                                <Text as="span" fontSize="xs" color="rgba(255,255,255,0.8)" whiteSpace="nowrap">
-                                                    Difficulty:
-                                                </Text>
-                                                <Select
-                                                    size="sm"
-                                                    w={{ base: "100px", sm: "110px" }}
-                                                    h="32px"
-                                                    fontSize="xs"
-                                                    bg="#323738"
-                                                    color="#fff"
-                                                    borderColor="rgba(0, 212, 255, 0.3)"
-                                                    borderRadius="6px"
-                                                    value={mode}
-                                                    onChange={(e) => setMode(e.target.value)}
-                                                    sx={{ option: { bg: "#323738", color: "#fff" } }}
-                                                >
-                                                    <option value="easy">Easy</option>
-                                                    <option value="normal">Normal</option>
-                                                    <option value="hard">Hard</option>
-                                                </Select>
-                                            </HStack>
-
-                                            <HStack
-                                                spacing="0"
-                                                bg="#323738"
-                                                borderRadius="6px"
-                                                p="2px"
-                                                border="1px solid rgba(0, 212, 255, 0.2)"
-                                            >
-                                                <Button
-                                                    size="xs"
-                                                    h="26px"
-                                                    px="10px"
-                                                    fontSize="xs"
-                                                    fontWeight="bold"
-                                                    bg={winMode === "flat" ? "#00D4FF" : "transparent"}
-                                                    color={winMode === "flat" ? "#000" : "#fff"}
-                                                    borderRadius="4px"
-                                                    _hover={{
-                                                        bg: winMode === "flat" ? "#00D4FF" : "rgba(255,255,255,0.1)",
-                                                    }}
-                                                    onClick={() => setWinMode("flat")}
-                                                >
-                                                    Flat Win
-                                                </Button>
-                                                <Button
-                                                    size="xs"
-                                                    h="26px"
-                                                    px="10px"
-                                                    fontSize="xs"
-                                                    fontWeight="bold"
-                                                    bg={winMode === "multiplier" ? "#00D4FF" : "transparent"}
-                                                    color={winMode === "multiplier" ? "#000" : "#fff"}
-                                                    borderRadius="4px"
-                                                    _hover={{
-                                                        bg: winMode === "multiplier" ? "#00D4FF" : "rgba(255,255,255,0.1)",
-                                                    }}
-                                                    onClick={() => setWinMode("multiplier")}
-                                                >
-                                                    Multiplier
-                                                </Button>
-                                            </HStack>
-                                        </HStack>
-
                                     </VStack>
                                     <Button
                                         h="66px"
                                         w="100%"
-                                        maxW="300px"
-                                        fontSize="md"
-                                        fontWeight="bold"
-                                        borderRadius="20px"
-                                        bg="#00D4FF"
-                                        color="#fff"
+                                        maxW="280px"       // slightly smaller so "FIRE" looks centered
+                                        fontSize="xl"      // bigger font for impact
+                                        fontWeight="extrabold"
+                                        letterSpacing="1.5px"
+                                        borderRadius="30px"  // rounder pill shape
+                                        bg="linear-gradient(90deg, #00D4FF, #00AFFF)"  // subtle gradient
+                                        color="#FFFFFF"
                                         border="2px solid #00D4FF"
+                                        textTransform="uppercase"
                                         _hover={{
-                                            bg: '#00D4FF',
-                                            borderColor: '#00D4FF',
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: '0 4px 12px rgba(0, 212, 255, 0.3)',
+                                            bg: "linear-gradient(90deg, #00F0FF, #00BFFF)",
+                                            borderColor: "#00F0FF",
+                                            transform: "translateY(-3px)",
+                                            boxShadow: "0 8px 20px rgba(0, 212, 255, 0.5)",
                                         }}
-                                        _active={{ transform: 'translateY(0)' }}
+                                        _active={{
+                                            transform: "translateY(0)",
+                                            boxShadow: "0 4px 8px rgba(0, 212, 255, 0.3)",
+                                        }}
+                                        _disabled={{
+                                            bg: "#00D4FF80",      // slightly faded
+                                            borderColor: "#00D4FF80",
+                                            cursor: "not-allowed",
+                                            boxShadow: "none",
+                                        }}
                                         isDisabled={
+                                            isFireCooldown ||
                                             isFiring ||
                                             isBetPending ||
                                             amount < MIN_AMOUNT ||
                                             amount > maxAmount ||
-                                            amount > walletBalance
+                                            (amount > walletBalanceNum)
                                         }
                                         title={
                                             amount < MIN_AMOUNT
-                                                ? `Enter at least ${MIN_AMOUNT}`
-                                                : amount > maxAmount
-                                                    ? `Max bet is ${maxAmount}`
-                                                    : ''
+                                            ? `Enter at least ${MIN_AMOUNT}`
+                                            : amount > maxAmount
+                                            ? `Max bet is ${maxAmount}`
+                                            : ""
                                         }
                                         onClick={() => {
                                             handleRocketBet(parseFloat(amount), mode, winMode);
                                         }}
-                                    >
-                                        Fire
-                                    </Button>
+                                        >
+                                        FIRE
+                                        </Button>
                                 </HStack>
                             </Box>
                         </CardBody>
@@ -501,6 +513,7 @@ export default function RocketShotPage() {
                     </Box>
                 </GridItem>
             </Grid>
+            <History />
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
                 <ModalOverlay bg="blackAlpha.700" />
                 <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
@@ -535,13 +548,6 @@ export default function RocketShotPage() {
                                 </Text>
                                 <Text mb={1}>
                                      - If you hit the rocket, you will win the multiplier. (min 0.1x - max 10x)
-                                </Text>
-                                <Text mb={1}>
-                                     - The faster the rocket moves, the harder it is to hit high multipliers — but that’s where the big rewards are.
-                                </Text>
-
-                                <Text mb={1}>
-                                    - In normal mode winingAmount is 110% of easy mode. In hard mode it is 120% of easy mode. But the speed is more fast.
                                 </Text>
                             </Box>
                         </VStack>

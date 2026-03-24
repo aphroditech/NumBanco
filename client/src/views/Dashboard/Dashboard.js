@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
     Flex,
     Grid,
@@ -12,80 +12,54 @@ import TopBestWinner from './DashboardItem/TopBestWinner';
 import VerticalSlider from '../../components/Slider/VerticalSlider';
 import SalesChart from './DashboardItem/GraphAndTable';
 import { Box } from "@chakra-ui/react";
-import { getActiveUsers } from 'action';
-import { useDispatch } from 'react-redux';
 export default function Dashboard() {
-
-    const dispatch = useDispatch();
-    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1920);
-    // useEffect(() => {
-    //     const fetchActiveUsers = async () => {
-    //         await getActiveUsers(dispatch);
-    //     };
-    //     fetchActiveUsers();
-    // }, [dispatch]);
-    useEffect(() => {
-        const handleResize = () => {
-            setWindowWidth(window.innerWidth);
-        };
-        window.addEventListener('resize', handleResize);
-        // Set initial width
-        handleResize();
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-    // Determine if width is >= 1819px
-    const isWideEnough = windowWidth >= 1893;
     return (
         <Flex flexDirection='column' pt={{ base: '120px', '992px': '75px' }}>
             <Overview />
             <Games />
             <VerticalSlider />
             <Grid 
-                templateColumns={isWideEnough 
-                    ? { base: '1fr', '992px': '1fr 1fr', lg: '1fr 1fr', '2lg': '1fr 1fr', xl: '1.2fr 1fr 1fr', '2xl': '3fr 3fr 3fr' }
-                    : { base: '1fr', '992px': '1fr 1fr', lg: '1fr 1fr', '2lg': '1fr 1fr', xl: '1fr 1fr' }
-                }
+                templateColumns={{ base: '1fr', lg: '1fr', xl: '1fr', '2xl': 'repeat(3, 1fr)' }}
+                gridAutoRows={{ base: 'auto', '2xl': '520px' }}
                 gap='18px'
                 my='18px'
                 alignItems="stretch"
             >
                 <Box
-                    gridColumn={isWideEnough
-                        ? { base: '1', '992px': '1', lg: '1', '2lg': '1', xl: 'auto', '2xl': '500px' }
-                        : { base: '1', '992px': '1', lg: '1', '2lg': '1', xl: '1', '2xl': '500px' }
-                    }
+                    gridColumn={{ base: '1', '2xl': '1' }}
                     h="100%"
                     display="flex"
                     flexDirection="column"
+                    minW={0}
                 >
                     <LinkButtons />
                 </Box>
                 <Box
-                    gridColumn={isWideEnough
-                        ? { base: '1', '992px': '2', lg: '2', '2lg': '2', xl: 'auto', '2xl': '100px' }
-                        : { base: '1', '992px': '2', lg: '2', '2lg': '2', xl: '2' }
-                    }
+                    gridColumn={{ base: '1', '2xl': '2' }}
                     h="100%"
                     display="flex"
                     flexDirection="column"
+                    minW={0}
                 >
                     <SalesChart />
                 </Box>
                 <Box
-                    gridColumn={isWideEnough
-                        ? { base: '1', '992px': '1 / -1', lg: '1 / -1', '2lg': '1 / -1', xl: 'auto', '2xl': 'auto' }
-                        : { base: '1', '992px': '1 / -1', lg: '1 / -1', '2lg': '1 / -1', xl: '1 / -1' }
-                    }
+                    gridColumn={{ base: '1', '2xl': '3' }}
                     h="100%"
                     display="flex"
                     flexDirection="column"
+                    minW={0}
                 >
                     <RealTimeWinner />
                 </Box>
             </Grid> 
-            <Grid templateColumns={{ sm: '1fr', md: '1fr', '2lg': '2fr 4fr' }} gap='18px' my='6px' >
-                <Transaction />
-                <TopBestWinner />
+            <Grid templateColumns={{ base: '1fr', '2xl': 'repeat(3, 1fr)' }} gap='18px' my='6px' >
+                <Box gridColumn={{ base: '1', '2xl': '1' }} minW={0}>
+                    <Transaction />
+                </Box>
+                <Box gridColumn={{ base: '1', '2xl': '2 / span 2' }} minW={0}>
+                    <TopBestWinner />
+                </Box>
             </Grid>
         </Flex>
     );

@@ -179,7 +179,7 @@ const SalesChart = ({ variant }) => {
         observer.unobserve(currentRef);
       }
     };
-  }, [filteredChartData.length]);
+  }, [chartData?.length, startDate, endDate, isProfile]);
 
   // Don't return null - always render the card structure
   // if (!chartData) return null;

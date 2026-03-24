@@ -330,9 +330,27 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 1 // normal mode by default
   },
+  minesMode: {
+    type: Number,
+    default: 1 // normal mode by default
+  },
+  minesAmount: {
+    type: Number,
+    default: 0
+  },
+  minesWinAmount: {
+    type: Number,
+    default: 0
+  },
   cocoMode: {
     type: Number,
     default: 0, // 0=easy, 1=normal, 2=hard
+    min: 0,
+    max: 2
+  },
+  alphaTreeMode: {
+    type: Number,
+    default: 1, // 0=easy, 1=normal, 2=hard
     min: 0,
     max: 2
   },
@@ -363,6 +381,18 @@ const userSchema = new mongoose.Schema({
   rocketWinAmount: {
     type: Number,
     default: 0
+  },
+  aToZAmount: {
+    type: Number,
+    default: 0
+  },
+  aToZWinAmount: {
+    type: Number,
+    default: 0
+  },
+  aToZMode: {
+    type: Number,
+    default: 0 // 0: normal, 1: hard
   },
 
   pumpingHistory: {
@@ -657,6 +687,11 @@ const userSchema = new mongoose.Schema({
           type: Number,
           required: true
         },
+        /** Same as `multiplier` — roll / outcome for this smash (kept for clarity with RealView / exports). */
+        result: {
+          type: Number,
+          default: 0
+        },
         profit: {
           type: Number,
           default: 0
@@ -682,6 +717,22 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  alphaTreeHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
   updownHistory: {
     type: [
       {
@@ -705,6 +756,43 @@ const userSchema = new mongoose.Schema({
         profit: {
           type: Number,
           default: 0
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
+  /** Cloud Spread — round summaries (like rubicHistory / pumpingHistory). */
+  cloudSpreadHistory: {
+    type: [
+      {
+        roundId: {
+          type: Number,
+          required: true
+        },
+        totalBet: {
+          type: Number,
+          required: true
+        },
+        win: {
+          type: Number,
+          default: 0
+        },
+        crashStep: {
+          type: Number,
+          default: 0
+        },
+        finalClouds: {
+          type: Number,
+          default: 0
+        },
+        multProduct: {
+          type: Number,
+          default: 1
         },
         createAt: {
           type: Date,

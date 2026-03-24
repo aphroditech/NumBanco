@@ -117,7 +117,7 @@ export default function Footer() {
                             {[
                                 "Email: support@numexa.store",
                                 "Phone Number: +1 505 309 0771",
-                                "Telegram: @numexawin",
+                                "Telegram: @numexa_support",
                                 "WhatsApp: +1 458 343 2384",
                                 // "WhatsApp: +1 820 201 2952",
                             ].map((item) => (

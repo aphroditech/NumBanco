@@ -20,6 +20,7 @@ import tierC from "assets/img/Games/tierC.png";
 import rubic from "assets/img/Games/dice5.png";
 import pumping from "assets/img/Games/pumping.png";
 import gravity from "assets/img/Games/gravity.png";
+import cloudSpread from "assets/img/Games/gravity.png";
 import dove from "assets/img/Games/dove.png"
 import coco from "assets/img/Games/coco.png"
 import jackal from "assets/img/Games/jackal.png"
@@ -28,6 +29,9 @@ import fishing from "assets/img/Games/fishing.png"
 import mine from "assets/img/Games/mine.png"
 import cardGame from "assets/img/Games/cardgame.png"
 import jokerCrash from "assets/img/Games/jokercrash.png"
+import alphaTree from "assets/img/Games/alphaTree.png"
+import digits from "assets/img/Games/digits.png"
+
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -42,11 +46,14 @@ const DASHBOARD_GAMES = [
     { img: jokerCrash, name: "Joker Crash", path: "/game/joker-crash", reduxKey: "jokerCrashUsers", tickMs: 4200 },
     { img: cardGame, name: "Card Game", path: "/game/card-game", reduxKey: "cardGameUsers", tickMs: 4200 },
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
-    { img: dove, name: "Dove Cross", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
+    { img: cloudSpread, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
+    { img: dove, name: "LUCKY HOP", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
     { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 3600 },
     { img: jackal, name: "Jackal", path: "/game/jackal", reduxKey: "jackalUsers", tickMs: 2600 },
     { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4900 },
+    { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
+    { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {

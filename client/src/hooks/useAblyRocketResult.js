@@ -18,7 +18,7 @@ export function useAblyRocketResult() {
             const data = message?.data;
             if (!data) return;
 
-            const { userName, avatar, isWin, bet, win, date } = data;
+            const { userName, avatar, isWin, bet, win, date, multiplier } = data;
 
             const row = {
                 userName: userName,
@@ -27,6 +27,7 @@ export function useAblyRocketResult() {
                 win: win,
                 date: date,
                 isWin: isWin,
+                multiplier: multiplier,
             };
 
             setRocketResults((prev) => {

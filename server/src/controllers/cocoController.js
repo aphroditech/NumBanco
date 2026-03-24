@@ -200,6 +200,7 @@ export const smash = async (req, res) => {
             user.cocoHistory = user.cocoHistory || [];
             user.cocoHistory.push({
                 betAmount: state.bet,
+                result: finalMulti,
                 profit: win,
                 multiplier: finalMulti,
                 successCount: state.successCount,
@@ -261,6 +262,7 @@ export const smash = async (req, res) => {
             user.cocoHistory = user.cocoHistory || [];
             user.cocoHistory.push({
                 betAmount: state.bet,
+                result: 0,
                 profit: 0,
                 multiplier: 0,
                 successCount: state.successCount,
@@ -323,6 +325,7 @@ export const smash = async (req, res) => {
         user.cocoHistory = user.cocoHistory || [];
         user.cocoHistory.push({
             betAmount: state.bet,
+            result: state.currentMultiplier,
             profit: win,
             multiplier: state.currentMultiplier,
             successCount: state.successCount,
@@ -430,7 +433,7 @@ async function enrichCocoViewsWithUser(cocoViews) {
                     partnerId: 0,
                     partnerActivity: 0,
                     lastClickDate: 0,
-                    canWithdraw: 0,
+                    
                 });
             const obj = item.toObject();
             delete obj.isUser;

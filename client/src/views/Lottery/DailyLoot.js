@@ -6,10 +6,9 @@ import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 
 import { useSelector, useDispatch } from "react-redux";
 import { getClickData } from "action/LotteryActions";
-import diamond from "assets/badge/377.png";
+// import diamond from "assets/badge/377.png";
 import dia from "assets/badge/diamond.png";
 import { formatTime } from "components/functions/format";
-import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 import { toast } from "react-toastify";
 // Load loding page
 import Loading from "components/Loading/Loading";
@@ -17,9 +16,9 @@ import Loading from "components/Loading/Loading";
 export default function Lottery() {
     const mountedRef = useRef(true);
     const timeoutRefs = useRef([]);
-    const history = useHistory();
     const [clickLock, setClickLock] = useState(false);  // 🔒 API lock
     const [showFireworks, setShowFireworks] = useState(false);
+    const [fireworksTotalEarn, setFireworksTotalEarn] = useState(0);
     const [wheelNumbers, setWheelNumbers] = useState([]);
     const [wheelRotation, setWheelRotation] = useState(0);
     const [isSpinning, setIsSpinning] = useState(false);
@@ -59,7 +58,11 @@ export default function Lottery() {
     const result = lottery - parseInt(lottery);
     if(result === 0) bet = lottery;
     else bet = lottery.toFixed(1);
-    if (lottery < 0.1) lottery = 0.1;
+    if (lottery < 0.1) 
+    {
+        bet = 0.1;
+        lottery = 0.1;
+    }
     const loading = useSelector((state) => state.user.loading);
 
     // const baseNumbers = useMemo(() => {
@@ -74,8 +77,7 @@ export default function Lottery() {
 
     const baseNumbers = useMemo(() => {
         return [0.5, 500, 100, 50, 20, 15, 5, 0.2, bet];
-    }, [lottery]);
-    
+    }, []);
     useEffect(() => {
         setWheelNumbers(shuffleArray(baseNumbers));
     }, [baseNumbers]);
@@ -131,37 +133,39 @@ export default function Lottery() {
             });
             setHasSpun(true);
 
-            // Trigger fireworks and toast after spin finishes
-            const spinDurationMs = 4000;
-            const timeoutFireworks = setTimeout(() => {
-                if (mountedRef.current) {
-                    setShowFireworks(true);
-                }
-            }, spinDurationMs);
-            timeoutRefs.current.push(timeoutFireworks);
-
             // Call getClickData after circle stops spinning
             const timeoutGetClickData = setTimeout(async () => {
                 if (mountedRef.current) {
                     try {
-                        await getClickData(body, dispatch, false, history);
+                        const apiRes = await getClickData(body, dispatch, false);
+
+                        if (mountedRef.current) {
+                            const lootAmt =
+                                apiRes?.lootAmt ??
+                                apiRes?.receivedBody?.data ??
+                                body?.data ??
+                                lottery.toFixed(1);
+
+                            setFireworksTotalEarn(lootAmt);
+                            setShowFireworks(true);
+
+                            // Hide fireworks after a short burst
+                            const timeoutHide = setTimeout(() => {
+                                if (mountedRef.current) {
+                                    setShowFireworks(false);
+                                    setPreviousShowlottery(null);
+                                    setNewShowlottery(null);
+                                }
+                            }, 3000);
+                            timeoutRefs.current.push(timeoutHide);
+                        }
                     } catch (err) {
                         console.error("Error calling getClickData after spin:", err);
                     }
                 }
-            }, 3500);
+            }, 800);
+            console.log(timeoutGetClickData);
             timeoutRefs.current.push(timeoutGetClickData);
-
-            // Hide fireworks after 3 seconds
-            const timeout1 = setTimeout(() => {
-                if (mountedRef.current) {
-                    setShowFireworks(false);
-                    // Also reset the display values when fireworks hide
-                    setPreviousShowlottery(null);
-                    setNewShowlottery(null);
-                }
-            }, 3000 + 4000);
-            timeoutRefs.current.push(timeout1);
 
             const timeout2 = setTimeout(() => {
                 if (mountedRef.current) {
@@ -196,6 +200,8 @@ export default function Lottery() {
         );
     }
 
+    console.log(user?.showlottery);
+
     return (
         <Box>
             <Box
@@ -229,7 +235,7 @@ export default function Lottery() {
                 isVisible={showFireworks}
                 previousValue={null}
                 currentValue={null}
-                totalEarn={newShowlottery !== null ? newShowlottery.toFixed(1) : (user?.showlottery || 0).toFixed(1)}
+                totalEarn={fireworksTotalEarn}
                 duration={1200}
             />
 
@@ -284,7 +290,7 @@ export default function Lottery() {
                                 d="M25 12 C19 12 13 18 13 24 C13 32 20 40 25 54 C30 40 37 32 37 24 C37 18 31 12 25 12 Z"
                                 fill="rgba(255,255,255,0.4)"
                             />
-                            <image
+                            {/* <image
                                 href={diamond}
                                 x="15"
                                 y="14"
@@ -292,7 +298,7 @@ export default function Lottery() {
                                 height="20"
                                 preserveAspectRatio="xMidYMid meet"
                                 alt="NumBanco Diamond Pointer"
-                            />
+                            /> */}
                         </Box>
                     </Box>
 

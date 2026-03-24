@@ -6,8 +6,7 @@ import { currentReducer } from "../reducers/currentReducer";
 import { notificationReducer } from "../reducers/notificationReducer";
 import { myBetIdsReducer } from "../reducers/myBetIdsReducer";
 import { slideIndexReducer } from "../reducers/slideIndexReducer";
-import { miningHistoryReducer } from "../reducers/miningHistoryReducer";
-import { rocketReducer } from "../reducers/rocketReducer";
+import { HistoryReducer } from "../reducers/historyReducer";
 const store = configureStore({
   reducer: {
     user: userReducer,
@@ -17,8 +16,7 @@ const store = configureStore({
     myBetIds: myBetIdsReducer,
     notifications: notificationReducer,
     slideIndex: slideIndexReducer,
-    miningHistory: miningHistoryReducer,
-    rocket: rocketReducer,
+    histories: HistoryReducer,  
   },
 
   // 🔐 Disable Redux DevTools in production

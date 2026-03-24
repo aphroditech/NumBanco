@@ -2,7 +2,6 @@ import User from "../models/User.js";
 
 export const userActive = async () => {
     try {
-        console.log("Fetching active users...");
         const users = await User.find({});
 
         const offlineUsers = users.filter(user => (user.active === 0)).length;
@@ -15,12 +14,15 @@ export const userActive = async () => {
         const pumpingUsers = users.filter(user => (user.active === 6)).length + 270;
         const gravityUsers = users.filter(user => (user.active === 7)).length + 100;
         const doveUsers = users.filter(user => (user.active === 8)).length + 123;
+        const cloudSpreadUsers = users.filter(user => (user.active === 9)).length + 96;
         const cocoUsers = users.filter(user => (user.active === 10)).length + 88;
         const rocketUsers = users.filter(user => (user.active === 11)).length + 150;
         const jackalUsers = users.filter(user => (user.active === 12)).length + 80;
         const mineUsers = users.filter(user => (user.active === 13)).length + 60;
         const fishingUsers = users.filter(user => (user.active === 14)).length + 90;
-
+        const alphaTreeUsers = users.filter(user => (user.active === 15)).length + 60;
+        const aToZUsers = users.filter(user => (user.active === 16)).length + 100;
+        const totalActiveUsers = tierAUsers + tierBUsers + tierCUsers + rubicUsers + pumpingUsers + gravityUsers + doveUsers + cloudSpreadUsers + cocoUsers + rocketUsers + jackalUsers + mineUsers + fishingUsers + alphaTreeUsers + aToZUsers;
         return {
             offlineUsers,
             onlineUsers,
@@ -32,11 +34,15 @@ export const userActive = async () => {
             pumpingUsers,
             gravityUsers,
             doveUsers,
+            cloudSpreadUsers,
             cocoUsers,
             rocketUsers,
             jackalUsers,
             mineUsers,
-            fishingUsers
+            fishingUsers,
+            alphaTreeUsers,
+            aToZUsers,
+            totalActiveUsers
         }
     } catch (err) {
         console.log("Error fetching active users:", err);

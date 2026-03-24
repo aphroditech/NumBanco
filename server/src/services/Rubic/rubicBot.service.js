@@ -1,19 +1,18 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import RubicResult from "../../models/RubicResult.js";
+import RubicResult from "../../models/rubic/RubicResult.js";
 
-import RubicSetting from "../../models/RubicSetting.js";
+import RubicSetting from "../../models/rubic/RubicSetting.js";
 
 const DICE = [1, 2, 3, 4, 5, 6];
 
 // Bet amount ranges (min, max) and their probability (0–1). User range is $0.1 to $1000.
 const BET_AMOUNT_RANGES = [
-    { min: 0.1, max: 3, probability: 0.35 },
-    { min: 3, max: 10, probability: 0.35 },
-    { min: 10, max: 50, probability: 0.15 },
-    { min: 50, max: 100, probability: 0.1 },
-    { min: 100, max: 200, probability: 0.1 },
-    { min: 200, max: 1000, probability: 0.05 },
+    { min: 0.1, max: 2, probability: 0.25 },
+    { min: 2, max: 6, probability: 0.25 },
+    { min: 6, max: 10, probability: 0.2 },
+    { min: 10, max: 15, probability: 0.2 },
+    { min: 15, max: 20, probability: 0.1 },
 ];
 // Operator selection probability: ">" 45%, "<" 45%, "=" 10%
 const OP_PROBABILITY = [
@@ -123,7 +122,7 @@ export const rubicBot = async (ably) => {
         const rubicSetting = await RubicSetting.findOne({});
 
 
-        if (Math.random() <= rubicSetting.botTriggerProbability) return;
+        if (Math.random() >= rubicSetting.botTriggerProbability) return;
         try {
             const botUser = botUsers[Math.floor(Math.random() * botUsers.length)];
             const user = await User.findOne({ userId: botUser.userId });
@@ -141,19 +140,22 @@ export const rubicBot = async (ably) => {
                 multiplier = calc.multiplier;
                 winAmount = calc.winAmount;
                 user.totalEarn = Math.round((user.totalEarn + winAmount) * 1000) / 1000;
+                user.rubicWinAmount = Math.round((user.rubicWinAmount + winAmount) * 1000) / 1000;
             }
             user.totalBet = Math.round((user.totalBet + betAmount) * 1000) / 1000;
 
             await user.save();
 
-            await RubicResult.create({
+            const newResult = new RubicResult({
                 userName: user.altas,
                 avatar: user.avatar,
                 isWin,
                 betAmount,
                 winAmount,
+                multiplier,
                 createAt: new Date(),
             });
+            await newResult.save();
             const recent = await RubicResult.find()
                 .sort({ createAt: -1 }) // newest first
                 .limit(30)
@@ -174,6 +176,7 @@ export const rubicBot = async (ably) => {
                     isWin,
                     betAmount,
                     winAmount,
+                    multiplier,
                     createAt: new Date(),
                 };
                 await channel.publish("RUBIC_RESULT", data);

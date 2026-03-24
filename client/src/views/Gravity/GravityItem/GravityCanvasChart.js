@@ -13,6 +13,8 @@ export default function GravityUltimateChartCanvas({
   const canvasRef = useRef(null);
   const tooltipRef = useRef(null);
   const rafRef = useRef(null);
+  // Cache Y-scale per round so endpoint updates at settlement don't rescale the whole curve.
+  const yScaleRef = useRef(null);
   const [width, setWidth] = useState(900);
 
   const dataRef = useRef(chartDataDisplay);
@@ -21,7 +23,10 @@ export default function GravityUltimateChartCanvas({
 
   useEffect(() => { dataRef.current = chartDataDisplay; }, [chartDataDisplay]);
   useEffect(() => { phaseRef.current = roundPhase; }, [roundPhase]);
-  useEffect(() => { startRef.current = roundStartAtMs; }, [roundStartAtMs]);
+  useEffect(() => {
+    startRef.current = roundStartAtMs;
+    yScaleRef.current = null; // reset scaling for new round
+  }, [roundStartAtMs]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -70,10 +75,12 @@ export default function GravityUltimateChartCanvas({
       ctx.lineWidth = 1;
       const gridRows = 6;
       for (let gr = 0; gr <= gridRows; gr += 1) {
-        const yGrid = (h / gridRows) * gr;
+        const pad = 18;
+        const plotH = Math.max(1, h - pad * 2);
+        const yGrid = pad + (plotH / gridRows) * gr;
         ctx.beginPath();
-        ctx.moveTo(0, yGrid);
-        ctx.lineTo(w, yGrid);
+        ctx.moveTo(pad, yGrid);
+        ctx.lineTo(w - pad, yGrid);
         ctx.stroke();
       }
 
@@ -83,12 +90,46 @@ export default function GravityUltimateChartCanvas({
         return;
       }
 
-      const minY = chartMin;
-      const maxY = chartMax;
-      const range = maxY - minY || 1;
+      // Build an adjusted Y range so the first point always renders at the vertical middle
+      // without clipping other values.
+      // Cache it so backend updates to only the endpoint don't cause a full curve rescale.
+      // Extra margin on the price range: quadraticCurveTo can bulge outside point bounds;
+      // lineWidth + shadowBlur also extend past the path (parent may use overflow:hidden).
+      let minY;
+      let range;
+      if (yScaleRef.current) {
+        minY = yScaleRef.current.minY;
+        range = yScaleRef.current.range;
+      } else {
+        const minP = Math.min(...data.map((d) => d.price));
+        const maxP = Math.max(...data.map((d) => d.price));
+        const firstP = data[0].price;
+        const maxDist = Math.max(firstP - minP, maxP - firstP) || 1;
+        // Generous margin: quadraticCurveTo bulges outside segments; stroke + shadow extend past path.
+        const bump = Math.max(maxDist * 0.28, 2.2);
+        let minY0 = firstP - maxDist - bump;
+        let maxY0 = firstP + maxDist + bump;
+        // Extra headroom so the curve never hugs the plot edge (avoids bottom/top clip).
+        const span0 = maxY0 - minY0 || 1;
+        const padFrac = 0.14;
+        minY = minY0 - span0 * padFrac;
+        const maxY = maxY0 + span0 * padFrac;
+        range = maxY - minY || 1;
+        yScaleRef.current = { minY, range };
+      }
 
-      const getX = (t) => (t / graphDurationSec) * w;
-      const getY = (p) => h - ((p - minY) / range) * h;
+      const pad = 18;
+      // Inner inset so glow (shadowBlur up to 16), stroke, and endpoint dot stay inside overflow:hidden card
+      const LINE_PAD_X = 16;
+      const LINE_PAD_Y = 44;
+
+      const plotW = Math.max(1, w - pad * 2 - LINE_PAD_X * 2);
+      const plotH = Math.max(1, h - pad * 2 - LINE_PAD_Y * 2);
+      const plotTop = pad + LINE_PAD_Y;
+      const plotBottom = plotTop + plotH;
+
+      const getX = (t) => pad + LINE_PAD_X + (t / graphDurationSec) * plotW;
+      const getY = (p) => plotTop + (1 - (p - minY) / range) * plotH;
 
       const now = Date.now();
       const start = startRef.current || now;
@@ -98,8 +139,12 @@ export default function GravityUltimateChartCanvas({
       const first = data[0];
       const last = data[data.length - 1];
 
+      const thresholdPrice = first.price;
+      const greenColor = "#00ff99";
+      const redColor = "#ff4d4d";
+
+      // Used only for the result text (win label). The line color is handled dynamically.
       const uptrend = last.price >= first.price;
-      const lineColor = uptrend ? "#00ff99" : "#ff4d4d";
 
       ctx.beginPath();
       ctx.lineJoin = "round";
@@ -142,7 +187,9 @@ export default function GravityUltimateChartCanvas({
             const xDot = getX(pd.time);
             const yDot = getY(pd.price);
             ctx.globalAlpha = isResultPhase ? 0.06 : 0.10;
-            ctx.fillStyle = lineColor;
+            // Color each marker based on whether this point is above/below the first point.
+            const dotColor = price >= thresholdPrice ? greenColor : redColor;
+            ctx.fillStyle = dotColor;
             // Slightly smaller dots feel softer than 1px hard points.
             const dotSize = 0.55;
             ctx.fillRect(xDot - dotSize / 2, yDot - dotSize / 2, dotSize, dotSize);
@@ -158,10 +205,12 @@ export default function GravityUltimateChartCanvas({
       ctx.lineTo(prevX, prevY);
 
       // Main line (soft neon)
+      const endpointAbove = prevPrice >= thresholdPrice;
+      const endpointColor = endpointAbove ? greenColor : redColor;
       ctx.globalAlpha = 0.9;
       ctx.lineWidth = 2.4;
-      ctx.strokeStyle = lineColor;
-      ctx.shadowColor = lineColor;
+      ctx.strokeStyle = endpointColor;
+      ctx.shadowColor = endpointColor;
       ctx.shadowBlur = 10;
       ctx.stroke();
 
@@ -196,8 +245,8 @@ export default function GravityUltimateChartCanvas({
       ctx.globalAlpha = 1;
 
       // 🔥 Area fill (very subtle so line feels natural)
-      ctx.lineTo(prevX, h);
-      ctx.lineTo(getX(first.time), h);
+      ctx.lineTo(prevX, plotBottom);
+      ctx.lineTo(getX(first.time), plotBottom);
       ctx.closePath();
 
       const fill = ctx.createLinearGradient(0, 0, 0, h);
@@ -216,23 +265,29 @@ export default function GravityUltimateChartCanvas({
 
       ctx.beginPath();
       ctx.arc(prevX, prevY, 1.6, 0, Math.PI * 2);
-      ctx.fillStyle = lineColor;
+      ctx.fillStyle = endpointColor;
       ctx.fill();
 
       // Live value tooltip (canvas-following, no React re-render).
+      // Clamp anchor X so translate(-50%, …) doesn't clip at left/right edges (parent overflow:hidden).
       if (tooltipRef.current) {
         const el = tooltipRef.current;
         el.style.display = "block";
-        el.style.left = `${prevX}px`;
-        el.style.top = `${prevY}px`;
-        el.style.borderColor = lineColor;
-        el.style.boxShadow = `0 0 22px ${uptrend ? "rgba(0,255,150,0.25)" : "rgba(255,77,77,0.25)"}`;
         el.textContent = `Value: ${Number(prevPrice).toFixed(2)}`;
+        const measured = el.offsetWidth || 0;
+        const halfW = measured > 0 ? measured / 2 : 68;
+        const edgePad = 10;
+        const clampedX = Math.max(halfW + edgePad, Math.min(w - halfW - edgePad, prevX));
+        el.style.left = `${clampedX}px`;
+        el.style.zIndex = 10000;
+        el.style.top = `${prevY}px`;
+        el.style.borderColor = endpointColor;
+        el.style.boxShadow = `0 0 22px ${endpointAbove ? "rgba(0,255,150,0.25)" : "rgba(255,77,77,0.25)"}`;
       }
 
       // 🔥 Result text
       if (phaseRef.current === "result") {
-        const label = uptrend ? "UP WINS!" : "DOWN WINS!";
+        const label = endpointAbove ? "UP WINS!" : "DOWN WINS!";
         const scale = 1 + Math.sin(Date.now() / 150) * 0.05;
 
         ctx.save();
@@ -241,10 +296,10 @@ export default function GravityUltimateChartCanvas({
 
         ctx.font = "900 64px Orbitron, sans-serif";
         ctx.shadowBlur = 60;
-        ctx.fillStyle = lineColor;
+        ctx.fillStyle = endpointColor;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.shadowColor = lineColor;
+        ctx.shadowColor = endpointColor;
         ctx.shadowBlur = 40;
 
         ctx.fillText(label, 0, 0);
@@ -259,7 +314,7 @@ export default function GravityUltimateChartCanvas({
   }, [width, height, chartMin, chartMax, graphDurationSec]);
 
   return (
-    <div ref={wrapRef} style={{ width: "100%", height, position: "relative" }}>
+    <div ref={wrapRef} style={{ width: "100%", height, position: "relative", overflow: "visible" }}>
       <div
         ref={tooltipRef}
         style={{

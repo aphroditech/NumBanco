@@ -21,7 +21,7 @@ export const dailyloot = async (req, res) => {
             rubicMode: 0,
             partnerId: 0,
             partnerActivity: 0,
-            canWithdraw: 0,
+            
         }
     );
     
@@ -68,6 +68,7 @@ export const dailyloot = async (req, res) => {
     if(flag) return res.json(0);
     
     const dlAmt = req.body.data.data;
+    const receivedBody = req.body?.data; // Echo back what the client sent
 
     const dailyLoot = new DailyLoot();
     dailyLoot.userName = req.user.altas;
@@ -90,7 +91,15 @@ export const dailyloot = async (req, res) => {
 
     user.totalhistory.push(data);
     await user.save();
-    return sendUserResponse(res, `You have earned $${truncateToTwo(dlAmt)} as daily loot!`, user);
+    return sendUserResponse(
+      res,
+      `You have earned $${truncateToTwo(dlAmt)} as daily loot!`,
+      user,
+      {
+        lootAmt: dlAmt,
+        receivedBody,
+      }
+    );
 
   } catch (err) {
     console.error(err);
@@ -114,7 +123,7 @@ export const reward = async (req, res) => {
             partnerId: 0,
             partnerActivity: 0,
             lastClickDate: 0,
-            canWithdraw: 0,
+            
         }
     );
     if(user) {

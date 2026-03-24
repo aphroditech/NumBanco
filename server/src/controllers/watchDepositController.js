@@ -33,7 +33,7 @@ export const checkExpiredDeposits = async () => {
                     partnerId: 0,
                     partnerActivity: 0,
                     lastClickDate: 0,
-                    canWithdraw: 0,
+                    
                 }
             );
 

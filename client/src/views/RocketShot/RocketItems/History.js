@@ -1,178 +1,232 @@
-import {
-    Box,
-    Text,
-    Table,
-    Thead,
-    Tbody,
-    Tr,
-    Th,
-    Flex,
-    Select,
-    Button,
-    HStack,
-} from '@chakra-ui/react';
-import Card from 'components/Card/Card.js';
-import CardHeader from 'components/Card/CardHeader';
-import CardBody from 'components/Card/CardBody.js';
-import React, { useState, useMemo } from 'react';
-import { useSelector } from 'react-redux';
-import RestoreRoundedIcon from '@mui/icons-material/RestoreRounded';
-import PumpingHistoryRow from 'components/Tables/PumpingHistoryRow';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Box, Text, Table, Thead, Tbody, Tr, Th, Td, Flex, Select, Button, HStack } from '@chakra-ui/react';
+import truncateToTwo from 'variables/truncateToTwo.js';
+import wolfnoavilable from 'assets/img/wolfnoavilable.png';
 import SpeakerNotesOffRoundedIcon from '@mui/icons-material/SpeakerNotesOffRounded';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { useSelector, useDispatch } from 'react-redux';
+import Card from 'components/Card/Card.js';
+import CardHeader from 'components/Card/CardHeader.js';
+import CardBody from 'components/Card/CardBody.js';
 import GradientBorder from 'components/GradientBorder/GradientBorder';
-import wolfnoavilable from '../../../assets/img/wolfnoavilable.png';
+import CardFooter from 'components/Card/CardFooter';
+import { getRocketHistory } from 'action/RocketActions';
+import { useHistory } from 'react-router-dom';
 
 function History() {
-    const user = useSelector((state) => state.user.userInfo) || {};
+    const dispatch = useDispatch();
+    const History = useHistory();
+    const [results, setResults] = useState([]);
+    const history = useSelector((state) => state.histories.rocketHistory) || [];
+    useEffect(() => {
+        setResults(history);
+    }, [history]);
+    // results.reverse();
 
-    const sortedHistory = user.pumpingHistory?.filter((item) => item.active)?.length > 0
-        ? user.pumpingHistory.filter((item) => item.active).sort((a, b) => {
-            const dateA = new Date(a.createAt || 0);
-            const dateB = new Date(b.createAt || 0);
-            return dateB - dateA;
-        })
-        : [];
+    function reverseArray(arr) {
+        return [...arr].reverse();
+    }
+    const reversedResults = reverseArray(results);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
-    const totalPages = useMemo(() => {
-        return Math.ceil(sortedHistory.length / itemsPerPage);
-    }, [sortedHistory.length, itemsPerPage]);
+    useEffect(() => {
+        dispatch(getRocketHistory(History, dispatch));
+    }, [dispatch]);
 
-    const paginatedHistory = useMemo(() => {
+    // Calculate pagination
+    const totalPages = useMemo(() => {
+        return Math.ceil(reversedResults.length / itemsPerPage);
+    }, [reversedResults.length, itemsPerPage]);
+
+    const paginatedResults = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
-        return sortedHistory.slice(startIndex, endIndex);
-    }, [sortedHistory, currentPage, itemsPerPage]);
+        return reversedResults.slice(startIndex, endIndex);
+    }, [results, currentPage, itemsPerPage]);
 
+    // Reset to page 1 when items per page changes
     const handleItemsPerPageChange = (e) => {
         const newItemsPerPage = parseInt(e.target.value, 10);
         setItemsPerPage(newItemsPerPage);
         setCurrentPage(1);
     };
 
+    // Pagination handlers
     const handlePreviousPage = () => {
-        if (currentPage > 1) setCurrentPage(currentPage - 1);
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
     };
 
     const handleNextPage = () => {
-        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
     };
 
     const handlePageClick = (page) => {
         setCurrentPage(page);
     };
+
     return (
-        <Card p="24px" overflowX="hidden" mt="24px">
-            <CardHeader mb="20px">
-                <Flex direction="column" alignSelf="flex-start">
-                    <Text fontSize='lg' color='#fff' fontWeight='bold' mb='6px' display="flex" alignItems="center" justifyContent="center">
-                        <RestoreRoundedIcon style={{ fontSize: "30px", color: "#00D4FF", marginRight: "8px" }} />History
+        <Box mt="24px" w="100%">
+            <Card pt="20px" pb="20px" minH="400px" px="22px">
+                <CardHeader>
+                    <Text fontSize="lg" fontWeight="bold" color="#00D4FF" mb="16px" textAlign="center" whiteSpace="nowrap">
+                        Bet History
                     </Text>
-                </Flex>
-            </CardHeader>
-            <CardBody>
-                <Box
-                    overflowY="auto"
-                    overflowX="hidden"
-                    width="100%"
-                    sx={{
-                        "&::-webkit-scrollbar": {
-                            width: "6px",
-                        },
-                        "&::-webkit-scrollbar-thumb": {
-                            background: "#555b5e",
-                            borderRadius: "8px",
-                        },
-                    }}
-                >
-                    {sortedHistory.length === 0 ? (
-                        // ✅ NO HISTORY STATE
-                        <Flex
-                            flex="1"
-                            direction="column"
-                            align="center"
-                            justify="center"
-                            minH="400px"
-                            color="white"
-                        >
-                            <Box
-                                backgroundImage={`url(${wolfnoavilable})`}
-                                backgroundSize="contain"
-                                backgroundRepeat="no-repeat"
-                                backgroundPosition="center"
-                                w="220px"
-                                h="220px"
-                                opacity={0.85}
-                                mb="20px"
-                            />
-                            <Flex align="center" justify="center" mb="20px">
-                                <SpeakerNotesOffRoundedIcon
-                                    style={{
-                                        fontSize: "20px",
-                                        color: "white",
-                                        marginRight: "8px",
-                                        filter: "drop-shadow(0 0 10px white)",
-                                    }} />
-                                No transaction found
+                </CardHeader>
+                <CardBody>
+                    <Box
+                        flex="1"
+                        // maxH="400px"
+                        overflowY="auto"
+                        overflowX="hidden"
+                        width="100%"
+                        pr="6px"
+                        sx={{
+                            "&::-webkit-scrollbar": {
+                                width: "6px",
+                            },
+                            "&::-webkit-scrollbar-track": {
+                                background: "transparent",
+                            },
+                            "&::-webkit-scrollbar-thumb": {
+                                background: "#555b5e",
+                                borderRadius: "8px",
+                            },
+                        }}
+                    >
+                        {results.length > 0 ? (
+                            <Table variant="simple" color="#fff" height="100%" width="100%" sx={{ tableLayout: "fixed" }}>
+                                <Thead top="0" zIndex="5">
+                                    <Tr>
+                                        <Th color="white" textAlign="left" className="real_th_font" width="10%">
+                                            ID
+                                        </Th>
+                                        <Th color="white" textAlign="left" className="real_th_font" width="12%">
+                                            Bet
+                                        </Th>
+                                        <Th color="white" textAlign="left" className="real_th_font" width="12%">
+                                            Win
+                                        </Th>
+                                        <Th color="white" textAlign="left" className="real_th_font" width="15%">
+                                            Multiplier
+                                        </Th>
+                                        <Th color="white" textAlign="left" className="real_th_font" width="24%">
+                                            Date
+                                        </Th>
+                                    </Tr>
+                                </Thead>
+                                <Tbody>
+                                    {paginatedResults.map((result, index, arr) => {
+                                        const lastItem = index === arr.length - 1;
+                                        const globalIndex = (currentPage - 1) * itemsPerPage + index;
+                                        return (
+                                            <Tr key={result.id || globalIndex}>
+                                                <Td
+                                                    textAlign="left"
+                                                    border={lastItem ? "none" : null}
+                                                    borderBottomColor='#56577A'
+                                                    overflow="hidden"
+                                                    fontSize='sm'
+                                                    color='#fff'
+                                                    fontWeight='normal'
+                                                >
+                                                    {globalIndex + 1}
+                                                </Td>
+                                                <Td
+                                                    textAlign="left"
+                                                    border={lastItem ? "none" : null}
+                                                    borderBottomColor='#56577A'
+                                                    overflow="hidden"
+                                                    fontSize='sm'
+                                                    color='#fff'
+                                                    fontWeight='normal'
+                                                >
+                                                    ${truncateToTwo(result.betAmount)}
+                                                </Td>
+                                                <Td
+                                                    textAlign="left"
+                                                    border={lastItem ? "none" : null}
+                                                    borderBottomColor='#56577A'
+                                                    overflow="hidden"
+                                                    fontSize='sm'
+                                                    color={result.isWin ? '#68d391' : '#f56565'}
+                                                    fontWeight='normal'
+                                                >
+                                                    ${truncateToTwo(result.winAmount)}
+                                                </Td>
+                                                <Td
+                                                    textAlign="left"
+                                                    border={lastItem ? "none" : null}
+                                                    borderBottomColor='#56577A'
+                                                    overflow="hidden"
+                                                    fontSize='sm'
+                                                    color='#fff'
+                                                    fontWeight='normal'
+                                                >
+                                                    x{result.multiplier}x
+                                                </Td>
+                                                <Td
+                                                    textAlign="left"
+                                                    border={lastItem ? "none" : null}
+                                                    borderBottomColor='#56577A'
+                                                    overflow="hidden"
+                                                    fontSize='sm'
+                                                    color='rgba(255, 255, 255, 0.7)'
+                                                    fontWeight='normal'
+                                                >
+                                                    {new Date(result.date).toLocaleDateString()}, {new Date(result.date).toLocaleTimeString()}
+                                                </Td>
+                                            </Tr>
+                                        );
+                                    })}
+                                </Tbody>
+
+                            </Table>
+                        ) : (
+                            <Flex
+                                flex="1"
+                                direction="column"
+                                align="center"
+                                justify="center"
+                                minH="400px"
+                                color="white"
+                            >
+                                <Box
+                                    backgroundImage={`url(${wolfnoavilable})`}
+                                    backgroundSize="contain"
+                                    backgroundRepeat="no-repeat"
+                                    backgroundPosition="center"
+                                    w="220px"
+                                    h="220px"
+                                    opacity={0.85}
+                                    mb="20px"
+                                />
+                                <Flex align="center" justify="center" mb="20px">
+                                    <SpeakerNotesOffRoundedIcon
+                                        style={{
+                                            fontSize: "20px",
+                                            color: "white",
+                                            marginRight: "8px",
+                                            filter: "drop-shadow(0 0 10px white)",
+                                        }} />
+                                    No rubic result found
+                                </Flex>
                             </Flex>
-                        </Flex>
-                    ) : (
+                        )}
+                    </Box>
+                </CardBody>
 
-                        <Table
-                            variant="simple"
-                            color="#fff"
-                            width="100%"
-                            sx={{ tableLayout: "fixed" }}
-                        >
-                            <Thead>
-                                <Tr style={{ textAlignLast: "center" }}>
-                                    <Th color="white" textAlign="left" className="real_th_font" w="15%">
-                                        No
-                                    </Th>
-
-                                    <Th color="white" className="real_th_font" w="30%">
-                                        Target
-                                    </Th>
-                                    <Th color="white" className="real_th_font" w="30%">
-                                        Bet
-                                    </Th>
-                                    <Th color="white" textAlign="left" className="real_th_font" w="20%">
-                                        Result
-                                    </Th>
-                                    <Th color="white" className="real_th_font" w="30%">
-                                        Win
-                                    </Th>
-                                    <Th color="white" className="real_th_font" w="30%">
-                                        Time
-                                    </Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {paginatedHistory.map((row, index, arr) => {
-                                    const globalIndex = (currentPage - 1) * itemsPerPage + index;
-                                    return (
-                                        <PumpingHistoryRow
-                                            key={globalIndex}
-                                            No={globalIndex + 1}
-                                            target={row.target}
-                                            result={row.result}
-                                            bet={row.bet}
-                                            win={row.win}
-                                            time={row.createAt}
-                                            lastItem={index === arr.length - 1}
-                                        />
-                                    );
-                                })}
-                            </Tbody>
-                        </Table>
-                    )}
-                    {sortedHistory.length > 0 && (
-                        <Box px="22px" pb="20px" pt="16px">
+                {/* Pagination Controls - Bottom of Card */}
+                <CardFooter>
+                    {results.length > 0 && (
+                        <Box px="22px" pb="20px" pt="0px">
                             <Flex
                                 justify="space-between"
                                 align="center"
@@ -214,7 +268,7 @@ function History() {
                                 {totalPages > 1 && (
                                     <>
                                         <Text fontSize="sm" color="rgba(255, 255, 255, 0.7)">
-                                            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, sortedHistory.length)} of {sortedHistory.length} results
+                                            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, results.length)} of {results.length} results
                                         </Text>
 
                                         <HStack spacing="8px">
@@ -232,29 +286,62 @@ function History() {
                                                 Previous
                                             </Button>
 
+                                            {/* Page Numbers */}
                                             <HStack spacing="4px">
                                                 {(() => {
                                                     const pages = [];
                                                     const maxVisible = 7;
 
                                                     if (totalPages <= maxVisible) {
-                                                        for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                                        // Show all pages if total is small
+                                                        for (let i = 1; i <= totalPages; i++) {
+                                                            pages.push(i);
+                                                        }
                                                     } else {
+                                                        // Always show first page
                                                         pages.push(1);
+
                                                         let startPage = Math.max(2, currentPage - 1);
                                                         let endPage = Math.min(totalPages - 1, currentPage + 1);
-                                                        if (currentPage <= 3) endPage = Math.min(5, totalPages - 1);
-                                                        if (currentPage >= totalPages - 2) startPage = Math.max(2, totalPages - 4);
-                                                        if (startPage > 2) pages.push('ellipsis-start');
-                                                        for (let i = startPage; i <= endPage; i++) pages.push(i);
-                                                        if (endPage < totalPages - 1) pages.push('ellipsis-end');
+
+                                                        // Adjust if we're near the start
+                                                        if (currentPage <= 3) {
+                                                            endPage = Math.min(5, totalPages - 1);
+                                                        }
+
+                                                        // Adjust if we're near the end
+                                                        if (currentPage >= totalPages - 2) {
+                                                            startPage = Math.max(2, totalPages - 4);
+                                                        }
+
+                                                        // Add ellipsis before middle pages if needed
+                                                        if (startPage > 2) {
+                                                            pages.push('ellipsis-start');
+                                                        }
+
+                                                        // Add middle pages
+                                                        for (let i = startPage; i <= endPage; i++) {
+                                                            pages.push(i);
+                                                        }
+
+                                                        // Add ellipsis after middle pages if needed
+                                                        if (endPage < totalPages - 1) {
+                                                            pages.push('ellipsis-end');
+                                                        }
+
+                                                        // Always show last page
                                                         pages.push(totalPages);
                                                     }
 
                                                     return pages.map((page, idx) => {
                                                         if (page === 'ellipsis-start' || page === 'ellipsis-end') {
-                                                            return <Text key={`ellipsis-${idx}`} color="rgba(255, 255, 255, 0.5)" px="4px">...</Text>;
+                                                            return (
+                                                                <Text key={`ellipsis-${idx}`} color="rgba(255, 255, 255, 0.5)" px="4px">
+                                                                    ...
+                                                                </Text>
+                                                            );
                                                         }
+
                                                         return (
                                                             <Button
                                                                 key={page}
@@ -293,11 +380,9 @@ function History() {
                             </Flex>
                         </Box>
                     )}
-                </Box>
-
-                {/* Pagination Controls */}
-            </CardBody>
-        </Card>
+                </CardFooter>
+            </Card>
+        </Box>
     );
 }
 

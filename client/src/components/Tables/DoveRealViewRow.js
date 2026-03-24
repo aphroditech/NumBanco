@@ -39,7 +39,7 @@ if (typeof document !== 'undefined') {
 }
 
 function DoveRealViewRow(props) {
-  const { altas, avatar, bet, multiplier, win } = props;
+  const { altas, avatar, result, win } = props;
   const winColor = win > 0 ? "#6DC64B" : "#E74C3C";
   const displayName = altas?.length > 7 ? altas.slice(0, 5) + "..." : (altas || "");
 
@@ -85,7 +85,7 @@ function DoveRealViewRow(props) {
         overflow="visible"
       >
         <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-          {bet}
+          {truncateToTwo(result)}x
         </Text>
       </Td>
       <Td
@@ -96,18 +96,7 @@ function DoveRealViewRow(props) {
         overflow="visible"
       >
         <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-          {multiplier != null ? truncateToTwo(multiplier) : "-"}
-        </Text>
-      </Td>
-      <Td
-        textAlign="left"
-        py="4px"
-        h="16px"
-        border="none"
-        overflow="visible"
-      >
-        <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-          {truncateToTwo(win)}
+          ${truncateToTwo(win)}
         </Text>
       </Td>
     </Tr>

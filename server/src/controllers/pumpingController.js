@@ -83,7 +83,7 @@ async function enrichPumpingViewsWithUser(pumpingViews) {
                     partnerId: 0,
                     partnerActivity: 0,
                     lastClickDate: 0,
-                    canWithdraw: 0,
+                    
                 });
             const obj = item.toObject();
             delete obj.isUser;
@@ -118,7 +118,7 @@ async function scheduleCreditAndBroadcast(userId, win, app) {
             partnerId: 0,
             partnerActivity: 0,
             lastClickDate: 0,
-            canWithdraw: 0,
+            
         }
     );
     if (!updatedUser?.pumpingHistory) return;
@@ -160,7 +160,7 @@ export const bet = async (req, res) => {
             partnerId: 0,
             partnerActivity: 0,
             lastClickDate: 0,
-            canWithdraw: 0,
+            
         }
     );
     const { target, bet: betAmount } = req.body;

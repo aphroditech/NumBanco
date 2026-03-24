@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import DoveView from "../../models/DoveView.js";
-import DoveSettings from "../../models/DoveSettings.js";
+import DoveView from "../../models/dove/DoveView.js";
+import DoveSettings from "../../models/dove/DoveSettings.js";
 
 const VIEW_LIMIT = 22;
 const MAX_LANES = 20;

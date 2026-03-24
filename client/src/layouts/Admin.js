@@ -28,6 +28,7 @@ export default function Dashboard(props) {
     const user = useSelector((state) => state.user.userInfo);
 
     useDailyLootTimer(user);
+    
     // Keep betStartTime in sessionStorage updated on all admin pages (dashboard, Tier A/B/C, etc.)
     useAblyBetStart(null, false, null);
     // const { ...rest } = props;

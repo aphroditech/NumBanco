@@ -18,7 +18,7 @@ export function useAblyMiningResult() {
             const data = message?.data;
             if (!data) return;
 
-            const { userName, avatar, isWin, bet, turn, win, date } = data;
+            const { userName, avatar, isWin, bet, turn, win, date, multiplier } = data;
 
             const row = {
                 userName: userName,
@@ -27,6 +27,7 @@ export function useAblyMiningResult() {
                 win: win,
                 date: date,
                 isWin: isWin,
+                multiplier: multiplier,
             };
 
             setMiningResults((prev) => {

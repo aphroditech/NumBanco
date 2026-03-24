@@ -16,7 +16,7 @@ import { getMiningHistory } from 'action/MiningActions';
 function UserMiningHistory() {
     const dispatch = useDispatch();
     const [results, setResults] = useState([]);
-    const history = useSelector((state) => state.miningHistory.history) || [];
+    const history = useSelector((state) => state.histories.miningHistory) || [];
     useEffect(() => {
         setResults(history);
     }, [history]);

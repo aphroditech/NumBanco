@@ -68,12 +68,17 @@ function CocoRealViewRow(props) {
     return (
     <Tr className={props.isNew ? "realtime-new" : undefined}>
         <Td
-        px="40px"
+        textAlign="left"
+        verticalAlign="bottom"
+        px="20px"
         py="4px"
         h="16px"
         border="none"
+        overflow="hidden"
+        textOverflow="ellipsis"
+        whiteSpace="nowrap"
         >
-        <Flex justify="flex-start" align="center" w="100%" h="100%">
+        <Flex align="flex-end" justify="flex-start" w="100%" h="100%">
             <HStack spacing="8px">
             {avatar ? (
                 <Box

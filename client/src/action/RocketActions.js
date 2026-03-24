@@ -6,15 +6,9 @@ export const rocketBet = async (data, dispatch, history) => {
         const res = await axiosInstance.post('/rocket/bet', data); // data contains bet, level
         if(res.data.balance != null) {
             dispatch({
-                type: 'SET_BALANCE',
+                type: 'UPDATE_USER_BALANCE',
                 payload: res.data.balance
             });
-        }
-        if(res.data.multiplier != null) {
-            dispatch({
-                type: "SET_ROCKET_MULTIPLIER",
-                payload: res.data.multiplier
-            })
         }
         return res.data.multiplier;
     } catch (error) {
@@ -32,10 +26,16 @@ export const rocketShotResult = async (data, dispatch, history) => {
         const res = await axiosInstance.post('/rocket/shotResult', data); // data contains isWin, betAmount, level. The goal is to save the result to the database
         if(res.data.balance != null) {
             dispatch({
-                type: 'SET_BALANCE',
+                type: 'UPDATE_USER_BALANCE',
                 payload: res.data.balance
             });
         }   
+        if(res.data.rocketHistory != null) {
+            dispatch({
+                type: 'SET_ROCKET_HISTORY',
+                payload: res.data.rocketHistory
+            });
+        }
     } catch (error) {
         console.error(error);
         if (error.response?.status === 401 && history) {
@@ -54,5 +54,22 @@ export const getRocketResults = (history) => async () => {
             history.push('/auth/landing');
         }
         return [];
+    }
+};
+
+export const getRocketHistory = (history, dispatch) => async () => {
+    try {
+        const res = await axiosInstance.get('/rocket/getRocketHistory');
+        if(res.data.rocketHistory != null) {
+            dispatch({
+                type: 'SET_ROCKET_HISTORY',
+                payload: res.data.rocketHistory
+            });
+        }
+    } catch (error) {
+        console.error(error);
+        if(error.response?.status === 401 && history) {
+            history.push('/auth/landing');
+        }
     }
 };

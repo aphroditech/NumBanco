@@ -1,10 +1,12 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import MiningSettings from "../../models/MiningSettings.js";
-import MiningResult from "../../models/MiningResult.js";
+import MiningSettings from "../../models/jackal/MiningSettings.js";
+import MiningResult from "../../models/jackal/MiningResult.js";
 
 const MIN_TURNS = 1;
 const MAX_TURNS = 8;
+/** Matches `MULTIPLIER_DECAY` in client `Mining.js` — each safe flip scales payout by this factor. */
+const MULTIPLIER_DECAY = 0.8;
 
 const BET_AMOUNT_RANGES = [
     { min: 0.5, max: 2, probability: 0.3 },
@@ -14,9 +16,19 @@ const BET_AMOUNT_RANGES = [
     { min: 15, max: 20, probability: 0.05 },
 ];
 
-function getMultiplier(turns) {
-    if (turns < MIN_TURNS || turns > MAX_TURNS) return 0;
-    return 16 / turns;
+function getMaxMultiplier(maxTurns) {
+    if (maxTurns < MIN_TURNS || maxTurns > MAX_TURNS) return 0;
+    return 16 / maxTurns;
+}
+
+/**
+ * Same as frontend `getEffectiveMultiplier` in `Mining.js`:
+ * effective = (16 / maxTurns) * DECAY^(currentTurn - 1), where currentTurn is 1-based flip on which the jackal is found.
+ */
+function getEffectiveMultiplier(maxTurns, currentTurn) {
+    const maxMult = getMaxMultiplier(maxTurns);
+    if (maxMult <= 0 || currentTurn < 1 || currentTurn > maxTurns) return 0;
+    return maxMult * MULTIPLIER_DECAY ** (currentTurn - 1);
 }
 
 function randomInt(min, max) {
@@ -54,16 +66,21 @@ export const miningBot = async (ably) => {
             if (!user) return;
 
             const betAmount = randomBetAmount();
-            const turn = randomInt(MIN_TURNS, MAX_TURNS);
+            /** Max flips (1–8), same meaning as `turn` in `MiningResult` / frontend `maxTurns`. */
+            const maxTurns = randomInt(MIN_TURNS, MAX_TURNS);
             const isWin = Math.random() < miningSetting.botWinProbability;
 
-            const multiplier = getMultiplier(turn);
-            const winAmount = isWin ? Math.round(betAmount * multiplier * 1000) / 1000 : 0;
-
-            user.totalBet = Math.round((user.totalBet + betAmount) * 1000) / 1000;
+            let multiplier = 0;
+            let winAmount = 0;
             if (isWin) {
+                const currentTurn = randomInt(1, maxTurns);
+                const rawMult = getEffectiveMultiplier(maxTurns, currentTurn);
+                multiplier = Math.round(rawMult * 100) / 100;
+                winAmount = Math.round(betAmount * multiplier * 1000) / 1000;
                 user.totalEarn = Math.round((user.totalEarn + winAmount) * 1000) / 1000;
+                user.miningWinAmount = Math.round((user.miningWinAmount + winAmount) * 1000) / 1000;
             }
+            user.totalBet = Math.round((user.totalBet + betAmount) * 1000) / 1000;
             await user.save();
 
             await MiningResult.create({
@@ -71,7 +88,8 @@ export const miningBot = async (ably) => {
                 avatar: user.avatar,
                 bet: betAmount,
                 isWin,
-                turn,
+                multiplier,
+                turn: maxTurns,
                 win: winAmount,
                 date: new Date(),
             });
@@ -90,7 +108,8 @@ export const miningBot = async (ably) => {
                     avatar: user.avatar,
                     bet: betAmount,
                     isWin,
-                    turn,
+                    multiplier,
+                    turn: maxTurns,
                     win: winAmount,
                     date: new Date(),
                 };

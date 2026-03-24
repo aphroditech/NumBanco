@@ -1,9 +1,9 @@
-import MiningSettings from "../models/MiningSettings.js";
+import MiningSettings from "../models/jackal/MiningSettings.js";
 import User from "../models/User.js";
-import MiningHistory from "../models/MiningHistory.js";
-import MiningResult from "../models/MiningResult.js";
+import MiningHistory from "../models/jackal/MiningHistory.js";
+import MiningResult from "../models/jackal/MiningResult.js";
 
-import CalendarMining from "../models/CalendarMining.js";
+import CalendarMining from "../models/jackal/CalendarMining.js";
 
 
 export const checkCanWin = async (req, res) => {
@@ -36,7 +36,7 @@ export const checkCanWin = async (req, res) => {
 
         const M1uXj3sZpU = await isWinLimitReached( user._id, betAmt, turn);
 
-        return res.json({ balance: user.balance, M1uXj3sZpU });
+        return res.json({ balance: -betAmt, M1uXj3sZpU });
     }
     catch (error) {
         console.error("Error in checkCanWin:", error);
@@ -111,6 +111,7 @@ export const resultGameMining = async (req, res) => {
             avatar: user.avatar,
             bet: betAmt,
             isWin: isWin,
+            multiplier: isWin ? multiplier : 0,
             turn: turn,
             win: profit,
             date: new Date()
@@ -127,6 +128,7 @@ export const resultGameMining = async (req, res) => {
                 avatar: user.avatar,
                 isWin: isWin,
                 bet: betAmt,
+                multiplier: isWin ? multiplier : 0,
                 turn: turn,
                 win: profit,
                 date: new Date()
@@ -159,7 +161,7 @@ export const resultGameMining = async (req, res) => {
             await newMiningHistory.save();
         }
         const histories = await MiningHistory.findOne({ user: req.user._id });
-        return res.json({ balance: user.balance, histories: histories?.history || [] });
+        return res.json({ balance: profit, histories: histories?.history || [] });
     }
     catch (error) {
         console.error("Error in resultGameMining:", error);

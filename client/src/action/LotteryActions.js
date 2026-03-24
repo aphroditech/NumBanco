@@ -6,15 +6,12 @@ import { toast } from "react-toastify"
 
 export const getClickData = async (data, dispatch, flag, history = null) => {
     try {
-        if (localStorage.getItem("token") === null) {
-            history.push("/auth/landing");
-            return;
-        }
         const res = await axiosInstance.post("/lottery/dailyloot", { data: data, flag: flag });
         if (flag) {
             return res.data;
         }
         setUserRedux(res, dispatch);
+        return res.data;
     } catch (err) {
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");

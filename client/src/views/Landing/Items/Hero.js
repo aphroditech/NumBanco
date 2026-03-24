@@ -162,7 +162,7 @@ export default function Hero() {
                                         as={RouterLink}
                                         to="/auth/signup"
                                     >
-                                        Try For Free
+                                        Bet Now
                                     </Button>
                                     <Button
                                         variant="outline"
@@ -175,7 +175,7 @@ export default function Hero() {
                                             document.getElementById("FAQs")?.scrollIntoView({ behavior: "smooth" })
                                         }
                                     >
-                                        Learn More
+                                        FAQs
                                     </Button>
                                 </Flex>
                             </Stack>

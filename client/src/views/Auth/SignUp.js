@@ -41,42 +41,9 @@ function SignUp({ setIsAuth }) {
        IP & Country Detection (FIXED)
     =============================== */
 
-    const [clientIp, setClientIp] = useState("");
     const [countryCode, setCountryCode] = useState("");
 
-    // useEffect(() => {
-    //     const fetchIpAndCountry = async () => {
-    //         try {
-    //             // 1️⃣ Get client IP
-    //             const ipResponse = await fetch("https://api.ipify.org?format=json");
-    //             if (!ipResponse.ok) throw new Error("IP fetch failed");
 
-    //             const ipData = await ipResponse.json();
-    //             if (!ipData?.ip) return;
-    //             // console.log(ipData.ip)
-    //             // setClientIp(ipData.ip);
-
-    //             // 2️⃣ Get country from IP (HTTPS only)
-    //             const countryResponse = await fetch(
-    //                 `https://ipapi.co/${ipData.ip}/json/`
-    //             );
-    //             if (!countryResponse.ok) throw new Error("Country fetch failed");
-
-    //             const countryData = await countryResponse.json();
-
-    //             // console.log(countryData)
-
-    //             if (countryData?.country_code) {
-    //                 setCountryCode(countryData.country_code);
-    //             }
-
-    //         } catch (error) {
-    //             console.warn("Failed to resolve country from IP", error);
-    //         }
-    //     };
-
-    //     fetchIpAndCountry();
-    // }, []);
 
     useEffect(() => {
         const fetchCountry = async () => {
@@ -88,8 +55,6 @@ function SignUp({ setIsAuth }) {
                 }
     
                 const data = await response.json();
-
-                console.log("country data", data);
     
                 if (data?.country_code) {
                     setCountryCode(data.country_code);
@@ -194,8 +159,6 @@ function SignUp({ setIsAuth }) {
             partnerId: data.partner,
             countryCode: countryCode, // ✅ Correct country
         };
-
-        console.log(payload );
 
         if (showEmail && data.email) {
             payload.email = data.email;

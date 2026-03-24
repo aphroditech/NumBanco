@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 
 import {
+  Avatar,
+  Badge,
   Box,
   Flex,
   Text,
@@ -9,17 +11,34 @@ import {
   Tr,
   Th,
   Tbody,
+  Td,
 } from "@chakra-ui/react";
 import Card from "components/Card/Card";
 import CardHeader from "components/Card/CardHeader";
-import TopBestWinnerRow from "components/Tables/TopBestWinnerRow";
 import { getWinners } from "action/AuthActions"
 import LocalPoliceRoundedIcon from '@mui/icons-material/LocalPoliceRounded';
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
+import truncateToTwo from "variables/truncateToTwo";
 
 function TopBestWinner() {
   const [winners, setWinners] = useState([]);
   const history = useHistory();
+  const getBadgeBgForGameType = (gameType) => {
+    const t = (gameType || "").toLowerCase();
+    if (t === "rubic") return "#805AD5";
+    if (t === "numexa") return "#DD6B20";
+    if (t === "pumping") return "#D53F8C";
+    if (t === "gravity") return "#00B5D8";
+    if (t === "deposit" || t === "withdraw") return "#3182CE";
+    return "#4A5568";
+  };
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) return "-";
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -85,7 +104,7 @@ function TopBestWinner() {
         >
           <Thead>
             <Tr>
-              <Th color="white" textAlign="left" className="real_th_font" w="15%">
+              <Th color="white" textAlign="left" className="real_th_font" w="10%">
                 No
               </Th>
 
@@ -93,27 +112,65 @@ function TopBestWinner() {
                 User
               </Th>
 
-              <Th color="white" textAlign="left" className="real_th_font" w="20%">
-                Membership
+              <Th color="white" textAlign="left" className="real_th_font" w="18%">
+                Game Type
               </Th>
 
-              <Th color="white" className="real_th_font" w="30%">
-                Total Bet Win
+              <Th color="white" className="real_th_font" w="22%">
+                Win Amount
+              </Th>
+
+              <Th color="white" className="real_th_font" w="20%">
+                Date
               </Th>
             </Tr>
           </Thead>
           <Tbody>
-            {winners && winners.map((row, index, arr) => (
-              <TopBestWinnerRow
-                key={index}
-                No={index + 1}
-                logo={row.avatar}
-                altas={row.altas}
-                membership={row.membership}
-                amounts={row.totalEarn}
-                lastItem={index === arr.length - 1}
-              />
-            ))}
+            {winners && winners.map((row, index, arr) => {
+              const isLast = index === arr.length - 1;
+              return (
+                <Tr key={row._id || `${row.username}-${row.level}-${index}`}>
+                  <Td textAlign="left" border={isLast ? "none" : null} borderBottomColor='#56577A'>
+                    <Text fontSize='sm' color='#fff' fontWeight='normal'>
+                      {index + 1}
+                    </Text>
+                  </Td>
+
+                  <Td ps='0px' border={isLast ? "none" : null} borderBottomColor='#56577A'>
+                    <Flex align='center' minWidth='100%' flexWrap='nowrap' gap="8px">
+                      <Avatar src={row.avatar} w="28px" h="28px" />
+                      <Text fontSize='sm' color='#fff' fontWeight='normal' isTruncated>
+                        {row.username || "-"}
+                      </Text>
+                    </Flex>
+                  </Td>
+
+                  <Td textAlign="left" border={isLast ? "none" : null} borderBottomColor='#56577A'>
+                    <Badge
+                      variant="solid"
+                      sx={{
+                        bg: getBadgeBgForGameType(row.gameType),
+                        color: "#FFFFFF",
+                      }}
+                    >
+                      {row.gameType || "Unknown"}
+                    </Badge>
+                  </Td>
+
+                  <Td textAlign="left" border={isLast ? "none" : null} borderBottomColor='#56577A'>
+                    <Text fontSize='sm' color='#fff' fontWeight='normal'>
+                      ${truncateToTwo(row.winAmount || 0)}
+                    </Text>
+                  </Td>
+
+                  <Td textAlign="left" border={isLast ? "none" : null} borderBottomColor='#56577A'>
+                    <Text fontSize='sm' color='#fff' fontWeight='normal'>
+                      {formatDate(row.date)}
+                    </Text>
+                  </Td>
+                </Tr>
+              );
+            })}
           </Tbody>
         </Table>
       </Box>

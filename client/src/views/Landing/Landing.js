@@ -12,7 +12,7 @@ import Hero from "./Items/Hero";
 const Slide = lazy(() => import("./Items/Slide."));
 const Concept = lazy(() => import("./Items/Concept"));
 const Card = lazy(() => import("./Items/Card"));
-const Price = lazy(() => import("./Items/Price"));
+const Videos = lazy(() => import("./Items/Videos"));
 const FAQs = lazy(() => import("./Items/FAQs"));
 const Footer = lazy(() => import("./Items/Footer"));
 const ScrollToTop = lazy(() => import("./Items/ScrollToTop"));
@@ -88,7 +88,7 @@ export default function LandingPage() {
                     }}
                 >
                     <Suspense fallback={<LoadingFallback />}>
-                        <AnimatedSection y={160} duration={0.6}><Price /></AnimatedSection>
+                        <AnimatedSection y={160} duration={0.6}><Videos /></AnimatedSection>
                     </Suspense>
                 </Box>
 

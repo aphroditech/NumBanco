@@ -18,7 +18,7 @@ export function useAblyRubicResult() {
             const data = message?.data;
             if (!data) return;
 
-            const { userName, avatar, isWin, betAmount, winAmount } = data;
+            const { userName, avatar, isWin, betAmount, winAmount, multiplier } = data;
 
             const row = {
                 userName: userName,
@@ -26,6 +26,7 @@ export function useAblyRubicResult() {
                 betAmount: betAmount,
                 winAmount: winAmount,
                 isWin: isWin,
+                multiplier: multiplier,
             };
 
             setRubicResults((prev) => {

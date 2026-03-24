@@ -82,10 +82,10 @@
                                         User
                                     </Th>
                                     <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                        Bet($)
+                                        Result
                                     </Th>
                                     <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                        Win($)
+                                        Win
                                     </Th>
                                 </Tr>
                             </Thead>
@@ -144,7 +144,7 @@
                                                     overflow="visible"
                                                 >
                                                     <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-                                                        {row.betAmount}
+                                                        {row.multiplier}x
                                                     </Text>
                                                 </Td>
                                                 <Td
@@ -155,7 +155,7 @@
                                                     overflow="visible"
                                                 >
                                                     <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-                                                        {truncateToTwo(row.winAmount)}
+                                                        ${truncateToTwo(row.winAmount)}
                                                     </Text>
                                                 </Td>
                                             </Tr>

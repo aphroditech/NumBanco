@@ -106,7 +106,7 @@ function RealView() {
                                 User
                             </Th>
                             <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                Bet
+                                Result
                             </Th>
                             <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
                                 Win
@@ -121,7 +121,7 @@ function RealView() {
                                 key={index}
                                 altas={row.userName}
                                 avatar={row.avatar}
-                                bet={row.bet}
+                                result={row.multiplier}
                                 win={row.win}
                                 isNew={newRowIds.has(rowId)}
                             />

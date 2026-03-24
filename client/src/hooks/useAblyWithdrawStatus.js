@@ -94,14 +94,11 @@ const useAblyWithdrawStatus = (showToastr = null, userId) => {
     };
 
     const handleFailed = (msg) => {
-      // console.log("Withdraw hook: WITHDRAW_FAILED received:", msg);
 
       if (msg.data?.userId !== userId) {
-          // console.log("Failed message not for this user, skipping. userId:", userId, "msg.userId:", msg.data?.userId);
           return;
       }
 
-      // console.log("Withdraw hook: Processing failed message for user:", userId);
 
       if (isMountedRef.current) {
           setWithdrawStatusWithPersist("failed");
