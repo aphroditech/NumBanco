@@ -26,7 +26,7 @@ const CoinSettingsSchema = new mongoose.Schema({
                 canWinNumber: Number,
             }
         ],
-        default: [{min: 0.5, max: 1, probability: 0.5, totalNumber: 10, canWinNumber: 1}]
+        default: [{min: 0.5, max: 20, probability: 0.5, totalNumber: 10, canWinNumber: 1}]
     },
 });
 

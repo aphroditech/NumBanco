@@ -41,35 +41,6 @@ const AMOUNT_STEP = 0.5;
 const FIRE_COOLDOWN_MS = 500;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
 
-/** Small sleep helper used by fast launch retries. */
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Start the Phaser shot as soon as possible after bet response.
- * We try immediately, then retry at a very short interval only if scene glue
- * is not ready for a brief moment.
- */
-async function fireJavelinWhenReady(maxMs = 800, retryMs = 12) {
-    const now = () =>
-        typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
-    const start = now();
-    while (true) {
-        const elapsed = now() - start;
-        if (elapsed > maxMs) break;
-        if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
-            try {
-                if (window.fireJavelin() === true) return true;
-            } catch (e) {
-                console.error(e);
-            }
-        }
-        await sleep(retryMs);
-    }
-    return false;
-}
-
 /**
  * Redux `user.balance` may be missing while the navbar still shows stale digits, or come back as a string.
  * When unknown, don't coerce to 0 (that makes `balance >= bet` false and locks Fire forever).
@@ -169,11 +140,17 @@ export default function RocketShotPage() {
             if (typeof window !== 'undefined') {
                 window.__rocketPendingMultiplier = multiplier;
             }
-            // Keep isBetPending true until Phaser accepts the shot.
+            // Launch immediately on the main thread; Phaser queues a same-frame/next-frame retry if needed
+            // (avoids slow setTimeout polling that made the rocket feel late after a fast API).
             if (typeof window !== 'undefined' && typeof window.fireJavelin === 'function') {
-                const fired = await fireJavelinWhenReady(800, 12);
+                let ok = false;
+                try {
+                    ok = window.fireJavelin() === true;
+                } catch (e) {
+                    console.error(e);
+                }
                 setIsBetPending(false);
-                if (fired) {
+                if (ok) {
                     setIsFiring(true);
                 } else {
                     unlockShooting();

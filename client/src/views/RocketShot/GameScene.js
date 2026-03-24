@@ -107,6 +107,9 @@ export default class GameScene extends Phaser.Scene {
         this.direction = 1;
         this.isFiring = false;
         this.pendingMultiplier = null;
+        /** React asked to fire while `fire()` returned false; retried once per Phaser frame (no slow setTimeout loop). */
+        this._pendingExternalFire = false;
+        this._pendingExternalFireFrames = 0;
 
         // Collision tolerance:
         // Arcade overlap can miss due to timestep + small circle sizes.
@@ -122,7 +125,7 @@ export default class GameScene extends Phaser.Scene {
         // Difficulty rotation speed:
         // RotatingSpeed(normal) = RotatingSpeed(easy) * 1.8
         // RotatingSpeed(hard) = RotatingSpeed(easy) * 2.3
-        this.easyRotationSpeed = 0.015;
+        this.easyRotationSpeed = 0.01;
         this.rotationSpeedMultiplier = 1;
         this.rotationSpeed = this.easyRotationSpeed;
 
@@ -256,6 +259,20 @@ export default class GameScene extends Phaser.Scene {
 
             if (!this.rocketOnPad) this.spawnRocketOnPad();
         }
+
+        if (this._pendingExternalFire) {
+            this._pendingExternalFireFrames += 1;
+            if (this._pendingExternalFireFrames > 180) {
+                this._pendingExternalFire = false;
+                this._pendingExternalFireFrames = 0;
+                console.warn("[GameScene] Cleared stuck pending rocket fire");
+            } else if (this.fire()) {
+                this._pendingExternalFire = false;
+                this._pendingExternalFireFrames = 0;
+            }
+        } else {
+            this._pendingExternalFireFrames = 0;
+        }
     }
 
     syncHandPosition() {
@@ -327,6 +344,20 @@ export default class GameScene extends Phaser.Scene {
         // Keep it aligned with the launcher while idle.
         const rocketRotationOffset = Math.PI / 2; // up-pointing sprite
         this.rocketOnPad.rotation = angle + rocketRotationOffset;
+    }
+
+    /**
+     * Called from React right after /rocket/bet returns. Tries `fire()` immediately;
+     * if the scene is not ready (projectile still clearing, etc.), queues retry on the next frame.
+     */
+    kickReactFire() {
+        this._pendingExternalFireFrames = 0;
+        if (this.fire()) {
+            this._pendingExternalFire = false;
+            return true;
+        }
+        this._pendingExternalFire = true;
+        return true;
     }
 
     // 🚀 FIRE rocket (the large rocket on the pad becomes the projectile)

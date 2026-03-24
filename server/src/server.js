@@ -24,8 +24,8 @@ import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js
 import { minesBot } from "./services/mines/minesBot.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
-import {miningBot} from "./services/mining/miningBotService.js";
-import {rocketBot} from "./services/rocket/rocketBot.service.js";
+import { miningBot } from "./services/mining/miningBotService.js";
+import { rocketBot } from "./services/rocket/rocketBot.service.js";
 import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
@@ -69,7 +69,7 @@ connectDB()
         //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
 
         // });
-    
+
         ably.connection.once("connected", () => {
             console.log("✅ Ably connected");
             // confirmDepositEngine(ably);
@@ -98,9 +98,9 @@ connectDB()
             // tankCheckEngine();
             // getWithdrawWallet();
 
-            // startBetEngine(ably, 0);
-            // startBetEngine(ably, 1);
-            // startBetEngine(ably, 2);
+            startBetEngine(ably, 0);
+            startBetEngine(ably, 1);
+            startBetEngine(ably, 2);
 
             try {
                 startCronJobs();
@@ -127,4 +127,4 @@ connectDB()
         console.error("❌ Failed to start server (MongoDB or startup error):", err?.message || err);
         console.error("Check MONGO_URI in .env and that MongoDB is running.");
         process.exit(1);
-});
+    });

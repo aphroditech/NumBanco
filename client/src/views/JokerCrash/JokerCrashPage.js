@@ -214,7 +214,7 @@ export default function JokerCrashPage() {
     const handleBet = async () => {
         if (isFlipping) return;
         const res = await jokerCrashBet({ amount, operator }, dispatch, history);
-        
+
         if (res) {
             console.log("res", res);
             setIsPumpingWin(false);
@@ -224,7 +224,6 @@ export default function JokerCrashPage() {
             setBet(true);
             setIsFlipping(true);
             setFlipTransitionEnabled(true);
-            setCardBack(spades1);
             requestAnimationFrame(() => {
                 setInnerRotate(180);
             });
@@ -260,7 +259,7 @@ export default function JokerCrashPage() {
             if (pumpingTimeoutRef.current) clearTimeout(pumpingTimeoutRef.current);
             pumpingTimeoutRef.current = setTimeout(() => setIsPumpingWin(false), 1100);
 
-            setTimeout(() => {       
+            setTimeout(() => {
                 setBet(false);
                 // Flip back to the "default backside" face.
                 // At innerRotate=0 the user sees `cardFront`; at innerRotate=180 they see `cardBack`.
@@ -757,9 +756,9 @@ export default function JokerCrashPage() {
                                         bet
                                             ? false
                                             : isFlipping ||
-                                              !amount ||
-                                              parseFloat(amount) < MIN_AMOUNT ||
-                                              balance < parseFloat(amount || '0')
+                                            !amount ||
+                                            parseFloat(amount) < MIN_AMOUNT ||
+                                            balance < parseFloat(amount || '0')
                                     }
                                 >
                                     {bet ? 'CASH OUT' : 'BET'}
@@ -938,7 +937,7 @@ export default function JokerCrashPage() {
                                                                     Number(imulti) > 0
                                                                         ? '0 0 32px rgba(72, 187, 120, 0.75), 0 0 60px rgba(56, 161, 105, 0.35)'
                                                                         : '0 0 32px rgba(245, 101, 101, 0.8), 0 0 60px rgba(229, 62, 62, 0.4)',
-                                                            animation: isPumpingMulti
+                                                                animation: isPumpingMulti
                                                                     ? 'cardArrowPulse 1s ease-in-out infinite'
                                                                     : 'none',
                                                             }}
@@ -1089,7 +1088,7 @@ export default function JokerCrashPage() {
                                     <Text fontSize="xs" color="rgba(255,255,255,0.55)" fontWeight="600">
                                         Win : {' '}
                                         <Text as="span" color="#fff" fontWeight="800">
-                                            {(amount*multi).toFixed(2)} $
+                                            {(amount * multi).toFixed(2)} $
                                         </Text>
                                     </Text>
                                 </HStack>
