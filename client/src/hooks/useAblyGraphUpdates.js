@@ -5,7 +5,7 @@ export function useAblyGraph() {
     const [graphData, setGraphData] = useState(null);
 
     useEffect(() => {
-        const channel = ablyClient.channels.get("Num2Bet");
+        const channel = ablyClient.channels.get("gravityGame");
 
         // If Ably connection/channel has already failed, avoid subscribing
         if (ablyClient.connection.state === "failed" || channel.state === "failed") {
@@ -17,6 +17,7 @@ export function useAblyGraph() {
         }
 
         const onGraph = (message) => {
+            console.log("message", message);
             if (message.data && message.data.alldata) {
                 const alldata = Array.isArray(message.data.alldata) 
                     ? [...message.data.alldata] // Create new array reference

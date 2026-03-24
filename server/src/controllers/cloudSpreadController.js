@@ -40,7 +40,7 @@ export async function createCloudSpreadBet(req, res) {
       targetStep,
     });
     return res.status(200).json({
-      user,
+      balance: Number(user.balance || 0),
       roundId: round.roundId,
       betId,
       betAmount: betAmount ?? amount,

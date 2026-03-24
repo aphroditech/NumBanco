@@ -1,11 +1,11 @@
 import User from "../models/User.js";
-import { sendUserResponse } from "../utils/responses.js";
 import CocoView from "../models/CocoView.js";
 import CocoState from "../models/CocoState.js";
 import CocoRate from "../models/CocoRate.js";
 
 const CREDIT_DELAY_MS = 300;
-const VIEW_LIMIT = 18;
+const VIEW_LIMIT = 22;
+const USER_HISTORY_CAP = 200;
 const multiTable = [
     0.5,
     1.05,
@@ -16,6 +16,22 @@ const multiTable = [
 ];
 
 const TARGET_SUM = 6;
+const RATE_CACHE_TTL_MS = 30 * 1000;
+const COCO_USER_SELECT = {
+    userId: 1,
+    userAuthId: 1,
+    username: 1,
+    altas: 1,
+    avatar: 1,
+    membership: 1,
+    balance: 1,
+    cocoHistory: 1,
+    cocoMode: 1,
+    cocoTotalProfit: 1,
+    cocoTotalBet: 1,
+    totalhistory: 1,
+    partnerLevel: 1,
+};
 
 const rand = (min, max) => min + Math.random() * (max - min);
 
@@ -42,6 +58,15 @@ function normalizeRate(rate) {
     return Math.max(0, Math.min(1, decimal));
 }
 
+function pushWithCap(arr, value, cap = USER_HISTORY_CAP) {
+    const list = Array.isArray(arr) ? arr : [];
+    list.push(value);
+    if (list.length > cap) {
+        list.splice(0, list.length - cap);
+    }
+    return list;
+}
+
 function getRateFieldForMode(cocoMode) {
     const mode = Number.isFinite(cocoMode) ? cocoMode : 0;
     if (mode === 0) return "easyRate";
@@ -50,7 +75,7 @@ function getRateFieldForMode(cocoMode) {
     return "easyRate";
 }
 
-function updateCocoModeByTotalProfit(user) {
+function warmCocoTotalsFromHistory(user) {
     const history = Array.isArray(user?.cocoHistory) ? user.cocoHistory : [];
     const totalProfit = history.reduce((acc, item) => {
         const p = Number(item?.profit);
@@ -60,31 +85,82 @@ function updateCocoModeByTotalProfit(user) {
         const b = Number(item?.betAmount);
         return acc + (Number.isFinite(b) ? b : 0);
     }, 0);
+    user.cocoTotalProfit = totalProfit;
+    user.cocoTotalBet = totalBet;
+}
 
-    // Your definition: profit = totalProfit - total betAmount
-    const netProfit = totalProfit - totalBet;
+function applyCocoResultAndUpdateMode(user, betAmount, profitAmount) {
+    if (
+        !Number.isFinite(Number(user?.cocoTotalProfit)) ||
+        !Number.isFinite(Number(user?.cocoTotalBet))
+    ) {
+        warmCocoTotalsFromHistory(user);
+    }
+
+    const safeBet = Number.isFinite(Number(betAmount)) ? Number(betAmount) : 0;
+    const safeProfit = Number.isFinite(Number(profitAmount)) ? Number(profitAmount) : 0;
+    user.cocoTotalProfit = Number(user.cocoTotalProfit || 0) + safeProfit;
+    user.cocoTotalBet = Number(user.cocoTotalBet || 0) + safeBet;
+
+    const netProfit = user.cocoTotalProfit - user.cocoTotalBet;
 
     // Mode changes only at extremes; otherwise keep current mode.
     if (netProfit > 100) user.cocoMode = 2;
     else if (netProfit < -10) user.cocoMode = 0;
 }
 
+let cocoRateCache = null;
+let cocoRateCacheAt = 0;
+let cocoRateCachePromise = null;
+
+async function getCocoRateRows() {
+    const now = Date.now();
+    if (cocoRateCache && now - cocoRateCacheAt < RATE_CACHE_TTL_MS) {
+        return cocoRateCache;
+    }
+    if (cocoRateCachePromise) {
+        return cocoRateCachePromise;
+    }
+
+    cocoRateCachePromise = CocoRate.find(
+        {},
+        { successCount: 1, rate: 1, easyRate: 1, normalRate: 1, hardRate: 1 }
+    )
+        .sort({ successCount: 1 })
+        .lean()
+        .then((rows) => {
+            cocoRateCache = rows;
+            cocoRateCacheAt = Date.now();
+            return rows;
+        })
+        .finally(() => {
+            cocoRateCachePromise = null;
+        });
+
+    return cocoRateCachePromise;
+}
+
 async function getCocoSuccessRateByCombo(combo, cocoMode) {
     const safeCombo = Number.isFinite(combo) ? Math.max(0, combo) : 0;
-    const exact = await CocoRate.findOne({ successCount: safeCombo }).lean();
+    const rows = await getCocoRateRows();
     const field = getRateFieldForMode(cocoMode);
-    const exactRate =
-        normalizeRate(exact?.[field]) ??
-        normalizeRate(exact?.rate);
-    if (exactRate !== null && exactRate !== undefined) return exactRate;
+    let nearest = null;
+    for (let i = 0; i < rows.length; i += 1) {
+        const row = rows[i];
+        if (row.successCount === safeCombo) {
+            const exactRate = normalizeRate(row?.[field]) ?? normalizeRate(row?.rate);
+            if (exactRate !== null && exactRate !== undefined) return exactRate;
+            nearest = row;
+            break;
+        }
+        if (row.successCount < safeCombo) {
+            nearest = row;
+            continue;
+        }
+        break;
+    }
 
-    // Fallback to closest lower combo row if exact combo row does not exist.
-    const nearest = await CocoRate.findOne({ successCount: { $lte: safeCombo } })
-        .sort({ successCount: -1 })
-        .lean();
-    const nearestRate =
-        normalizeRate(nearest?.[field]) ??
-        normalizeRate(nearest?.rate);
+    const nearestRate = normalizeRate(nearest?.[field]) ?? normalizeRate(nearest?.rate);
     if (nearestRate !== null && nearestRate !== undefined) return nearestRate;
 
     // Final fallback keeps current behavior if no DB table rows exist yet.
@@ -92,7 +168,7 @@ async function getCocoSuccessRateByCombo(combo, cocoMode) {
 }
 
 async function getState(userId) {
-    return CocoState.findOne({ userId });
+    return CocoState.findOne({ userId }).lean();
 }
 
 async function setState(userId, state) {
@@ -120,6 +196,22 @@ async function scheduleCreditAndBroadcast(userId, win, app) {
     }
 }
 
+function buildCocoUserPayload(user) {
+    return {
+        userId: user.userId,
+        userAuthId: user.userAuthId,
+        username: user.username,
+        altas: user.altas,
+        avatar: user.avatar,
+        membership: user.membership,
+        balance: user.balance,
+        cocoHistory: user.cocoHistory,
+        cocoMode: user.cocoMode,
+        cocoTotalProfit: user.cocoTotalProfit,
+        cocoTotalBet: user.cocoTotalBet,
+    };
+}
+
 
 export const smash = async (req, res) => {
     try {
@@ -134,16 +226,10 @@ export const smash = async (req, res) => {
             return res.status(400).json({ error: "Invalid bet amount" });
         }
 
-        const user = await User.findOne(
-            { userAuthId: req.user.userAuthId },
-            {
-                "wallets.eth.privateKey": 0,
-                "wallets.bsc.privateKey": 0,
-                "wallets.tron.privateKey": 0,
-                password: 0,
-                country: 0,
-            }
-        );
+        const [user, stateFromDb] = await Promise.all([
+            User.findOne({ userAuthId: req.user.userAuthId }, COCO_USER_SELECT),
+            getState(userId),
+        ]);
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });
@@ -157,7 +243,7 @@ export const smash = async (req, res) => {
         }
 
         user.balance = newBalance;
-        let state = await getState(userId);
+        let state = stateFromDb;
 
 
         // Allow changing betAmount between hits: always sync the in-round state bet
@@ -168,8 +254,7 @@ export const smash = async (req, res) => {
 
         // Start new round if no state
         if (!state) {
-            user.totalhistory = user.totalhistory || [];
-            user.totalhistory.push({
+            user.totalhistory = pushWithCap(user.totalhistory, {
                 amount: -betAmount,
                 date: new Date(),
                 type: "tapcrash",
@@ -181,7 +266,6 @@ export const smash = async (req, res) => {
                 totalSum: 0,
                 ready: false,
             };
-            await setState(userId, state);
         }
 
         // FINAL HIT (tower break on next smash)
@@ -197,8 +281,7 @@ export const smash = async (req, res) => {
             user.balance += win;
 
             // Store the result snapshot for this smash.
-            user.cocoHistory = user.cocoHistory || [];
-            user.cocoHistory.push({
+            user.cocoHistory = pushWithCap(user.cocoHistory, {
                 betAmount: state.bet,
                 result: finalMulti,
                 profit: win,
@@ -207,32 +290,34 @@ export const smash = async (req, res) => {
                 totalSum: state.totalSum,
             });
 
-            updateCocoModeByTotalProfit(user);
+            applyCocoResultAndUpdateMode(user, state.bet, win);
 
-            user.totalhistory.push({
+            user.totalhistory = pushWithCap(user.totalhistory, {
                 amount: win,
                 date: new Date(),
                 type: "tapcrash",
             });
 
-            await clearState(userId);
-
-            await user.save();
-
-            await CocoView.create({
+            await Promise.all([
+                clearState(userId),
+                user.save({ validateBeforeSave: false }),
+                CocoView.create({
                 userId: req.user.userId,
                 bet: state.bet,
                 win,
                 result: finalMulti,
                 isUser: req.user.partnerLevel > 0 ? 1 : 0,
-            });
+                }),
+            ]);
 
             setTimeout(
                 () => scheduleCreditAndBroadcast(req.user.userId, 0, req.app),
                 CREDIT_DELAY_MS
             );
 
-            return sendUserResponse(res, "", user, {
+            return res.json({
+                message: "",
+                user: buildCocoUserPayload(user),
                 multi: finalMulti,
                 lastWin: win,
                 combo: state.successCount,
@@ -250,17 +335,9 @@ export const smash = async (req, res) => {
         if (!success) {
             state.successCount = 0;
             state.currentMultiplier = 0.0;
-            await setState(userId, {
-                bet: state.bet,
-                successCount: state.successCount,
-                currentMultiplier: state.currentMultiplier,
-                totalSum: state.totalSum,
-                ready: state.ready,
-            });
 
             // Store the result snapshot for this (failed) smash.
-            user.cocoHistory = user.cocoHistory || [];
-            user.cocoHistory.push({
+            user.cocoHistory = pushWithCap(user.cocoHistory, {
                 betAmount: state.bet,
                 result: 0,
                 profit: 0,
@@ -269,17 +346,25 @@ export const smash = async (req, res) => {
                 totalSum: state.totalSum,
             });
 
-            updateCocoModeByTotalProfit(user);
+            applyCocoResultAndUpdateMode(user, state.bet, 0);
 
-            await user.save();
-
-            await CocoView.create({
+            await Promise.all([
+                setState(userId, {
+                    bet: state.bet,
+                    successCount: state.successCount,
+                    currentMultiplier: state.currentMultiplier,
+                    totalSum: state.totalSum,
+                    ready: state.ready,
+                }),
+                user.save({ validateBeforeSave: false }),
+                CocoView.create({
                 userId: req.user.userId,
                 bet: state.bet,
                 win: 0,
                 result: 0,
                 isUser: req.user.partnerLevel > 0 ? 1 : 0,
-            });
+                }),
+            ]);
 
             // Publish updated realview even on fail (win=0).
             setTimeout(
@@ -287,7 +372,9 @@ export const smash = async (req, res) => {
                 CREDIT_DELAY_MS
             );
 
-            return sendUserResponse(res, "", user, {
+            return res.json({
+                message: "",
+                user: buildCocoUserPayload(user),
                 multi: 0,
                 lastWin: 0,
                 combo: 0,
@@ -322,8 +409,7 @@ export const smash = async (req, res) => {
         user.balance += win;
 
         // Store the result snapshot for this (successful step) smash.
-        user.cocoHistory = user.cocoHistory || [];
-        user.cocoHistory.push({
+        user.cocoHistory = pushWithCap(user.cocoHistory, {
             betAmount: state.bet,
             result: state.currentMultiplier,
             profit: win,
@@ -332,38 +418,40 @@ export const smash = async (req, res) => {
             totalSum: state.totalSum,
         });
 
-        updateCocoModeByTotalProfit(user);
+        applyCocoResultAndUpdateMode(user, state.bet, win);
 
-        user.totalhistory.push({
+        user.totalhistory = pushWithCap(user.totalhistory, {
             amount: win,
             date: new Date(),
             type: "tapcrash",
         });
 
-        await setState(userId, {
-            bet: state.bet,
-            successCount: state.successCount,
-            currentMultiplier: state.currentMultiplier,
-            totalSum: state.totalSum,
-            ready: state.ready,
-        });
-
-        await user.save();
-
-        await CocoView.create({
-            userId: req.user.userId,
-            bet: state.bet,
-            win,
-            result: state.currentMultiplier,
-            isUser: req.user.partnerLevel > 0 ? 1 : 0,
-        });
+        await Promise.all([
+            setState(userId, {
+                bet: state.bet,
+                successCount: state.successCount,
+                currentMultiplier: state.currentMultiplier,
+                totalSum: state.totalSum,
+                ready: state.ready,
+            }),
+            user.save({ validateBeforeSave: false }),
+            CocoView.create({
+                userId: req.user.userId,
+                bet: state.bet,
+                win,
+                result: state.currentMultiplier,
+                isUser: req.user.partnerLevel > 0 ? 1 : 0,
+            }),
+        ]);
 
         setTimeout(
             () => scheduleCreditAndBroadcast(req.user.userId, win, req.app),
             CREDIT_DELAY_MS
         );
 
-        return sendUserResponse(res, "", user, {
+        return res.json({
+            message: "",
+            user: buildCocoUserPayload(user),
             multi: state.currentMultiplier,
             lastWin: win,
             combo: state.successCount,
@@ -388,20 +476,14 @@ export const restart = async (req, res) => {
 
         const user = await User.findOne(
             { userAuthId: req.user.userAuthId },
-            {
-                "wallets.eth.privateKey": 0,
-                "wallets.bsc.privateKey": 0,
-                "wallets.tron.privateKey": 0,
-                password: 0,
-                country: 0,
-            }
+            COCO_USER_SELECT
         );
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
-        return sendUserResponse(res, "", user);
+        return res.json({ message: "", user: buildCocoUserPayload(user) });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }

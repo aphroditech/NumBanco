@@ -1,5 +1,6 @@
 // import { setCredentials } from "../store/userSlice";
 import axiosInstance from "../api/axiosConfig";
+import store from "../store/store";
 
 import { setNotification } from "utils/localStorage";
 import { toast } from "react-toastify"
@@ -15,14 +16,22 @@ export const NotToken = (history) => {
 
 export const setUserRedux = (res, dispatch, history = null, isShowNotification = true) => {
     const data = res.data;
+    const prevUser = store.getState()?.user?.userInfo || {};
+    const mergedUser =
+        data?.user && typeof data.user === "object"
+            ? { ...prevUser, ...data.user }
+            : prevUser;
+
     dispatch({
         type: "SET_USER",
-        payload: data.user
+        payload: mergedUser
     });
-    dispatch({
-        type: "INITIALIZED_NOTIFICATION",
-        payload: data.user?.notification || []
-    });
+    if (Array.isArray(data.user?.notification)) {
+        dispatch({
+            type: "INITIALIZED_NOTIFICATION",
+            payload: data.user.notification
+        });
+    }
 
     if (res.data.message) {
         if (isShowNotification) setNotification(res.data.message, dispatch, "success");

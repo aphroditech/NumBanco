@@ -10,13 +10,12 @@ const minesHistorySchema = new mongoose.Schema(
     history: {
       type: [
         {
-          bet: { type: Number, required: true },
-          multiplier: { type: Number, default: 0 },
-          winAmt: { type: Number, default: 0 },
+          betAmount: { type: Number, default: 0 },
           profit: { type: Number, default: 0 },
           isWin: { type: Boolean, required: true },
           minesCount: { type: Number, default: 0 },
-          timestamp: { type: Date, default: Date.now },
+          gridSize: { type: Number, default: 25 },
+          createAt: { type: Date, default: Date.now },
         },
       ],
       default: [],

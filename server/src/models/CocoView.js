@@ -27,4 +27,7 @@ const CocoViewSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+CocoViewSchema.index({ createdAt: -1 });
+CocoViewSchema.index({ userId: 1, createdAt: -1 });
+
 export default mongoose.model('CocoView', CocoViewSchema);

@@ -342,11 +342,32 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  minesHistory: {
+    type: [
+      {
+        betAmount: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        isWin: { type: Boolean, required: true },
+        minesCount: { type: Number, default: 0 },
+        gridSize: { type: Number, default: 25 },
+        createAt: { type: Date, default: Date.now },
+      }
+    ],
+    default: []
+  },
   cocoMode: {
     type: Number,
     default: 0, // 0=easy, 1=normal, 2=hard
     min: 0,
     max: 2
+  },
+  cocoTotalProfit: {
+    type: Number,
+    default: 0
+  },
+  cocoTotalBet: {
+    type: Number,
+    default: 0
   },
   alphaTreeMode: {
     type: Number,

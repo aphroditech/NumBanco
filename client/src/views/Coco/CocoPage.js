@@ -43,14 +43,14 @@ const EGG_SLOT_LIFT_PX = 48;
 const CLOUD_RISE_PER_BREAK_PX = 48;
 const EGG_TOWER_COUNT = 7;  
 /** egg1 breaks → remove egg1, egg2–egg7 rise (gap at old egg7 spot) → new egg fills bottom */
-const EGG_NORMAL_REMOVE_TOP_MS = 380;
+const EGG_NORMAL_REMOVE_TOP_MS = 260;
 /** Pause so empty bottom slot is visible before new egg7 appears */
-const EGG_NORMAL_ADD_BOTTOM_RISE_MS = 180;
+const EGG_NORMAL_ADD_BOTTOM_RISE_MS = 110;
 /** Big multi (final): chicken lands here; eggs all break then cleared */
 const CHICKEN_LAND_BOTTOM = 22;
-const BIG_MULTI_BREAK_EACH_MS = 130;
+const BIG_MULTI_BREAK_EACH_MS = 90;
 const BIG_MULTI_CLEAR_EGGS_MS = BIG_MULTI_BREAK_EACH_MS * EGG_TOWER_COUNT + 120;
-const BIG_MULTI_CHICKEN_DOWN_MS = 900;
+const BIG_MULTI_CHICKEN_DOWN_MS = 620;
 /**
  * One vertical loop (px). Taller than typical sky so each cycle has empty sky on top
  * and clouds only in the lower band — recycled clouds enter from bottom and rise.
@@ -61,7 +61,7 @@ const CLOUD_LAND_MASK =
     'linear-gradient(to bottom, #000 0%, #000 70%, rgba(0,0,0,0.35) 84%, transparent 100%)';
 /** Smooth motion for egg gap + cloud scroll */
 const EGG_TOWER_SMOOTH_MS = 120;
-const CLOUD_SCROLL_SMOOTH_MS = 480;
+const CLOUD_SCROLL_SMOOTH_MS = 260;
 /**
  * `top` is offset from each band’s start (0, CLOUD_LOOP_PX, …).
  * Keep values in the lower ~35% of the band so repeats rise from below, not mid-sky.
@@ -78,6 +78,13 @@ const COCO_SCENE_DESIGN_WIDTH = 900;
 const COCO_SCENE_DEFAULT_HEIGHT = 506;
 /** Minimum time the "Starting game…" fog stays visible after Play */
 const START_GAME_FOG_MIN_MS = 900;
+/** Minimum visible time for SMASH loading state */
+const SMASH_LOADING_MIN_MS = 300;
+const CHICKEN_HIT_SWITCH_MS = 110;
+const RESULT_START_DELAY_MS = 40;
+const SHAKE_STEP_MS = 28;
+const SHAKE_TOTAL_MS = 180;
+const COCO_SESSION_STORAGE_KEY = "cocoGameSessionState";
 
 function positiveMod(n, m) {
     return ((n % m) + m) % m;
@@ -97,6 +104,7 @@ export default function CocoPage() {
             if (restartCoverTimerRef.current) {
                 clearTimeout(restartCoverTimerRef.current);
             }
+            clearAnimationTimers();
         };
     }, []);
 
@@ -155,6 +163,32 @@ export default function CocoPage() {
     const [cloudInstantMove, setCloudInstantMove] = useState(false);
     const prevSceneRiseRef = useRef(0);
     const [shakeX, setShakeX] = useState(0);
+    const animationTimeoutsRef = useRef([]);
+    const animationIntervalsRef = useRef([]);
+
+    const registerAnimTimeout = (cb, ms) => {
+        const id = setTimeout(() => {
+            animationTimeoutsRef.current = animationTimeoutsRef.current.filter(
+                (tid) => tid !== id
+            );
+            cb();
+        }, ms);
+        animationTimeoutsRef.current.push(id);
+        return id;
+    };
+
+    const registerAnimInterval = (cb, ms) => {
+        const id = setInterval(cb, ms);
+        animationIntervalsRef.current.push(id);
+        return id;
+    };
+
+    const clearAnimationTimers = () => {
+        animationTimeoutsRef.current.forEach((id) => clearTimeout(id));
+        animationIntervalsRef.current.forEach((id) => clearInterval(id));
+        animationTimeoutsRef.current = [];
+        animationIntervalsRef.current = [];
+    };
 
     useLayoutEffect(() => {
         const prev = prevSceneRiseRef.current;
@@ -258,6 +292,7 @@ export default function CocoPage() {
         startGameFogOn ||
         restartCoverOn;
     const user = useSelector((state) => state.user.userInfo) || {};
+    const hasRestoredSessionRef = useRef(false);
     const cocoHistory = Array.isArray(user?.cocoHistory) ? user.cocoHistory : [];
     const balance = Number(user?.balance ?? 0);
     const username = user?.username ?? 'User';
@@ -288,18 +323,22 @@ export default function CocoPage() {
             setShakeX(i % 2 === 0 ? -6 : 6);
             i++;
     
-        }, 40); // speed of shake
+        }, SHAKE_STEP_MS); // speed of shake
     
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
             clearInterval(id);
             setShakeX(0);
-        }, 300); // duration of shake
+        }, SHAKE_TOTAL_MS); // duration of shake
     
-        return () => clearInterval(id);
+        return () => {
+            clearInterval(id);
+            clearTimeout(timeoutId);
+        };
     
     }, [animState]);
 
     const resetLocalCocoScene = () => {
+        clearAnimationTimers();
         setAnimState("idle");
         setEggs(Array(EGG_TOWER_COUNT).fill("normal"));
         eggKeySeqRef.current = EGG_TOWER_COUNT;
@@ -313,6 +352,104 @@ export default function CocoPage() {
         setShakeX(0);
         setChickenBottom(CHICKEN_BOTTOM_IDLE);
     };
+
+    useEffect(() => {
+        if (hasRestoredSessionRef.current) return;
+        if (!user?.userId) return;
+
+        hasRestoredSessionRef.current = true;
+        try {
+            const raw = sessionStorage.getItem(COCO_SESSION_STORAGE_KEY);
+            if (!raw) return;
+            const saved = JSON.parse(raw);
+            if (!saved || saved.userId !== user.userId) return;
+
+            const safeEggs = Array.isArray(saved.eggs) ? saved.eggs : null;
+            const safeEggKeys = Array.isArray(saved.eggRowKeys) ? saved.eggRowKeys : null;
+
+            if (safeEggs) setEggs(safeEggs);
+            if (safeEggKeys && safeEggKeys.length === (safeEggs?.length ?? 0)) {
+                setEggRowKeys(safeEggKeys);
+                const maxKey = safeEggKeys.length ? Math.max(...safeEggKeys) : EGG_TOWER_COUNT - 1;
+                eggKeySeqRef.current = Number.isFinite(maxKey) ? maxKey + 1 : EGG_TOWER_COUNT;
+            }
+            setAnimState(saved.animState || "idle");
+            setChickenBottom(
+                Number.isFinite(Number(saved.chickenBottom))
+                    ? Number(saved.chickenBottom)
+                    : CHICKEN_BOTTOM_IDLE
+            );
+            setLatestWin(
+                Number.isFinite(Number(saved.latestWin))
+                    ? Number(saved.latestWin).toFixed(2)
+                    : "0.00"
+            );
+            setLatestMulti(
+                Number.isFinite(Number(saved.latestMulti))
+                    ? Number(saved.latestMulti).toFixed(2)
+                    : "0.00"
+            );
+            setLatestCombo(String(saved.latestCombo ?? "0"));
+            setGameSessionActive(Boolean(saved.gameSessionActive));
+            setSceneRisePx(
+                Number.isFinite(Number(saved.sceneRisePx)) ? Number(saved.sceneRisePx) : 0
+            );
+            setEggBottomGapPx(
+                Number.isFinite(Number(saved.eggBottomGapPx)) ? Number(saved.eggBottomGapPx) : 0
+            );
+            setEggStackLiftPx(
+                Number.isFinite(Number(saved.eggStackLiftPx)) ? Number(saved.eggStackLiftPx) : 0
+            );
+            setTowerOffset(
+                Number.isFinite(Number(saved.towerOffset)) ? Number(saved.towerOffset) : 0
+            );
+            if (typeof saved.amount === "string") {
+                setAmountSafe(saved.amount);
+            }
+        } catch (err) {
+            console.warn("[coco] failed to restore saved session:", err);
+        }
+    }, [user?.userId]);
+
+    useEffect(() => {
+        if (!user?.userId) return;
+        const payload = {
+            userId: user.userId,
+            amount,
+            animState,
+            eggs,
+            eggRowKeys,
+            chickenBottom,
+            latestWin,
+            latestMulti,
+            latestCombo,
+            gameSessionActive,
+            sceneRisePx,
+            eggBottomGapPx,
+            eggStackLiftPx,
+            towerOffset,
+        };
+        try {
+            sessionStorage.setItem(COCO_SESSION_STORAGE_KEY, JSON.stringify(payload));
+        } catch (err) {
+            console.warn("[coco] failed to persist session:", err);
+        }
+    }, [
+        user?.userId,
+        amount,
+        animState,
+        eggs,
+        eggRowKeys,
+        chickenBottom,
+        latestWin,
+        latestMulti,
+        latestCombo,
+        gameSessionActive,
+        sceneRisePx,
+        eggBottomGapPx,
+        eggStackLiftPx,
+        towerOffset,
+    ]);
 
     const handlePlayGame = async () => {
         if (
@@ -371,6 +508,7 @@ export default function CocoPage() {
             return;
         }
     
+        const smashLoadingStartedAt = Date.now();
         setLoading(true);
     
         try {
@@ -387,10 +525,10 @@ export default function CocoPage() {
             );
     
             // go to hit quickly
-            setTimeout(() => {
+            registerAnimTimeout(() => {
                 setAnimState("hit");
                 setChickenBottom(CHICKEN_BOTTOM_IDLE);
-            }, 160);
+            }, CHICKEN_HIT_SWITCH_MS);
     
             // wait result
             const data = await smashPromise;
@@ -400,13 +538,13 @@ export default function CocoPage() {
             const isFinal = multi >= 3.5; // your final range
     
             // start result immediately after hit
-            setTimeout(() => {
+            registerAnimTimeout(() => {
     
                 if (multi === 0) {
 
                     setAnimState("shake");
 
-                    setTimeout(() => {
+                    registerAnimTimeout(() => {
 
                         setEggs((prev) => {
                             const copy = [...prev];
@@ -429,8 +567,8 @@ export default function CocoPage() {
                         setEggs((prev) => prev.map(() => "normal"));
                         let brokenCount = 0;
                         // Start breaking right when chicken starts its descent.
-                        setTimeout(() => {
-                            const breakTimer = setInterval(() => {
+                        registerAnimTimeout(() => {
+                            const breakTimer = registerAnimInterval(() => {
                                 brokenCount += 1;
                                 setEggs((prev) =>
                                     prev.map((s, idx) =>
@@ -440,15 +578,19 @@ export default function CocoPage() {
 
                                 if (brokenCount >= EGG_TOWER_COUNT) {
                                     clearInterval(breakTimer);
+                                    animationIntervalsRef.current =
+                                        animationIntervalsRef.current.filter(
+                                            (iid) => iid !== breakTimer
+                                        );
                                 }
                             }, BIG_MULTI_BREAK_EACH_MS);
                         }, 40);
 
-                        setTimeout(() => {
+                        registerAnimTimeout(() => {
                             setChickenBottom(CHICKEN_LAND_BOTTOM);
                         }, 40);
 
-                        setTimeout(() => {
+                        registerAnimTimeout(() => {
                             setEggs([]);
                             setEggRowKeys([]);
                             setEggStackLiftPx(0);
@@ -457,15 +599,15 @@ export default function CocoPage() {
                             );
                         }, BIG_MULTI_CLEAR_EGGS_MS);
 
-                        setTimeout(() => {
+                        registerAnimTimeout(() => {
                             setAnimState("finalStand");
                         }, BIG_MULTI_CHICKEN_DOWN_MS);
 
-                        setTimeout(() => {
+                        registerAnimTimeout(() => {
                             setAnimState("showMulti");
                         }, BIG_MULTI_CHICKEN_DOWN_MS + 280);
 
-                        setTimeout(() => {
+                        registerAnimTimeout(() => {
                             if (!restartCalledRef.current) {
                                 restartCalledRef.current = true;
                                 handleRestart();
@@ -483,12 +625,12 @@ export default function CocoPage() {
                             return copy;
                         });
                 
-                        setTimeout(() => {
+                        registerAnimTimeout(() => {
                             setAnimState("remove");
                         }, 120);
 
                         // 1) egg1 gone → egg2..egg7 rise (smooth gap open); tower stays there after this.
-                        setTimeout(() => {
+                        registerAnimTimeout(() => {
                             setEggGapCloseInstant(false);
                             setAnimState("idle");
                             setEggs((prev) => {
@@ -508,7 +650,7 @@ export default function CocoPage() {
                         }, EGG_NORMAL_REMOVE_TOP_MS);
 
                         // 2) New egg under egg7; snap gap shut (no padding animation) so e2–e7 don’t shift again.
-                        setTimeout(() => {
+                        registerAnimTimeout(() => {
                             setEggGapCloseInstant(true);
                             setEggs((prev) => [...prev, "normal"]);
                             setEggRowKeys((prev) => [
@@ -525,7 +667,7 @@ export default function CocoPage() {
                     }
                 }
     
-            }, 150);
+            }, RESULT_START_DELAY_MS);
     
             setLatestWin((data?.lastWin ?? 0).toFixed(2));
             setLatestMulti((data?.multi ?? 0).toFixed(2));
@@ -541,6 +683,11 @@ export default function CocoPage() {
             toast.error(msg);
     
         } finally {
+            const elapsed = Date.now() - smashLoadingStartedAt;
+            const waitMore = Math.max(0, SMASH_LOADING_MIN_MS - elapsed);
+            if (waitMore > 0) {
+                await new Promise((resolve) => setTimeout(resolve, waitMore));
+            }
     
             setLoading(false);
     
@@ -1116,8 +1263,8 @@ export default function CocoPage() {
                                                 animState === "finalDown" ||
                                                 animState === "finalStand" ||
                                                 animState === "showMulti"
-                                                    ? "bottom 0.95s cubic-bezier(0.33, 1, 0.68, 1)"
-                                                    : "all 0.2s linear",
+                                                    ? "bottom 0.62s cubic-bezier(0.2, 0.8, 0.2, 1)"
+                                                    : "all 0.14s cubic-bezier(0.2, 0.8, 0.2, 1)",
 
                                             bottom: chickenBottom,
 
