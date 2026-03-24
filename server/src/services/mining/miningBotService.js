@@ -78,6 +78,7 @@ export const miningBot = async (ably) => {
                 multiplier = Math.round(rawMult * 100) / 100;
                 winAmount = Math.round(betAmount * multiplier * 1000) / 1000;
                 user.totalEarn = Math.round((user.totalEarn + winAmount) * 1000) / 1000;
+                user.miningWinAmount = Math.round((user.miningWinAmount + winAmount) * 1000) / 1000;
             }
             user.totalBet = Math.round((user.totalBet + betAmount) * 1000) / 1000;
             await user.save();

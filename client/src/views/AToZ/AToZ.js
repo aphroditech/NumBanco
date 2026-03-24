@@ -438,6 +438,7 @@ export default function AToZPage() {
                                     inset={0}
                                     zIndex={1}
                                     display="flex"
+                                    top="-60px"
                                     alignItems="center"
                                     justifyContent="center"
                                     px={{ base: 2, md: 6 }}
@@ -698,7 +699,7 @@ export default function AToZPage() {
                                         </MotionBox>
                                     )}
                                 </AnimatePresence>
-                                <FormControl w="100%" maxW="420px" position={'absolute'} bottom="10px" left="50%" transform="translateX(-50%)" zIndex={10}>
+                                <FormControl w="100%" maxW="420px" position={'absolute'} bottom="30px" left="50%" transform="translateX(-50%)" zIndex={10}>
                                     <HStack
                                         spacing={{ base: '8px', sm: '12px' }}
                                         justify="center"
@@ -708,7 +709,6 @@ export default function AToZPage() {
                                     >
                                         {['100s', '10s', '1s'].map((place, index) => (
                                             <VStack key={place} spacing="4px" align="center">
-                                                
                                                 <HStack
                                                     spacing="4px"
                                                     bg="#0A1018EB   "

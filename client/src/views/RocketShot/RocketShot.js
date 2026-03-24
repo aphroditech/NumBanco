@@ -38,7 +38,7 @@ const MAX_AMOUNT = 20;
 /** Match Dove Cross step increments for +/- controls */
 const AMOUNT_STEP = 0.5;
 /** Minimum time between bets (Fire stays disabled after a successful click). */
-const FIRE_COOLDOWN_MS = 860;
+const FIRE_COOLDOWN_MS = 500;
 /** Float tolerance for bet min / max checks (avoids 0.499999… disabling Fire). */
 
 /** One “tick” of wait — MUST resolve even if rAF is paused (background tab) or never fires. */
@@ -516,44 +516,6 @@ export default function RocketShotPage() {
                                         </HStack>
 
                                     </VStack>
-                                    {/* <Button
-                                        h="66px"
-                                        w="100%"
-                                        maxW="300px"
-                                        fontSize="md"
-                                        fontWeight="bold"
-                                        borderRadius="20px"
-                                        bg="#00D4FF"
-                                        color="#fff"
-                                        border="2px solid #00D4FF"
-                                        _hover={{
-                                            bg: '#00D4FF',
-                                            borderColor: '#00D4FF',
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: '0 4px 12px rgba(0, 212, 255, 0.3)',
-                                        }}
-                                        _active={{ transform: 'translateY(0)' }}
-                                        isDisabled={
-                                            isFireCooldown ||
-                                            isFiring ||
-                                            isBetPending ||
-                                            amount < MIN_AMOUNT ||
-                                            amount > maxAmount ||
-                                            (hasKnownBalance && amount > walletBalanceNum)
-                                        }
-                                        title={
-                                            amount < MIN_AMOUNT
-                                                ? `Enter at least ${MIN_AMOUNT}`
-                                                : amount > maxAmount
-                                                    ? `Max bet is ${maxAmount}`
-                                                    : ''
-                                        }
-                                        onClick={() => {
-                                            handleRocketBet(parseFloat(amount), mode, winMode);
-                                        }}
-                                    >
-                                        Fire
-                                    </Button> */}
                                     <Button
                                         h="66px"
                                         w="100%"
@@ -588,7 +550,7 @@ export default function RocketShotPage() {
                                             isBetPending ||
                                             amount < MIN_AMOUNT ||
                                             amount > maxAmount ||
-                                            (hasKnownBalance && amount > walletBalanceNum)
+                                            (amount > walletBalanceNum)
                                         }
                                         title={
                                             amount < MIN_AMOUNT

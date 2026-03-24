@@ -123,6 +123,7 @@ export default function Mining() {
     };
 
     const startGame = async () => {
+        setGameState('playing');
         const bet = parseFloat(amount) || 0;
         if (bet < MIN_AMOUNT || bet > MAX_AMOUNT || bet > balance) return;
 
@@ -139,7 +140,7 @@ export default function Mining() {
         setFlippedCount(0);
         setFlippedIndices(new Set());
         setJackalCelebrationKey(0);
-        setGameState('playing');
+        
         setResultMessage('Good luck! Play your best!');
     };
 

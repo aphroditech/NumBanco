@@ -50,13 +50,6 @@ connectDB()
         console.error("[cloud-spread] failed to start game loop:", err);
     });
 
-    // Check and create yesterday's wallet if it doesn't exist
-    try {
-        await ensureYesterdayWalletExists();
-    } catch (err) {
-        console.warn('Failed to ensure yesterday\'s wallet exists:', err);
-    }
-
     // Load SSL certificates
     // const sslOptions = {
     //     key: fs.readFileSync(process.env.SSL_KEY_PATH || './certs/key.pem'),
@@ -71,12 +64,7 @@ connectDB()
     //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
 
     // });
-    try {
-        await initMoralis();
-    } catch (err) {
-        console.warn("⚠️ Moralis failed to start (optional for many routes):", err?.message || err);
-    }
-
+    
     ably.connection.once("connected", () => {
         console.log("✅ Ably connected");
         confirmDepositEngine(ably);
@@ -92,11 +80,11 @@ connectDB()
         // rocketBot(ably);
         // aToZBot(ably);
         // fishingBot(ably);
-        startGravityGameLoop(ably);
-        setCloudSpreadAbly(ably);
-        cloudSpreadBot().catch((err) => {
-            console.error("[cloud-spread] bot failed to start:", err);
-        });
+        // startGravityGameLoop(ably);
+        // setCloudSpreadAbly(ably);
+        // cloudSpreadBot().catch((err) => {
+        //     console.error("[cloud-spread] bot failed to start:", err);
+        // });
         // cocoBot(ably);
         // alphaTreeBot(ably);
         // doveBot(ably);
@@ -114,6 +102,20 @@ connectDB()
             console.warn('Failed to start cron jobs:', err);
         }
     });
+
+    try {
+        await initMoralis();
+    } catch (err) {
+        console.warn("⚠️ Moralis failed to start (optional for many routes):", err?.message || err);
+    }
+
+
+    // Check and create yesterday's wallet if it doesn't exist
+    try {
+        await ensureYesterdayWalletExists();
+    } catch (err) {
+        console.warn('Failed to ensure yesterday\'s wallet exists:', err);
+    }
   })
   .catch((err) => {
     console.error("❌ Failed to start server (MongoDB or startup error):", err?.message || err);
