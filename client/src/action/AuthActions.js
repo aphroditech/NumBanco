@@ -10,6 +10,7 @@ export const register = async (data, history, dispatch, setIsAuth) => {
         setIsAuth(true);
         localStorage.setItem("token", res.data.token);
         setUserRedux(res, dispatch, history, false);
+        return "Success";
     } catch (err) {
         console.error(err);
         const errorMessage = err.response?.data?.message || err.message || "Registration failed";
@@ -35,6 +36,7 @@ export const login = async (data, history, dispatch, setIsAuth) => {
         setIsAuth(true);
         localStorage.setItem("token", res.data.token);
         setUserRedux(res, dispatch, history, false);
+        return "Success";
     } catch (err) {
         console.error(err);
         const errorMessage = err.response?.data?.message || err.message || "Login failed";

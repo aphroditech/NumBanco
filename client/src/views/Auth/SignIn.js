@@ -35,6 +35,7 @@ function SignIn({ setIsAuth }) {
         userAuthId: remembered?.userAuthId || "",
         password: remembered?.password || "",
     });
+    const [isLoading, setIsLoading] = useState(false);
 
     const [rememberMe, setRememberMe] = useState(!!remembered);
     const [errors, setErrors] = useState({});
@@ -52,16 +53,22 @@ function SignIn({ setIsAuth }) {
         return Object.keys(temp).length === 0;
     };
 
-    const onClick = () => {
+    const onClick = async () => {
         if (!validate()) return;
 
+        setIsLoading(true);
         if (rememberMe) {
             localStorage.setItem("rememberMe", JSON.stringify(data));
         } else {
             localStorage.removeItem("rememberMe");
         }
 
-        login(data, history, dispatch, setIsAuth);
+        const res = await login(data, history, dispatch, setIsAuth);
+        if (res === "Success") {
+            setIsLoading(false);
+        } else {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -70,34 +77,16 @@ function SignIn({ setIsAuth }) {
             w="100%"
             align="center"
             justify="center"
-            // bg="linear-gradient(135deg, #050B10 0%, #0A141D 40%, #060B11 100%)"
             bg="#323738"
             position="relative"
             overflow="hidden"
         >
-            {/* Ambient glow */}
-            {/* <Box
-            position="absolute"
-            w="700px"
-            h="700px"
-            bg="cyan.400"
-            opacity="0.08"
-            filter="blur(180px)"
-            top="-250px"
-            right="-250px"
-        /> */}
 
             <Box w="100%" maxW="480px" textAlign="center" px="24px">
                 {/* 🔥 Animated Gradient Border Wrapper */}
                 <Box
                     p="2px"
                     borderRadius="26px"
-                    // bgGradient="linear-gradient(
-                    //     120deg,
-                    // #00d4ff,
-                    // #7a5cff,
-                    // #00ffd5
-                    // )"
                     bgSize="300% 300%"
                     animation={`${gradientAnimation} 6s ease infinite`}
                 >
@@ -122,15 +111,6 @@ function SignIn({ setIsAuth }) {
                                 h="42px"
                                 mb="10px"
                             />
-
-                            {/* <Text
-                            fontSize="13px"
-                            letterSpacing="3px"
-                            color="cyan.300"
-                            fontWeight="600"
-                        >
-                            BET · WIN · EARN
-                        </Text> */}
                         </Flex>
 
                         <Heading
@@ -206,6 +186,7 @@ function SignIn({ setIsAuth }) {
                             label="SIGN IN"
                             onClick={onClick}
                             mt="28px"
+                            isLoading={isLoading}
                         />
 
                         <Text
