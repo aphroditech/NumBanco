@@ -1017,12 +1017,12 @@ export default function FishingPage() {
                         </Box>
 
                         {/* Optional debug info (kept small so it doesn't cover the sea view) */}
-                        <Box position="absolute" left="26px" top="10px">
+                        {/* <Box position="absolute" left="26px" top="10px">
                             <Text fontSize="12px" color="rgb(0, 0, 0)">Step: {step}</Text>
                             <Text fontSize="12px" color="rgb(0, 0, 0)">Strength: {strengthValue}</Text>
                             <Text fontSize="12px" color="rgb(0, 0, 0)">Multi: {multi}</Text>
                             <Text fontSize="12px" color="rgb(0, 0, 0)">Amount: {amount}</Text>
-                        </Box>
+                        </Box> */}
                     </Card>
                 </GridItem>
                 <GridItem area="empty" minH="250px">

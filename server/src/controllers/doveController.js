@@ -122,74 +122,86 @@ export const checkDoveWin = async (req, res) => {
         const { bet, multiplier, level, isStart } = req.body;
 
         const betNum = Number(bet) || 0;
+        const multiplierNum = Number(multiplier) || 0;
         if (betNum < 0.1 || betNum > MAX_BET_AMOUNT) {
             return res.status(400).json({ error: `Bet must be between 0.1 and ${MAX_BET_AMOUNT}` });
         }
 
-        let user = await User.findOne({ _id: userId });
+        const [baseUser, doveSettings] = await Promise.all([
+            User.findById(userId).select("balance doveAmount doveWinAmount doveMode"),
+            DoveSettings.findOne().lean()
+        ]);
+
+        let user = baseUser;
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-
-        const doveSettings = await DoveSettings.findOne();
         if (!doveSettings) {
             return res.status(500).json({ error: "Dove settings not found" });
         }
-        const doveHistory = await DoveHistory.findOne({ user: userId });
-        if (isStart) {
-            user.balance -= bet;
-            user.doveAmount += bet;
-            user.totalBet += bet;
-            user.refreshBet += bet;
-            user.lotterybet += bet;
-            user.totalhistory.push({
-                amount: -bet,
-                date: new Date(),
-                type: "Bet Dove"
-            });
-            await user.save();
-        }
-        user = await User.findOne({ _id: userId });
-        if(user.doveMode == 1 && (await checkNormalToHard(user._id))) {
-            user.doveMode = 2;
-            await user.save();
-            console.log("user is in hard mode");
-        } else if(user.doveMode == 2 && (await checkHardToNormal(user._id))) {
-            user.doveMode = 1;
-            await user.save();
-            console.log("user is in normal mode");
-        }
-        user = await User.findOne({ _id: userId });
-        const doveMode = user.doveMode;
-        const isWin = calculateWin(bet, level, doveSettings,multiplier, doveMode);
-        user = await User.findOne({ _id: userId });
 
-        if(isWin) {
-            return res.json({ M1uXj3sZpU : 1, ...(isStart && { balance: user.balance }) });
-            
-        } else {
-            if(doveHistory) {
-                doveHistory.history.push({
-                    bet: bet,
-                    multiplier: multiplier,
-                    winAmt: 0,
-                    profit: 0,
-                    timestamp: new Date(),
-                });
-            } else {
-                const newDoveHistory = new DoveHistory({
-                    user: userId,
-                    history: [{
-                        bet: bet,
-                        multiplier: multiplier,
-                        winAmt: 0,
-                        profit: 0,
-                        timestamp: new Date(),
-                    }]
-                });
-                await newDoveHistory.save();
+        if (isStart) {
+            if ((user.balance || 0) < betNum) {
+                return res.status(400).json({ error: "Insufficient balance" });
             }
-            await doveHistory.save();
+
+            user = await User.findByIdAndUpdate(
+                userId,
+                {
+                    $inc: {
+                        balance: -betNum,
+                        doveAmount: betNum,
+                        totalBet: betNum,
+                        refreshBet: betNum,
+                        lotterybet: betNum
+                    },
+                    $push: {
+                        totalhistory: {
+                            amount: -betNum,
+                            date: new Date(),
+                            type: "Bet Dove"
+                        }
+                    }
+                },
+                {
+                    new: true,
+                    projection: { balance: 1, doveAmount: 1, doveWinAmount: 1, doveMode: 1 }
+                }
+            );
+        }
+
+        let doveMode = user.doveMode;
+        if (doveMode === 1 && checkNormalToHard(user)) {
+            doveMode = 2;
+        } else if (doveMode === 2 && checkHardToNormal(user)) {
+            doveMode = 1;
+        }
+
+        if (doveMode !== user.doveMode) {
+            await User.updateOne({ _id: userId }, { $set: { doveMode } });
+            user.doveMode = doveMode;
+        }
+
+        const isWin = calculateWin(betNum, level, doveSettings, multiplierNum, doveMode);
+
+        if (isWin) {
+            return res.json({ M1uXj3sZpU : 1, ...(isStart && { balance: user.balance }) });
+        } else {
+            await DoveHistory.updateOne(
+                { user: userId },
+                {
+                    $push: {
+                        history: {
+                            bet: betNum,
+                            multiplier: multiplierNum,
+                            winAmt: 0,
+                            profit: 0,
+                            timestamp: new Date(),
+                        }
+                    }
+                },
+                { upsert: true }
+            );
             return res.json({ M1uXj3sZpU: 0 });
         }
 
@@ -200,7 +212,7 @@ export const checkDoveWin = async (req, res) => {
 }
 
 
-function calculateWin(bet, level, doveSettings,multiplier, doveMode) {
+function calculateWin(bet, level, doveSettings, multiplier, doveMode) {
     const { probability, RTP } = doveSettings;
     let mainProbability = RTP / multiplier;
     
@@ -238,11 +250,7 @@ export const getPrefix = async (req, res) => {
 }
 
 // check if the user should be in hard mode or normal mode Normal to Hard
-async function checkNormalToHard(userId) {
-    const user = await User.findOne({ _id: userId });
-    if (!user) {
-        return false;
-    }
+function checkNormalToHard(user) {
     const doveAmount = user.doveAmount;
     const doveWinAmount = user.doveWinAmount;
     if(doveWinAmount >= doveAmount*1.2) {
@@ -252,11 +260,7 @@ async function checkNormalToHard(userId) {
 }
 
 // check if the user should be in normal mode or hard mode Hard to Normal
-async function checkHardToNormal(userId) {
-    const user = await User.findOne({ _id: userId });
-    if (!user) {
-        return false;
-    }
+function checkHardToNormal(user) {
     const doveAmount = user.doveAmount;
     const doveWinAmount = user.doveWinAmount;
     if(doveWinAmount <= doveAmount*0.6) {

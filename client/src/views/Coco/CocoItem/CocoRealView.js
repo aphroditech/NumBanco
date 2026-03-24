@@ -97,9 +97,10 @@ function CocoRealView() {
                     <Tbody>
                     {rowsToRender.map((row, index) => {
                         const rowId = getRowId(row);
+                        const rowRenderKey = rowId ? `${rowId}-${index}` : `row-${index}`;
                         return (
                             <CocoRealViewRow
-                                key={rowId || index}
+                                key={rowRenderKey}
                                 altas={row.altas}
                                 avatar={row.avatar}
                                 result={Number(row.result).toFixed(2)}

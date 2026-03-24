@@ -34,4 +34,6 @@ const doveHistorySchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
+doveHistorySchema.index({ user: 1 });
+
 export default mongoose.model("DoveHistory", doveHistorySchema);

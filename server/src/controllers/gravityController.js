@@ -21,19 +21,37 @@ export async function getGravityState(req, res) {
 export async function createGravityBet(req, res) {
   try {
     const { amount, direction } = req.body;
-    const user = await User.findOne({ userAuthId: req.user.userAuthId });
+    const user = await User.findOne({ userAuthId: req.user.userAuthId }).select(
+      "userId altas avatar balance totalBet refreshBet totalhistory partnerLevel notification"
+    );
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const { row, round, betId, betAmount } = await placeGravityBet({ user, amount, direction });
-    const ably = req.app.locals.ably;
-    await publishGravityBetEvent(ably, row, round);
-    return res.status(200).json({
-      user,
+    const response = {
+      user: {
+        userId: user.userId,
+        altas: user.altas,
+        avatar: user.avatar,
+      },
+      row,
+      balanceDelta: -Number(betAmount ?? amount ?? 0),
       roundId: round.roundId,
       betId,
       betAmount: betAmount ?? amount,
       direction,
+    };
+    res.status(200).json(response);
+
+    // Do not block response on websocket publication.
+    setImmediate(async () => {
+      try {
+        const ably = req.app.locals.ably;
+        await publishGravityBetEvent(ably, row, round);
+      } catch (publishError) {
+        console.error("[gravity] publish bet event failed:", publishError);
+      }
     });
+    return;
   } catch (error) {
     const status = /closed|already|Minimum|Invalid|Insufficient|ready/i.test(error.message) ? 400 : 500;
     return res.status(status).json({ message: error.message || "Server Error" });

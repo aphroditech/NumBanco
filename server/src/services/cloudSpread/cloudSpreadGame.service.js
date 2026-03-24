@@ -1,5 +1,6 @@
 import CloudSpreadRound from "../../models/CloudSpreadRound.js";
 import CloudSpreadHistory from "../../models/CloudSpreadHistory.js";
+import CloudSpreadSettings from "../../models/CloudSpreadSettings.js";
 import User from "../../models/User.js";
 
 const TOTAL_STEPS = 8;
@@ -67,20 +68,158 @@ function multiplierForStep(step) {
   return 2 ** Number(step);
 }
 
-function buildCloudMultipliers(cloudCount) {
+const DEFAULT_STEP_MULTIPLIER_PROFILES = [
+  { step: 1, bands: [{ min: 0, max: 0, weight: 5 }, { min: 0, max: 1, weight: 45 }, { min: 1, max: 2, weight: 45 }] },
+  { step: 2, bands: [{ min: 0, max: 0, weight: 10 }, { min: 0, max: 1, weight: 40 }, { min: 1, max: 2, weight: 35 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 35 }] },
+  { step: 3, bands: [{ min: 0, max: 0, weight: 15 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 30 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 4, bands: [{ min: 0, max: 0, weight: 15 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 25 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 5, bands: [{ min: 0, max: 0, weight: 25 }, { min: 0, max: 1, weight: 40 }, { min: 1, max: 2, weight: 20 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 6, bands: [{ min: 0, max: 0, weight: 30 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 20 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 7, bands: [{ min: 0, max: 0, weight: 45 }, { min: 0, max: 1, weight: 25 }, { min: 1, max: 2, weight: 25 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 8, bands: [{ min: 0, max: 0, weight: 40 }, { min: 0, max: 1, weight: 25 }, { min: 1, max: 2, weight: 20 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+];
+
+const PROFILE_REFRESH_MS = 10_000;
+let stepMultiplierProfilesCache = DEFAULT_STEP_MULTIPLIER_PROFILES;
+let stepMultiplierProfilesLoadedAt = 0;
+let mode1To2LimitCache = 1.2;
+let mode2To1LimitCache = 0.7;
+
+function normalizeStepProfiles(input) {
+  if (!Array.isArray(input) || input.length === 0) return DEFAULT_STEP_MULTIPLIER_PROFILES;
+  const out = [];
+  for (const p of input) {
+    const step = Number(p?.step);
+    if (!Number.isInteger(step) || step < 1 || step > TOTAL_STEPS) continue;
+    const bandsIn = Array.isArray(p?.bands) ? p.bands : [];
+    const bands = bandsIn
+      .map((b) => ({
+        min: Number(b?.min),
+        max: Number(b?.max),
+        weight: Number(b?.weight),
+      }))
+      .filter((b) => Number.isFinite(b.min) && Number.isFinite(b.max) && Number.isFinite(b.weight) && b.weight > 0);
+    if (!bands.length) continue;
+    out.push({ step, bands: bands.map((b) => ({ min: Math.min(b.min, b.max), max: Math.max(b.min, b.max), weight: b.weight })) });
+  }
+  if (!out.length) return DEFAULT_STEP_MULTIPLIER_PROFILES;
+  return out.sort((a, b) => a.step - b.step);
+}
+
+async function refreshStepMultiplierProfiles(force = false) {
+  const now = Date.now();
+  if (!force && now - stepMultiplierProfilesLoadedAt < PROFILE_REFRESH_MS) return;
+  try {
+    const settings = await CloudSpreadSettings.findOne().lean();
+    const normalized = normalizeStepProfiles(settings?.stepMultiplierProfiles);
+    stepMultiplierProfilesCache = normalized;
+    mode1To2LimitCache = Number.isFinite(Number(settings?.limitMode1To2))
+      ? Number(settings.limitMode1To2)
+      : 1.2;
+    mode2To1LimitCache = Number.isFinite(Number(settings?.limitMode2To1))
+      ? Number(settings.limitMode2To1)
+      : 0.7;
+    stepMultiplierProfilesLoadedAt = now;
+  } catch {
+    stepMultiplierProfilesLoadedAt = now;
+  }
+}
+
+function applyCloudModeFromTotals(user) {
+  if (!user) return;
+  const amount = Number(user.cloudAmount || 0);
+  const win = Number(user.cloudWinAmount || 0);
+  const mode = Number(user.cloudMode || 1);
+  const limitUp = Number(mode1To2LimitCache || 1.2);
+  const limitDown = Number(mode2To1LimitCache || 0.7);
+
+  if (mode === 1) {
+    if (amount * limitUp < win) user.cloudMode = 2;
+    return;
+  }
+  if (mode === 2) {
+    if (amount * limitDown > win) user.cloudMode = 1;
+  }
+}
+
+function pickStepBandProfile(stepBand) {
+  const s = Math.min(TOTAL_STEPS, Math.max(1, Number(stepBand) || 1));
+  return (
+    stepMultiplierProfilesCache.find((p) => Number(p.step) === s) ||
+    DEFAULT_STEP_MULTIPLIER_PROFILES.find((p) => Number(p.step) === s) ||
+    DEFAULT_STEP_MULTIPLIER_PROFILES[0]
+  );
+}
+
+/** When `cloudMode === 2`: bump x0.00 band weight +5%, trim [1,2] band weight −5% (relative to each band’s weight). */
+const CLOUD_MODE2_ZERO_WEIGHT_FACTOR = 1.05;
+const CLOUD_MODE2_ONE_TWO_WEIGHT_FACTOR = 0.95;
+
+function adjustBandsForCloudMode(bands, cloudMode) {
+  if (Number(cloudMode) !== 2 || !Array.isArray(bands) || !bands.length) return bands;
+  return bands.map((b) => {
+    const lo = Math.min(Number(b.min), Number(b.max));
+    const hi = Math.max(Number(b.min), Number(b.max));
+    const w = Number(b.weight);
+    if (!Number.isFinite(w) || w <= 0) return { min: lo, max: hi, weight: b.weight };
+    if (lo === 0 && hi === 0) {
+      return { min: lo, max: hi, weight: w * CLOUD_MODE2_ZERO_WEIGHT_FACTOR };
+    }
+    if (lo === 1 && hi === 2) {
+      return { min: lo, max: hi, weight: w * CLOUD_MODE2_ONE_TWO_WEIGHT_FACTOR };
+    }
+    return { min: lo, max: hi, weight: w };
+  });
+}
+
+async function getUserCloudModeForSpread(userId) {
+  if (!userId) return 1;
+  try {
+    const u = await User.findOne({ userId: String(userId) }).select("cloudMode").lean();
+    return Number(u?.cloudMode) === 2 ? 2 : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function drawCloudMultiplier(stepBand, cloudMode = 1) {
+  const profile = pickStepBandProfile(stepBand);
+  let bands = Array.isArray(profile?.bands) ? profile.bands : [];
+  bands = adjustBandsForCloudMode(bands, cloudMode);
+  if (!bands.length) return 0;
+  const totalWeight = bands.reduce((sum, b) => sum + Number(b.weight || 0), 0);
+  if (!(totalWeight > 0)) return 0;
+  let r = Math.random() * totalWeight;
+  let chosen = bands[0];
+  for (const b of bands) {
+    r -= Number(b.weight || 0);
+    if (r <= 0) {
+      chosen = b;
+      break;
+    }
+  }
+  const lo = Number(chosen.min);
+  const hi = Number(chosen.max);
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return 0;
+  if (hi <= lo) return round2(lo);
+  return round2(lo + Math.random() * (hi - lo));
+}
+
+function buildCloudMultipliers(cloudCount, cloudMode = 1) {
   const count = Math.max(0, Number(cloudCount || 0));
+  const mode = Number(cloudMode) === 2 ? 2 : 1;
   const list = [];
   for (let i = 0; i < count; i += 1) {
     const cloudIndex = i + 1;
     const stepBand = Math.min(TOTAL_STEPS, Math.ceil(cloudIndex / CLOUDS_PER_STEP));
-    const max = multiplierForStep(stepBand);
-    list.push(round2(Math.random() * max));
+    list.push(drawCloudMultiplier(stepBand, mode));
   }
   return list;
 }
 
-function extendCloudMultipliers(prevList, newCount) {
+function extendCloudMultipliers(prevList, newCount, cloudMode = 1) {
   const count = Math.max(0, Number(newCount || 0));
+  const mode = Number(cloudMode) === 2 ? 2 : 1;
   const prev = Array.isArray(prevList) ? prevList : [];
   const list = [];
   for (let i = 0; i < count; i += 1) {
@@ -91,8 +230,7 @@ function extendCloudMultipliers(prevList, newCount) {
     }
     const cloudIndex = i + 1;
     const stepBand = Math.min(TOTAL_STEPS, Math.ceil(cloudIndex / CLOUDS_PER_STEP));
-    const max = multiplierForStep(stepBand);
-    list.push(round2(Math.random() * max));
+    list.push(drawCloudMultiplier(stepBand, mode));
   }
   return list;
 }
@@ -111,7 +249,15 @@ function productCloudMultipliers(bets) {
   let p = 1;
   for (const b of bets) {
     const m = Number(b.selectedCloudMultiplier);
-    p *= Number.isFinite(m) && m > 0 ? m : 1;
+    if (!Number.isFinite(m) || m < 0) {
+      p *= 1;
+      continue;
+    }
+    if (m === 0) {
+      p = 0;
+      break;
+    }
+    p *= m;
   }
   return p;
 }
@@ -142,8 +288,14 @@ function persistSessionToRound(s) {
     : [];
 }
 
-function syncSessionFromRoundDoc(s) {
+async function syncSessionFromRoundDoc(s, explicitCloudMode) {
   if (!s?.currentRound) return;
+  let cloudMode = 1;
+  if (explicitCloudMode !== undefined && explicitCloudMode !== null) {
+    cloudMode = Number(explicitCloudMode) === 2 ? 2 : 1;
+  } else if (s.currentRound.userId) {
+    cloudMode = await getUserCloudModeForSpread(String(s.currentRound.userId));
+  }
   const r = s.currentRound;
   s.currentClouds = Number(r.sessionClouds) >= MIN_CLOUDS ? r.sessionClouds : MIN_CLOUDS;
   s.selectedCloudTrail = Array.isArray(r.sessionTrail) ? [...r.sessionTrail] : [];
@@ -153,12 +305,13 @@ function syncSessionFromRoundDoc(s) {
   if (mults.length >= s.currentClouds) {
     s.currentCloudMultipliers = mults.slice(0, s.currentClouds);
   } else {
-    s.currentCloudMultipliers = extendCloudMultipliers(mults, s.currentClouds);
+    s.currentCloudMultipliers = extendCloudMultipliers(mults, s.currentClouds, cloudMode);
   }
 }
 
 async function hydrateSessionFromLatestRound(userId, s) {
   const uid = String(userId);
+  const cloudMode = await getUserCloudModeForSpread(uid);
   const latest = await CloudSpreadRound.findOne({ userId: uid }).sort({ roundId: -1 });
   if (!latest) return;
 
@@ -169,11 +322,11 @@ async function hydrateSessionFromLatestRound(userId, s) {
     const n = (latest.users || []).length;
     const derivedClouds = Math.min(MAX_CLOUDS, MIN_CLOUDS + n * CLOUDS_PER_STEP);
     if (Number(latest.sessionClouds) >= MIN_CLOUDS) {
-      syncSessionFromRoundDoc(s);
+      await syncSessionFromRoundDoc(s, cloudMode);
     } else {
       s.currentClouds = derivedClouds;
       s.selectedCloudTrail = [];
-      s.currentCloudMultipliers = extendCloudMultipliers([], s.currentClouds);
+      s.currentCloudMultipliers = extendCloudMultipliers([], s.currentClouds, cloudMode);
     }
     persistSessionToRound(s);
     await s.currentRound.save();
@@ -186,11 +339,11 @@ async function hydrateSessionFromLatestRound(userId, s) {
     const at = latest.resultSettledAt?.getTime?.();
     s.settledAtMs = at && at > 0 ? at : Date.now();
     if (Number(latest.sessionClouds) >= MIN_CLOUDS) {
-      syncSessionFromRoundDoc(s);
+      await syncSessionFromRoundDoc(s, cloudMode);
     } else {
       s.currentClouds = Math.max(MIN_CLOUDS, Number(latest.finalClouds || MIN_CLOUDS));
       s.selectedCloudTrail = [];
-      s.currentCloudMultipliers = buildCloudMultipliers(s.currentClouds);
+      s.currentCloudMultipliers = buildCloudMultipliers(s.currentClouds, cloudMode);
     }
     persistSessionToRound(s);
     await s.currentRound.save();
@@ -202,7 +355,8 @@ async function createRound(userId) {
   const latest = await CloudSpreadRound.findOne({ userId: uid }).sort({ roundId: -1 });
   const roundId = latest?.roundId ? latest.roundId + 1 : 1;
   const now = new Date();
-  const sessionMultipliers = buildCloudMultipliers(MIN_CLOUDS);
+  const cloudMode = await getUserCloudModeForSpread(uid);
+  const sessionMultipliers = buildCloudMultipliers(MIN_CLOUDS, cloudMode);
   return CloudSpreadRound.create({
     userId: uid,
     roundId,
@@ -241,12 +395,13 @@ async function advanceToNextBettingRound(userId) {
   s.currentRound = await createRound(userId);
   s.settled = false;
   s.settledAtMs = 0;
-  syncSessionFromRoundDoc(s);
+  await syncSessionFromRoundDoc(s);
   persistSessionToRound(s);
   await s.currentRound.save();
 }
 
 async function ensureActiveRound(userId) {
+  await refreshStepMultiplierProfiles();
   const s = getSession(userId);
   if (!s.currentRound) {
     await hydrateSessionFromLatestRound(userId, s);
@@ -256,7 +411,7 @@ async function ensureActiveRound(userId) {
     s.currentRound = await createRound(userId);
     s.settled = false;
     s.settledAtMs = 0;
-    syncSessionFromRoundDoc(s);
+    await syncSessionFromRoundDoc(s);
     persistSessionToRound(s);
     await s.currentRound.save();
   }
@@ -351,12 +506,14 @@ async function settleRound(userId) {
     if (totalWin > 0) {
       user.balance = round2(user.balance + totalWin);
       user.totalEarn = round2((user.totalEarn || 0) + totalWin);
+      user.cloudWinAmount = round2((user.cloudWinAmount || 0) + totalWin);
       user.totalhistory.push({
         amount: totalWin,
         date: new Date(),
         type: "cloudSpread",
       });
     }
+    applyCloudModeFromTotals(user);
 
     /** Persist round to CloudSpreadHistory on cash-out / settle (single summary row per round). */
     const historyDoc = await CloudSpreadHistory.create({
@@ -427,7 +584,14 @@ export async function getCloudSpreadStateSnapshot(forUserId = null) {
   for (const b of mine) {
     summedStake += Number(b.betAmount || 0);
     const m = Number(b.selectedCloudMultiplier);
-    myMultProduct *= Number.isFinite(m) && m > 0 ? m : 1;
+    if (!Number.isFinite(m) || m < 0) {
+      /* skip invalid */
+    } else if (m === 0) {
+      myMultProduct = 0;
+      break;
+    } else {
+      myMultProduct *= m;
+    }
   }
   summedStake = round2(summedStake);
   myMultProduct = round2(myMultProduct);
@@ -499,7 +663,8 @@ export async function placeCloudSpreadBet({ user, amount, targetStep }) {
 
   const prevMultipliers = Array.isArray(s.currentCloudMultipliers) ? [...s.currentCloudMultipliers] : [];
   s.currentClouds = Math.min(MAX_CLOUDS, Math.max(MIN_CLOUDS, s.currentClouds) + CLOUDS_PER_STEP);
-  s.currentCloudMultipliers = extendCloudMultipliers(prevMultipliers, s.currentClouds);
+  const spreadMode = Number(user.cloudMode || 1) === 2 ? 2 : 1;
+  s.currentCloudMultipliers = extendCloudMultipliers(prevMultipliers, s.currentClouds, spreadMode);
 
   const selectedCloudStep = Math.max(1, Math.ceil(selectedCloud / CLOUDS_PER_STEP));
   const selectedCloudMultiplier = Number(s.currentCloudMultipliers[selectedCloud - 1] ?? 0);
@@ -509,6 +674,8 @@ export async function placeCloudSpreadBet({ user, amount, targetStep }) {
     user.balance = round2(user.balance - entryStake);
     user.totalBet = round2((user.totalBet || 0) + entryStake);
     user.refreshBet = round2((user.refreshBet || 0) + entryStake);
+    user.cloudAmount = round2((user.cloudAmount || 0) + entryStake);
+    applyCloudModeFromTotals(user);
     user.totalhistory.push({
       amount: -entryStake,
       date: new Date(),
@@ -584,8 +751,10 @@ export async function startCloudSpreadGameLoop() {
   if (timer) return;
   await ensureCloudSpreadHistoryIndexes();
   await ensureCloudSpreadRoundIndexes();
+  await refreshStepMultiplierProfiles(true);
   timer = setInterval(async () => {
     try {
+      await refreshStepMultiplierProfiles();
       for (const userId of sessions.keys()) {
         await maybeAdvanceResultPhase(userId);
       }
@@ -615,12 +784,10 @@ export async function cashOutCloudSpreadRound(userId) {
   return { state, alreadySettled: false };
 }
 
-export async function maybeBustSettleCloudSpread(selectedCloudMultiplier, userId) {
-  const m = Number(selectedCloudMultiplier);
-  if (!userId) return;
-  const s = getSession(userId);
-  if (s.settled || !s.currentRound || s.currentRound.phase !== "betting") return;
-  if (!Number.isFinite(m) || m > 0) return;
-  await settleRound(userId);
-  await advanceToNextBettingRound(userId);
+/**
+ * Previously: cloud mult ≤ 0 ended the round immediately.
+ * Product rule: x0.00 keeps the same round; player can continue (cash-out payout can be $0).
+ */
+export async function maybeBustSettleCloudSpread() {
+  /* no-op */
 }

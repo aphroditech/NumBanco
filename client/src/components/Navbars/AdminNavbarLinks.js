@@ -711,7 +711,7 @@ export default function HeaderLinks(props) {
               .reverse()
               .map((n, index) => (
                 <Flex
-                  key={n._id || n.id || index}
+                  key={`${n._id || n.id || "notification"}-${index}`}
                   m="10px 5px 10px 10px"
                   px="16px"
                   py="12px"

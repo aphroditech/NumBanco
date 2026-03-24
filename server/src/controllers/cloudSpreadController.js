@@ -4,7 +4,6 @@ import {
   getCloudSpreadRoundHistory,
   getCloudSpreadStateSnapshot,
   getCloudSpreadUserHistory,
-  maybeBustSettleCloudSpread,
   placeCloudSpreadBet,
 } from "../services/cloudSpread/cloudSpreadGame.service.js";
 
@@ -40,7 +39,6 @@ export async function createCloudSpreadBet(req, res) {
       amount,
       targetStep,
     });
-    await maybeBustSettleCloudSpread(selectedCloudMultiplier, user.userId);
     return res.status(200).json({
       user,
       roundId: round.roundId,

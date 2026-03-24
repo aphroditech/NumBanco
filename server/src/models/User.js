@@ -382,6 +382,18 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  cloudAmount: {
+    type: Number,
+    default: 0
+  },
+  cloudWinAmount: {
+    type: Number,
+    default: 0
+  },
+  cloudMode: {
+    type: Number,
+    default: 1 // 1: normal, 2: hard/controlled
+  },
   aToZAmount: {
     type: Number,
     default: 0
@@ -738,5 +750,8 @@ const userSchema = new mongoose.Schema({
   },
 
 }, { timestamps: true });
+
+userSchema.index({ userAuthId: 1 });
+userSchema.index({ active: 1 });
 
 export default mongoose.model("User", userSchema);

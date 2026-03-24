@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, CloudSpread, Pumping, Fishing, Gravity, DoveGame, CocoGame, AToZGame, AlphaTreeGame } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic,Pumping, Fishing, Gravity, DoveGame, CocoGame, AToZGame, AlphaTreeGame, CloudSpread } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -28,7 +28,7 @@ import Landing_logo from "assets/img/logo_Landing.png";
 function Sidebar(props) {
   let variantChange = "0.2s linear";
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState("menu");
+  const [activeMenu, setActiveMenu] = React.useState(null);
   const toggleMenu = (menu) => {
     setActiveMenu(prev => prev === menu ? null : menu);
   };
@@ -43,9 +43,9 @@ function Sidebar(props) {
           <Box key={key}>
             <SideBarToggle
             value={prop}
-            isExpanded={activeMenu === "menu"}
-            onClick={() => toggleMenu("menu")} />
-              <Collapse in={activeMenu === "menu"} animateOpacity>
+            isExpanded={activeMenu === "bet"}
+            onClick={() => toggleMenu("bet")} />
+              <Collapse in={activeMenu === "bet"} animateOpacity>
                 <SidebarButtonLink value={TierA} />
                 <SidebarButtonLink value={TierB} />
                 <SidebarButtonLink value={TierC} />
@@ -169,7 +169,7 @@ function Sidebar(props) {
 
 export function SidebarResponsive(props) {
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState("menu");
+  const [activeMenu, setActiveMenu] = React.useState(null);
 
   const toggleMenu = (menu) => {
     setActiveMenu(prev => (prev === menu ? null : menu));
@@ -185,13 +185,12 @@ export function SidebarResponsive(props) {
             {/* Main toggle */}
             <SideBarToggle
               value={prop}
-              
-              isExpanded={activeMenu === "menu"}
-              onClick={() => toggleMenu("menu")}
+              isExpanded={activeMenu === "bet"}
+              onClick={() => toggleMenu("bet")}
             />
 
             {/* Sub menu */}
-            <Collapse in={activeMenu === "menu"} animateOpacity>
+            <Collapse in={activeMenu === "bet"} animateOpacity>
               <Stack
                 spacing={2}
                 mt={2}
@@ -225,6 +224,8 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={Mines} />
                 <SidebarButtonLink value={DoveGame} />
                 <SidebarButtonLink value={CocoGame} />
+                <SidebarButtonLink value={CloudSpread} />
+                <SidebarButtonLink value={AlphaTreeGame} />
                 <SidebarButtonLink value={AToZGame} />
               </Stack>
               </Collapse>
@@ -257,8 +258,7 @@ export function SidebarResponsive(props) {
   // SidebarResponsive (drawer) top logo — same logo_Landing.png as desktop sidebar
   const brand = (
     <Box pt="40px" mb="24px" w="100%">
-      <Link
-        as={NavLink}
+      <NavLink
         to='/user/dashboard'
         display="flex"
         w="100%"
@@ -267,7 +267,7 @@ export function SidebarResponsive(props) {
         _hover={{ textDecoration: "none" }}
       >
         <Image src={Landing_logo} alt="NumBanco Logo" maxH="40px" objectFit="contain" mx="auto" mb="20px" />
-      </Link>
+      </NavLink>
 
       <Separator mb="20px" />
     </Box>

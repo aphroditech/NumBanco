@@ -1,10 +1,14 @@
 import axiosInstance from "../api/axiosConfig";
-import { setUserRedux } from ".";
 
 export const pumpingBet = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/pumping/bet', data);
-        setUserRedux(res, dispatch);
+        if (res.data?.balanceDelta != null) {
+            dispatch({
+                type: 'UPDATE_USER_BALANCE',
+                payload: res.data.balanceDelta
+            });
+        }
         return res.data;
     } catch (err) {
         console.error(err);

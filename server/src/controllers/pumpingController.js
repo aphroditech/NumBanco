@@ -4,7 +4,6 @@ import PumpingView from "../models/PumpingView.js";
 import PumpingLimit from "../models/PumpingLimit.js";
 import PumpingMulti from "../models/PumpingMulti.js";
 import { calculatePumping } from "../services/pumping/calculatePumping.js";
-import { sendUserResponse } from "../utils/responses.js";
 
 const VIEW_LIMIT = 12;
 const CREDIT_DELAY_MS = 1000;
@@ -146,24 +145,21 @@ async function scheduleCreditAndBroadcast(userId, win, app) {
 }
 
 export const bet = async (req, res) => {
-    const user = await User.findOne(
-        { userAuthId: req.user.userAuthId },
-        {
-            "wallets.eth.privateKey": 0,
-            "wallets.bsc.privateKey": 0,
-            "wallets.tron.privateKey": 0,
-            password: 0,
-            country: 0,
-            pumpingMode: 0,
-            fishingMode: 0,
-            rubicMode: 0,
-            partnerId: 0,
-            partnerActivity: 0,
-            lastClickDate: 0,
-            
-        }
+    const user = await User.findOne({ userAuthId: req.user.userAuthId }).select(
+        "userId userAuthId balance totalBet refreshBet lotterybet totalhistory pumpingHistory pumpingMode"
     );
-    const { target, bet: betAmount } = req.body;
+    const { target, bet: betAmountRaw } = req.body;
+    const betAmount = Number(betAmountRaw) || 0;
+
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+    if (betAmount <= 0) {
+        return res.status(400).json({ message: "Invalid bet amount" });
+    }
+    if ((user.balance || 0) < betAmount) {
+        return res.status(400).json({ message: "Insufficient balance" });
+    }
 
     const { result, win } = await computeBetResult(req.body, user);
 
@@ -228,7 +224,13 @@ export const bet = async (req, res) => {
         CREDIT_DELAY_MS
     );
 
-    return sendUserResponse(res, "", user);
+    // Keep payload minimal for low-latency round-trip.
+    return res.json({
+        balanceDelta: -betAmount,
+        betResult: result,
+        target,
+        win,
+    });
 };
 
 export const getPumpingView = async (req, res) => {

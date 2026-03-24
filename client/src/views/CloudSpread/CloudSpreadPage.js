@@ -113,6 +113,7 @@ export default function CloudSpreadPage() {
   const maxBetsPerRound = Number(state?.maxBetsPerRound ?? state?.totalSteps ?? 8);
   const myBetCount = Number(state?.myBetCount ?? 0);
   const phaseBetting = state?.phase === "betting";
+  const lastWasZeroMultiplier = Number(selectedCloudInfo?.multiplier) === 0;
   const canBet = phaseBetting && myBetCount < maxBetsPerRound;
   /** Next bet must use this step (one bet per step: 1→2→…→8). */
   const nextBetStep = myBetCount < maxBetsPerRound ? myBetCount + 1 : maxBetsPerRound;
@@ -147,6 +148,17 @@ export default function CloudSpreadPage() {
 
   const handleBet = async () => {
     if (playBusy) return;
+    if (lastWasZeroMultiplier) {
+      try {
+        const data = await cashOutCloudSpread(dispatch);
+        if (data?.state) setState(data.state);
+        setSelectedCloudInfo(null);
+        toast.info("New bet is ready.");
+      } catch (e) {
+        toast.error(e?.response?.data?.message || "Failed to prepare new bet");
+      }
+      return;
+    }
     setPlayBusy(true);
     try {
       const res = await placeCloudSpreadBet(
@@ -158,7 +170,11 @@ export default function CloudSpreadPage() {
       );
       const selectedCloud = Number(res?.selectedCloud || 1);
       const selectedCloudStep = Number(res?.selectedCloudStep || 1);
-      const selectedCloudMultiplier = Number(res?.selectedCloudMultiplier || 2);
+      const rawCloudMult = res?.selectedCloudMultiplier;
+      const selectedCloudMultiplier =
+        rawCloudMult != null && rawCloudMult !== "" && Number.isFinite(Number(rawCloudMult))
+          ? Number(rawCloudMult)
+          : multiplierForStep(selectedCloudStep);
       setSelectedCloudInfo({
         cloud: selectedCloud,
         step: selectedCloudStep,
@@ -170,9 +186,11 @@ export default function CloudSpreadPage() {
       } catch {
         /* ignore */
       }
-      toast.success(
-        `Cloud #${selectedCloud} selected (x${selectedCloudMultiplier.toFixed(2)})`
-      );
+      if (selectedCloudMultiplier === 0) {
+        toast.warning(`Cloud #${selectedCloud} — x0.00. Play again!`);
+      } else {
+        toast.success(`Cloud #${selectedCloud} selected (x${selectedCloudMultiplier.toFixed(2)})`);
+      }
       if (playBusyTimerRef.current) clearTimeout(playBusyTimerRef.current);
       playBusyTimerRef.current = setTimeout(() => {
         setPlayBusy(false);
@@ -264,37 +282,7 @@ export default function CloudSpreadPage() {
                     Round ended at step {state?.crashStep}
                   </Text>
                 )}
-                {selectedCloudInfo && (
-                  <HStack
-                    spacing="2"
-                    flexWrap="wrap"
-                    bg="rgba(255, 255, 255, 0.06)"
-                    border="1px solid"
-                    borderColor={S.border}
-                    borderRadius="8px"
-                    px="12px"
-                    py="6px"
-                  >
-                    <Text color={S.text} fontWeight="800" fontSize="sm" bg="rgba(255,255,255,0.12)" px="8px" py="1px" borderRadius="6px">
-                      x{Number(selectedCloudInfo.multiplier).toFixed(2)}
-                    </Text>
-                    <Text color={S.text} fontSize="sm" fontWeight="600">
-                      Cloud #{selectedCloudInfo.cloud} · Step {selectedCloudInfo.step}
-                    </Text>
-                  </HStack>
-                )}
-                {!!(state?.selectedClouds || []).length && (
-                  <Text color={S.textMuted} fontSize="xs" lineHeight="1.5">
-                    Trail:{" "}
-                    {(state.selectedClouds || [])
-                      .slice(-8)
-                      .map((idx) => {
-                        const mul = Number(state?.cloudMultipliers?.[Number(idx) - 1] ?? 0);
-                        return `#${idx}(x${mul.toFixed(2)})`;
-                      })
-                      .join(" → ")}
-                  </Text>
-                )}
+                {/* Hidden per request: selected cloud badge and trail text */}
               </VStack>
 
               <Box
@@ -333,167 +321,196 @@ export default function CloudSpreadPage() {
 
               <Grid
                 mt="14px"
-                templateColumns={{ base: "1fr", md: "1fr 1fr", lg: "1fr 1fr 1fr auto auto" }}
-                gap="10px"
-                alignItems="center"
+                templateColumns={{ base: "1fr", lg: "minmax(0,1fr) 230px 190px" }}
+                gap="12px"
+                alignItems="stretch"
               >
-                <HStack spacing="8px" flexWrap="wrap">
-                  <Text color={S.textMuted} fontSize="xs" fontWeight="700" whiteSpace="nowrap">
-                    {myBetCount > 0 ? "Stake:" : "Pay once:"}
-                  </Text>
-                  <Button
-                    size="xs"
-                    h="32px"
-                    px="10px"
-                    bg={S.innerBg}
-                    border="1px solid"
-                    borderColor={S.border}
-                    color={S.text}
-                    borderRadius="8px"
-                    fontWeight="700"
-                    isDisabled={myBetCount > 0}
-                    onClick={() => setAmount("0.1")}
-                  >
-                    Min
-                  </Button>
-                  <Button
-                    size="xs"
-                    h="32px"
-                    px="10px"
-                    bg={S.innerBg}
-                    border="1px solid"
-                    borderColor={S.border}
-                    color={S.text}
-                    borderRadius="8px"
-                    fontWeight="700"
-                    isDisabled={myBetCount > 0}
-                    onClick={() =>
-                      setAmount(
-                        String(
-                          Math.min(MAX_AMOUNT_USDT, Math.max(0.1, Number.isFinite(bal) ? bal : 0.1))
-                        )
-                      )
-                    }
-                  >
-                    Max
-                  </Button>
-                </HStack>
-
-                <Input
-                  value={
-                    myBetCount > 0 && state?.sessionStake != null
-                      ? String(Number(state.sessionStake))
-                      : amount
-                  }
-                  onChange={(e) => setAmount(e.target.value)}
-                  isDisabled={myBetCount > 0}
-                  title={myBetCount > 0 ? "Stake locked — next steps are free until cash out" : "Amount to pay on first play only"}
-                  bg={S.innerBg}
-                  border="1px solid"
-                  borderColor={S.border}
-                  color={S.text}
-                  h="40px"
-                  borderRadius="8px"
-                  fontWeight="700"
-                  _placeholder={{ color: "rgba(255,255,255,0.35)" }}
-                  _hover={{ borderColor: S.borderStrong }}
-                  _focus={{ borderColor: S.borderStrong, boxShadow: "0 0 0 1px rgba(255,255,255,0.25)" }}
-                  placeholder="USDT (first play)"
-                />
-
-                <HStack flexWrap="wrap" spacing="6px">
-                  {["1", "5", "10", "20"].map((v) => (
+                <VStack align="center" spacing="8px" minW={0}>
+                  <HStack spacing="8px" flexWrap="wrap" justify="center" w="100%">
                     <Button
-                      key={v}
-                      size="sm"
-                      h="32px"
-                      minW="44px"
+                      size="xs"
+                      h="36px"
+                      px="14px"
                       bg={S.innerBg}
                       border="1px solid"
                       borderColor={S.border}
                       color={S.text}
                       borderRadius="8px"
-                      fontWeight="800"
+                      fontWeight="700"
                       isDisabled={myBetCount > 0}
-                      onClick={() => setAmount(v)}
+                      onClick={() => setAmount("0.1")}
                     >
-                      {v}
+                      Min
                     </Button>
-                  ))}
-                </HStack>
+                    <Input
+                      value={
+                        myBetCount > 0 && state?.sessionStake != null
+                          ? String(Number(state.sessionStake))
+                          : amount
+                      }
+                      onChange={(e) => setAmount(e.target.value)}
+                      isDisabled={myBetCount > 0}
+                      title={myBetCount > 0 ? "Stake locked — next steps are free until cash out" : "Amount to pay on first play only"}
+                      bg={S.innerBg}
+                      border="1px solid"
+                      borderColor={S.border}
+                      color={S.text}
+                      h="36px"
+                      maxW="140px"
+                      borderRadius="8px"
+                      textAlign="center"
+                      fontWeight="700"
+                      _placeholder={{ color: "rgba(255,255,255,0.35)" }}
+                      _hover={{ borderColor: S.borderStrong }}
+                      _focus={{ borderColor: S.borderStrong, boxShadow: "0 0 0 1px rgba(255,255,255,0.25)" }}
+                      placeholder="0.1"
+                    />
+                    <Button
+                      size="xs"
+                      h="36px"
+                      px="14px"
+                      bg={S.innerBg}
+                      border="1px solid"
+                      borderColor={S.border}
+                      color={S.text}
+                      borderRadius="8px"
+                      fontWeight="700"
+                      isDisabled={myBetCount > 0}
+                      onClick={() =>
+                        setAmount(
+                          String(
+                            Math.min(MAX_AMOUNT_USDT, Math.max(0.1, Number.isFinite(bal) ? bal : 0.1))
+                          )
+                        )
+                      }
+                    >
+                      Max
+                    </Button>
+                  </HStack>
 
-                <HStack
-                  minH="40px"
-                  bg={S.innerBg}
-                  border="1px solid"
-                  borderColor={S.border}
-                  borderRadius="8px"
-                  px="12px"
-                  minW="0"
-                  flex="1"
-                >
-                  <Text color={S.text} fontSize="sm" fontWeight="700" noOfLines={2}>
-                    {canBet
-                      ? `Next: Step ${nextBetStep} (x${multiplierForStep(nextBetStep).toFixed(2)})`
-                      : myBetCount >= maxBetsPerRound
-                        ? `All ${maxBetsPerRound} steps done`
-                        : "—"}
-                  </Text>
-                </HStack>
+                  <HStack flexWrap="wrap" spacing="6px" justify="center" w="100%">
+                    {["1", "5", "10", "20"].map((v) => (
+                      <Button
+                        key={v}
+                        size="sm"
+                        h="34px"
+                        minW="50px"
+                        bg={S.innerBg}
+                        border="1px solid"
+                        borderColor={S.border}
+                        color={S.text}
+                        borderRadius="8px"
+                        fontWeight="800"
+                        isDisabled={myBetCount > 0}
+                        onClick={() => setAmount(v)}
+                      >
+                        {v}
+                      </Button>
+                    ))}
+                  </HStack>
 
-                <HStack
-                  minH="40px"
-                  bg={S.innerBg}
-                  border="1px solid"
-                  borderColor={S.border}
-                  borderRadius="8px"
-                  px="12px"
-                >
-                  <Text color={S.accentText} fontSize="sm" fontWeight="800" title="Stake × product of cloud multipliers (paid once at first play)">
-                    {myBetCount > 0 ? "Cash-out payout" : "If you start"}: ${potentialWin}
-                  </Text>
-                </HStack>
+                </VStack>
 
-                <Button
-                  h="42px"
-                  bg={S.playGreen}
-                  color="white"
-                  borderRadius="8px"
-                  fontWeight="800"
-                  fontSize="md"
-                  _hover={{ bg: S.playGreenHover }}
-                  _active={{ bg: "#2f855a" }}
-                  _disabled={{ opacity: 0.45, cursor: "not-allowed" }}
-                  onClick={handleBet}
-                  isDisabled={!canBet || playBusy}
-                  isLoading={playBusy}
-                  title={
-                    playBusy
-                      ? "Wait for the ball to land…"
-                      : myBetCount >= maxBetsPerRound
-                        ? `All ${maxBetsPerRound} steps done — cash out`
-                        : myBetCount === 0
-                          ? `Pay ${Number(amount || 0).toFixed(2)} USDT and play step ${nextBetStep}`
-                          : `Free play — step ${nextBetStep}`
-                  }
-                >
-                  {myBetCount === 0 ? "Start" : "Play"}
-                </Button>
-                <Button
-                  h="42px"
-                  bg={S.innerBg}
-                  color={S.text}
-                  border="1px solid"
-                  borderColor={S.border}
-                  borderRadius="8px"
-                  fontWeight="800"
-                  _hover={{ bg: "#333333", borderColor: S.borderStrong }}
-                  onClick={handleCashOut}
-                  isDisabled={!phaseBetting || myBetCount === 0}
-                  title={myBetCount === 0 ? "Pay and play at least once before cash out" : "End round and collect payout"}
-                >
-                  Cash Out
-                </Button>
+                <VStack align="stretch" spacing="8px" w={{ base: "100%", lg: "320px" }} justify="flex-end" justifySelf={{ base: "stretch", lg: "end" }}>
+                  {myBetCount > 0 ? (
+                    <HStack spacing="8px" w="100%" flexWrap="wrap">
+                      <Button
+                        h="56px"
+                        flex={{ base: "1 1 100%", lg: "1 1 0" }}
+                        bg={S.playGreen}
+                        color="white"
+                        borderRadius="10px"
+                        fontWeight="800"
+                        fontSize="xl"
+                        whiteSpace="nowrap"
+                        _hover={{ bg: S.playGreenHover }}
+                        _active={{ bg: "#2f855a" }}
+                        _disabled={{ opacity: 0.45, cursor: "not-allowed" }}
+                        onClick={handleBet}
+                        isDisabled={playBusy || (!canBet && !lastWasZeroMultiplier)}
+                        isLoading={playBusy}
+                      >
+                        {lastWasZeroMultiplier ? "Play again!" : "Play"}
+                      </Button>
+                      <Button
+                        h="56px"
+                        flex={{ base: "1 1 100%", lg: "1 1 0" }}
+                        minW={{ base: "100%", lg: "170px" }}
+                        bg={S.innerBg}
+                        color={S.text}
+                        border="1px solid"
+                        borderColor={S.border}
+                        borderRadius="8px"
+                        fontWeight="800"
+                        fontSize="md"
+                        px="10px"
+                        whiteSpace="nowrap"
+                        _hover={{ bg: "#333333", borderColor: S.borderStrong }}
+                        onClick={handleCashOut}
+                        isDisabled={!phaseBetting || lastWasZeroMultiplier}
+                        title={
+                          lastWasZeroMultiplier
+                            ? "Cash out disabled after x0.00 — play again first"
+                            : "End round and collect payout"
+                        }
+                      >
+                        {`Cash Out $${potentialWin}`}
+                      </Button>
+                    </HStack>
+                  ) : (
+                    <Button
+                      h="56px"
+                      bg={S.playGreen}
+                      color="white"
+                      borderRadius="10px"
+                      fontWeight="800"
+                      fontSize="2xl"
+                      _hover={{ bg: S.playGreenHover }}
+                      _active={{ bg: "#2f855a" }}
+                      _disabled={{ opacity: 0.45, cursor: "not-allowed" }}
+                      onClick={handleBet}
+                      isDisabled={!canBet || playBusy}
+                      isLoading={playBusy}
+                    >
+                      Start
+                    </Button>
+                  )}
+                </VStack>
+
+                <VStack align="stretch" spacing="8px" w="100%" justify="flex-end">
+                  {/* <HStack
+                    minH="38px"
+                    bg={S.innerBg}
+                    border="1px solid"
+                    borderColor={S.border}
+                    borderRadius="8px"
+                    px="10px"
+                    minW={0}
+                    w="100%"
+                  >
+                    <Text color={S.text} fontSize="sm" fontWeight="700" noOfLines={2}>
+                      {canBet
+                        ? `Next: Step ${nextBetStep} (x${multiplierForStep(nextBetStep).toFixed(2)})`
+                        : myBetCount >= maxBetsPerRound
+                          ? `All ${maxBetsPerRound} steps done`
+                          : "—"}
+                    </Text>
+                  </HStack> */}
+
+                  {/* <HStack
+                    minH="38px"
+                    bg={S.innerBg}
+                    border="1px solid"
+                    borderColor={S.border}
+                    borderRadius="8px"
+                    px="10px"
+                    justify="center"
+                  >
+                    <Text color={S.accentText} fontSize="sm" fontWeight="800" textAlign="center" title="Stake × product of cloud multipliers (paid once at first play)">
+                      {myBetCount > 0 ? "Cash-out payout" : "If you start"}: ${potentialWin}
+                    </Text>
+                  </HStack> */}
+                </VStack>
               </Grid>
             </CardBody>
           </Card>

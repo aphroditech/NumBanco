@@ -513,33 +513,28 @@ export const getCurrentBetData = async (req, res) => {
 export const onlineUser = async (req, res) => {
     try {
         const { level } = req.query;
-        // const user = await User.findOne({ userAuthId: req.user.userAuthId });
-        const user = await User.findOne(
+        const activeCode = Number(level) + 2;
+        await User.updateOne(
             { userAuthId: req.user.userAuthId },
-            {
-                "wallets.eth.privateKey": 0,
-                "wallets.bsc.privateKey": 0,
-                "wallets.tron.privateKey": 0,
-                password: 0,
-                country: 0,
-                pumpingMode: 0,
-                rubicMode: 0,
-                partnerId: 0,
-                partnerActivity: 0,
-                lastClickDate: 0,
-                
-            }
+            { $set: { active: activeCode } }
         );
-        user.active = Number(level) + 2;
-        await user.save();
-        const activeUsers = await userActive();
-
-        const ably = req.app.locals.ably;
-        if (ably) {
-            const channel = ably.channels.get("Num2Bet");
-            channel.publish("onlineUser", activeUsers);
-        }
         res.json("success");
+
+        // Publish active-user counters after responding to keep presence endpoint fast.
+        setImmediate(async () => {
+            try {
+                const activeUsers = await userActive();
+                const ably = req.app.locals.ably;
+                if (ably) {
+                    const channel = ably.channels.get("Num2Bet");
+                    channel.publish("onlineUser", activeUsers).catch((err) => {
+                        console.error("Failed to publish onlineUser:", err);
+                    });
+                }
+            } catch (asyncError) {
+                console.error("onlineUser async publish error:", asyncError);
+            }
+        });
     }
     catch (err) {
         console.log("Error in onlineUser:", err);
@@ -549,34 +544,28 @@ export const onlineUser = async (req, res) => {
 
 export const offlineUser = async (req, res) => {
     try {
-        // const user = await User.findOne({ userAuthId: req.user.userAuthId });
-        const user = await User.findOne(
+        await User.updateOne(
             { userAuthId: req.user.userAuthId },
-            {
-                "wallets.eth.privateKey": 0,
-                "wallets.bsc.privateKey": 0,
-                "wallets.tron.privateKey": 0,
-                password: 0,
-                country: 0,
-                pumpingMode: 0,
-                rubicMode: 0,
-                partnerId: 0,
-                partnerActivity: 0,
-                lastClickDate: 0,
-                
-            }
+            { $set: { active: 1 } }
         );
-        user.active = 1;
-        await user.save();
-        const activeUsers = await userActive();
+        res.json("success");
 
-
-        const ably = req.app.locals.ably;
-        if (ably) {
-            const channel = ably.channels.get("Num2Bet");
-            channel.publish("offlineUser", activeUsers);
-        }
-        return res.json("success");
+        // Publish active-user counters after responding to keep presence endpoint fast.
+        setImmediate(async () => {
+            try {
+                const activeUsers = await userActive();
+                const ably = req.app.locals.ably;
+                if (ably) {
+                    const channel = ably.channels.get("Num2Bet");
+                    channel.publish("offlineUser", activeUsers).catch((err) => {
+                        console.error("Failed to publish offlineUser:", err);
+                    });
+                }
+            } catch (asyncError) {
+                console.error("offlineUser async publish error:", asyncError);
+            }
+        });
+        return;
     }
     catch (err) {
         console.log("Error in offlineUser:", err);

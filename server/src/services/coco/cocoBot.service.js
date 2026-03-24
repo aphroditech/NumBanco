@@ -19,12 +19,13 @@ export const cocoBot = async (ably) => {
                     if (!randomBot) return;
 
                     // Use coco game calculator (not pumping)
-                    const { bet, win } = calculateCoco();
+                    const { bet, win, result } = calculateCoco();
 
                     await CocoView.create({
                         userId: randomBot.userId,
                         bet,
                         win,
+                        result,
                         isUser: 0,
                     });
 

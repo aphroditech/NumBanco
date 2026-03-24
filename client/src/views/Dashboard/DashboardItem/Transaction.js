@@ -95,7 +95,7 @@ function Transaction() {
     }, [user, option])
 
     return (
-        <Card>
+        <Card h="100%">
             <CardHeader mb='12px'>
                 <Flex direction='column' w='100%'>
                     <Flex
@@ -162,6 +162,7 @@ function Transaction() {
                 <Flex
                     direction="column"
                     w="100%"
+                    minH="400px"
                     maxH="420px"
                     overflowY="auto"
                     pr="8px"
@@ -176,7 +177,9 @@ function Transaction() {
                     }}
                 >
                     {transition.length ? (
-                        <Box maxH={{ sm: "425px" }}
+                        <Box
+                            minH="400px"
+                            maxH="420px"
                             overflowY="auto"
                             overflowX="hidden"
                             width="100%"
