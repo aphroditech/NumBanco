@@ -102,8 +102,17 @@ function RealtimeWinner() {
 
 
     return (
-        <Card p="16px" id="realCard" position="relative" w="100%" h="100%" display="flex" flexDirection="column"
-            height="530px" minW="0"
+        <Card
+            p="16px"
+            id="realCard"
+            position="relative"
+            w="100%"
+            h={{ base: "430px", md: "470px", xl: "500px", "2xl": "100%" }}
+            maxH={{ base: "430px", md: "470px", xl: "500px", "2xl": "100%" }}
+            minH={{ base: "430px", md: "470px", xl: "500px", "2xl": "520px" }}
+            display="flex"
+            flexDirection="column"
+            minW="0"
         >
             {/* 🔒 FIXED / STICKY HEADER */}
             <CardHeader
@@ -130,7 +139,8 @@ function RealtimeWinner() {
             <CardBody p="0" flex="1" display="flex" flexDirection="column" minH="0">
                 <Box
                     flex="1"
-                    maxH={{ sm: "550px", md: "500px", lg: "880px", xl: "400px", '2xl': '430px' }}
+                    minH="0"
+                    maxH="100%"
                     overflowY="auto"
                     overflowX="hidden"
                     width="100%"
