@@ -531,7 +531,9 @@ async function settleRound(userId) {
     });
     await publishCloudSpreadLiveRow(historyDoc);
 
-    await user.save();
+    // Avoid validating unrelated legacy subdocs (e.g. old minesHistory rows)
+    // when Cloud Spread updates only cloud-related user fields.
+    await user.save({ validateModifiedOnly: true });
   }
 }
 
@@ -682,7 +684,9 @@ export async function placeCloudSpreadBet({ user, amount, targetStep }) {
       type: "cloudSpread",
     });
   }
-  await user.save();
+  // Cloud Spread only touches a subset of user fields here; validating only
+  // modified paths prevents unrelated schema drift from blocking gameplay.
+  await user.save({ validateModifiedOnly: true });
 
   const stakeForRow = Number(s.currentRound.sessionStake || entryStake || 0);
 

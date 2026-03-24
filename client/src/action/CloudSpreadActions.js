@@ -1,5 +1,4 @@
 import axiosInstance from "../api/axiosConfig";
-import { setUserRedux } from "./index";
 
 export async function getCloudSpreadState() {
   const res = await axiosInstance.get("/cloud-spread/state");
@@ -8,7 +7,9 @@ export async function getCloudSpreadState() {
 
 export async function placeCloudSpreadBet(data, dispatch) {
   const res = await axiosInstance.post("/cloud-spread/bet", data);
-  setUserRedux(res, dispatch);
+  if (dispatch && Number.isFinite(Number(res?.data?.balance))) {
+    dispatch({ type: "SET_BALANCE", payload: Number(res.data.balance) });
+  }
   return res.data;
 }
 

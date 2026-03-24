@@ -19,6 +19,8 @@ import { initializeJokerCrashCards } from './jokerCrashCards.js';
 import { initializeJokerCrashPercentages } from './jokerCrashPercentages.js';
 import { initAToZSetting } from './initAtoZSettings.js';
 import { initCloudSpreadSetting } from './initCloudSpreadSetting.js';
+import { initGravityBot } from './initGravityBot.js';
+import { initializeMinesSettings } from './minesSettings.js';
 
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
@@ -37,6 +39,8 @@ export const initializeDatabase = async () => {
     await initRocketSetting();
     await initAToZSetting();
     await initCloudSpreadSetting();
+    await initGravityBot();
+    await initializeMinesSettings();
     await initializeFishingPercentages();
     await initializeFishingLimits();
     await initializeCardGamePercentages();

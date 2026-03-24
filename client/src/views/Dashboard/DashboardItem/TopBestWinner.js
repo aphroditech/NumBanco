@@ -23,6 +23,7 @@ import truncateToTwo from "variables/truncateToTwo";
 
 function TopBestWinner() {
   const [winners, setWinners] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const history = useHistory();
   const getBadgeBgForGameType = (gameType) => {
     const t = (gameType || "").toLowerCase();
@@ -52,6 +53,8 @@ function TopBestWinner() {
         }
       } catch (err) {
         if (isMounted) console.error(err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -130,7 +133,15 @@ function TopBestWinner() {
             </Tr>
           </Thead>
           <Tbody>
-            {winners && winners.map((row, index, arr) => {
+            {isLoading ? (
+              <Tr>
+                <Td colSpan={5} textAlign="center" borderBottomColor="#56577A">
+                  <Text fontSize="sm" color="#fff" fontWeight="normal">
+                    Loading winners...
+                  </Text>
+                </Td>
+              </Tr>
+            ) : winners && winners.map((row, index, arr) => {
               const isLast = index === arr.length - 1;
               return (
                 <Tr key={row._id || `${row.username}-${row.level}-${index}`}>
