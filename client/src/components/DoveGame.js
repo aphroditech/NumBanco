@@ -493,10 +493,13 @@ function DoveGame() {
             scene.stepBarStar = starGraphics
 
             game.updateStepBar = (currentStep, truckCrashStep) => {
+                if (!scene.sys?.isActive()) return
                 for (let i = 0; i < scene.stepBarCircles.length; i++) {
                     const circle = scene.stepBarCircles[i]
+                    if (!circle?.active) continue
                     const stepNum = i + 1
-                    const isNext = stepNum === currentStep + 1 && truckCrashStep == null
+                    const isNext =
+                        !gameOver && stepNum === currentStep + 1 && truckCrashStep == null
                     let newFill, newStroke
                     if (truckCrashStep != null && stepNum === truckCrashStep) {
                         newFill = 0xef4444
@@ -514,14 +517,21 @@ function DoveGame() {
                     const colorChanged = (circle.lastFill !== newFill)
                     circle.lastFill = newFill
 
-                    if (circle.glow) {
+                    const glow = circle.glow
+                    const glowOk =
+                        glow &&
+                        glow.active &&
+                        glow.scene &&
+                        glow.scene.sys?.isActive() &&
+                        !glow.scene.sys?.isDestroyed
+                    if (glowOk) {
                         if (isNext) {
-                            circle.glow.setVisible(true)
-                            circle.glow.setFillStyle(0x38bdf8, 0.4)
-                            circle.glow.setRadius(circleRadius + 5)
-                            if (!circle.glow.pulseTween || !circle.glow.pulseTween.isPlaying()) {
-                                circle.glow.pulseTween = scene.tweens.add({
-                                    targets: circle.glow,
+                            glow.setVisible(true)
+                            glow.setFillStyle(0x38bdf8, 0.4)
+                            glow.setRadius(circleRadius + 5)
+                            if (!glow.pulseTween || !glow.pulseTween.isPlaying()) {
+                                glow.pulseTween = scene.tweens.add({
+                                    targets: glow,
                                     alpha: { from: 0.4, to: 0.2 },
                                     duration: 600,
                                     yoyo: true,
@@ -530,15 +540,15 @@ function DoveGame() {
                                 })
                             }
                         } else {
-                            circle.glow.setVisible(false)
-                            if (circle.glow.pulseTween) {
-                                circle.glow.pulseTween.stop()
-                                circle.glow.pulseTween = null
+                            glow.setVisible(false)
+                            if (glow.pulseTween) {
+                                glow.pulseTween.stop()
+                                glow.pulseTween = null
                             }
                         }
                     }
 
-                    if (colorChanged) {
+                    if (colorChanged && circle.active) {
                         if (newFill === 0xffd700 || newFill === 0xef4444) {
                             scene.tweens.add({
                                 targets: circle,
@@ -556,8 +566,10 @@ function DoveGame() {
                         }
                     }
 
-                    circle.setFillStyle(newFill)
-                    circle.setStrokeStyle(2, newStroke)
+                    if (circle.active) {
+                        circle.setFillStyle(newFill)
+                        circle.setStrokeStyle(2, newStroke)
+                    }
                 }
             }
 
@@ -662,6 +674,10 @@ function DoveGame() {
                     difficulty: difficultyRef.current
                 })
 
+                if (!mounted || gameRef.current !== game || game.sys?.isDestroyed) {
+                    return
+                }
+
                 if (earned == null) {
                     toast.error("Cash out failed.");
                 } else {
@@ -696,7 +712,12 @@ function DoveGame() {
                     getUserData(dispatchRef.current)
                 }
 
-                scene.time.delayedCall(1500, () => resetGame())
+                if (mounted && gameRef.current === game && !game.sys?.isDestroyed && scene?.time?.delayedCall) {
+                    scene.time.delayedCall(1500, () => {
+                        if (!mounted || gameRef.current !== game || game.sys?.isDestroyed) return
+                        resetGame()
+                    })
+                }
             }
 
             game.setCanMove = (val) => {
