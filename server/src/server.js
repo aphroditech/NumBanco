@@ -55,10 +55,10 @@ connectDB()
     });
 
     // Load SSL certificates
-    // const sslOptions = {
-    //     key: fs.readFileSync(process.env.SSL_KEY_PATH || './certs/key.pem'),
-    //     cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
-    // };
+    const sslOptions = {
+        key: fs.readFileSync(process.env.SSL_KEY_PATH || './certs/key.pem'),
+        cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
+    };
 
     /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
     http.createServer(app).listen(PORT, () => {
@@ -71,8 +71,8 @@ connectDB()
     
     ably.connection.once("connected", () => {
         console.log("✅ Ably connected");
-        confirmDepositEngine(ably);
-        tronEngine(ably);
+        // confirmDepositEngine(ably);
+        // tronEngine(ably);
         // startPartnerDepositCron(ably);
         // startWithdrawApprovalCron(ably);
         // getUserStatusChannel(ably);
@@ -80,7 +80,6 @@ connectDB()
         // pumpingBot(ably);
         // jokerCrashBot(ably);
         // rubicBot(ably);
-        // pumpingBot(ably);
         // miningBot(ably);
         // rocketBot(ably);
         // aToZBot(ably);

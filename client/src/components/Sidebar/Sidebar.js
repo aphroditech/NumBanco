@@ -28,7 +28,7 @@ import Landing_logo from "assets/img/logo_Landing.png";
 function Sidebar(props) {
   let variantChange = "0.2s linear";
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState("menu");
+  const [activeMenu, setActiveMenu] = React.useState(null);
   const toggleMenu = (menu) => {
     setActiveMenu(prev => prev === menu ? null : menu);
   };
@@ -171,7 +171,7 @@ function Sidebar(props) {
 
 export function SidebarResponsive(props) {
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState("menu");
+  const [activeMenu, setActiveMenu] = React.useState(null);
 
   const toggleMenu = (menu) => {
     setActiveMenu(prev => (prev === menu ? null : menu));
@@ -193,7 +193,7 @@ export function SidebarResponsive(props) {
             />
 
             {/* Sub menu */}
-            <Collapse in={activeMenu === "menu"} animateOpacity>
+            <Collapse in={activeMenu === "bet"} animateOpacity>
               <Stack
                 spacing={2}
                 mt={2}
@@ -227,6 +227,8 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={Mines} />
                 <SidebarButtonLink value={DoveGame} />
                 <SidebarButtonLink value={CocoGame} />
+                <SidebarButtonLink value={CloudSpread} />
+                <SidebarButtonLink value={AlphaTreeGame} />
                 <SidebarButtonLink value={AToZGame} />
               </Stack>
             </Collapse>
@@ -259,8 +261,7 @@ export function SidebarResponsive(props) {
   // SidebarResponsive (drawer) top logo — same logo_Landing.png as desktop sidebar
   const brand = (
     <Box pt="40px" mb="24px" w="100%">
-      <Link
-        as={NavLink}
+      <NavLink
         to='/user/dashboard'
         display="flex"
         w="100%"
@@ -269,7 +270,7 @@ export function SidebarResponsive(props) {
         _hover={{ textDecoration: "none" }}
       >
         <Image src={Landing_logo} alt="NumBanco Logo" maxH="40px" objectFit="contain" mx="auto" mb="20px" />
-      </Link>
+      </NavLink>
 
       <Separator mb="20px" />
     </Box>

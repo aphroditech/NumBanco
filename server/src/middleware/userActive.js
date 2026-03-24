@@ -1,29 +1,53 @@
 import User from "../models/User.js";
 
+const ACTIVE_USERS_CACHE_TTL_MS = 2000;
+let cachedActiveUsers = null;
+let cacheExpiresAt = 0;
+let pendingActiveUsersPromise = null;
+
 export const userActive = async () => {
     try {
-        const users = await User.find({});
+        const now = Date.now();
+        if (cachedActiveUsers && now < cacheExpiresAt) {
+            return cachedActiveUsers;
+        }
 
-        const offlineUsers = users.filter(user => (user.active === 0)).length;
-        const onlineUsers = users.filter(user => (user.active !== 0)).length + 1012;
-        const otherPageUsers = users.filter(user => (user.active === 1)).length;
-        const tierAUsers = users.filter(user => (user.active === 2)).length + 307;
-        const tierBUsers = users.filter(user => (user.active === 3)).length + 228;
-        const tierCUsers = users.filter(user => (user.active === 4)).length + 95;
-        const rubicUsers = users.filter(user => (user.active === 5)).length + 150;
-        const pumpingUsers = users.filter(user => (user.active === 6)).length + 270;
-        const gravityUsers = users.filter(user => (user.active === 7)).length + 100;
-        const doveUsers = users.filter(user => (user.active === 8)).length + 123;
-        const cloudSpreadUsers = users.filter(user => (user.active === 9)).length + 96;
-        const cocoUsers = users.filter(user => (user.active === 10)).length + 88;
-        const rocketUsers = users.filter(user => (user.active === 11)).length + 150;
-        const jackalUsers = users.filter(user => (user.active === 12)).length + 80;
-        const mineUsers = users.filter(user => (user.active === 13)).length + 60;
-        const fishingUsers = users.filter(user => (user.active === 14)).length + 90;
-        const alphaTreeUsers = users.filter(user => (user.active === 15)).length + 60;
-        const aToZUsers = users.filter(user => (user.active === 16)).length + 100;
+        if (pendingActiveUsersPromise) {
+            return pendingActiveUsersPromise;
+        }
+
+        pendingActiveUsersPromise = (async () => {
+        const groupedUsers = await User.aggregate([
+            { $group: { _id: "$active", count: { $sum: 1 } } }
+        ]);
+
+        const counts = Object.fromEntries(
+            groupedUsers.map((item) => [Number(item._id), item.count])
+        );
+        const countByActive = (activeCode) => counts[activeCode] || 0;
+
+        const offlineUsers = countByActive(0);
+        const onlineUsers = groupedUsers
+            .filter((item) => Number(item._id) !== 0)
+            .reduce((sum, item) => sum + item.count, 0) + 1012;
+        const otherPageUsers = countByActive(1);
+        const tierAUsers = countByActive(2) + 307;
+        const tierBUsers = countByActive(3) + 228;
+        const tierCUsers = countByActive(4) + 95;
+        const rubicUsers = countByActive(5) + 150;
+        const pumpingUsers = countByActive(6) + 270;
+        const gravityUsers = countByActive(7) + 100;
+        const doveUsers = countByActive(8) + 123;
+        const cloudSpreadUsers = countByActive(9) + 96;
+        const cocoUsers = countByActive(10) + 88;
+        const rocketUsers = countByActive(11) + 150;
+        const jackalUsers = countByActive(12) + 80;
+        const mineUsers = countByActive(13) + 60;
+        const fishingUsers = countByActive(14) + 90;
+        const alphaTreeUsers = countByActive(15) + 60;
+        const aToZUsers = countByActive(16) + 100;
         const totalActiveUsers = tierAUsers + tierBUsers + tierCUsers + rubicUsers + pumpingUsers + gravityUsers + doveUsers + cloudSpreadUsers + cocoUsers + rocketUsers + jackalUsers + mineUsers + fishingUsers + alphaTreeUsers + aToZUsers;
-        return {
+        const result = {
             offlineUsers,
             onlineUsers,
             tierAUsers,
@@ -43,8 +67,18 @@ export const userActive = async () => {
             alphaTreeUsers,
             aToZUsers,
             totalActiveUsers
-        }
+        };
+
+        cachedActiveUsers = result;
+        cacheExpiresAt = Date.now() + ACTIVE_USERS_CACHE_TTL_MS;
+        return result;
+        })();
+
+        const result = await pendingActiveUsersPromise;
+        pendingActiveUsersPromise = null;
+        return result;
     } catch (err) {
+        pendingActiveUsersPromise = null;
         console.log("Error fetching active users:", err);
         return;
     }

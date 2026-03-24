@@ -64,7 +64,7 @@ export const bet = async (req, res) => {
             multiplier /= 1000;  
         } else if (level === "hard") {
             multiplier *= 1200;
-            multiplier /= 1000;  
+            multiplier /= 1000;
         }
 
         // single DB write for this endpoint (instead of multiple save() calls)
@@ -98,20 +98,33 @@ export const bet = async (req, res) => {
 };
 
 function getMultiplier(mode, normalMultiple, hardMultiple) {
-
-    const multipliers = mode === 0 ? normalMultiple : hardMultiple;
-
-    const totalWeight = multipliers.reduce((sum, m) => sum + m.probability, 0);
+    const defaultNormalMultipliers = [{ number: 0.5, probability: 5 }];
+    const defaultHardMultipliers = [{ number: 1, probability: 5 }];
+    const candidate = mode === 0 ? normalMultiple : hardMultiple;
+    const fallback = mode === 0 ? defaultNormalMultipliers : defaultHardMultipliers;
+    const multipliers = Array.isArray(candidate) && candidate.length > 0 ? candidate : fallback;
+    const normalizedMultipliers = multipliers.filter(
+        (m) => Number.isFinite(Number(m?.number)) && Number.isFinite(Number(m?.probability)) && Number(m.probability) > 0
+    );
+    if (normalizedMultipliers.length === 0) {
+        return fallback[0].number;
+    }
+    const totalWeight = normalizedMultipliers.reduce((sum, m) => sum + Number(m.probability), 0);
+    if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+        return normalizedMultipliers[0].number;
+    }
   
     let random = Math.random() * totalWeight;
   
-    for (let m of multipliers) {
-        if (random < m.probability) {
-            return m.number;
+    for (const m of normalizedMultipliers) {
+        const probability = Number(m.probability);
+        const number = Number(m.number);
+        if (random < probability) {
+            return number;
         }
-        random -= m.probability;
+        random -= probability;
     }
-    return 0;
+    return Number(normalizedMultipliers[normalizedMultipliers.length - 1].number);
 }
 
 // check if the user should be in hard mode or normal mode Normal to Hard
@@ -134,88 +147,100 @@ function checkHardToNormal(rocketAmount, rocketWinAmount, limitHardToNormal) {
 export const shotResult = async (req, res) => {
     try {
         const { isWin, betAmount, multiplier, level } = req.body;
-        const user = await User.findById(req.user._id);
+        const numericBetAmount = Number(betAmount) || 0;
+        const numericMultiplier = Number(multiplier) || 0;
+        const user = await User.findById(req.user._id).select("altas avatar");
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-        const winAmount = isWin ? betAmount * multiplier : 0;
+
+        const winAmount = isWin ? numericBetAmount * numericMultiplier : 0;
         if (isWin) {
-            user.balance += winAmount;
-            user.totalEarn += winAmount;
-            user.rocketWinAmount += winAmount;
-            user.totalhistory.push({
-                amount: winAmount,
-                date: new Date(),
-                type: "Win Rocket",
-            });
+            await User.updateOne(
+                { _id: user._id },
+                {
+                    $inc: {
+                        balance: winAmount,
+                        totalEarn: winAmount,
+                        rocketWinAmount: winAmount,
+                    },
+                    $push: {
+                        totalhistory: {
+                            amount: winAmount,
+                            date: new Date(),
+                            type: "Win Rocket",
+                        }
+                    }
+                }
+            );
         }
 
-        await user.save();
-
-        // save result to rocket history
-        const rocketHistory = await RocketHistory.findOne({ user: user._id });
-        if (!rocketHistory) {
-            const newRocketHistory = new RocketHistory({
-                user: user._id,
-                history: [{
-                    isWin: isWin,
-                    betAmount: betAmount,
-                    multiplier: multiplier,
-                    winAmount: winAmount,
-                    level: level,
-                    date: new Date(),
-                }]
-            });
-            await newRocketHistory.save();
-        } else {
-            rocketHistory.history.push({
-                isWin: isWin,
-                betAmount: betAmount,
-                multiplier: multiplier,
-                winAmount: winAmount,
-                level: level,
-                date: new Date(),
-            });
-            await rocketHistory.save();
-        }
-        await CalendarRocket.create({
-            userName: user.altas,
+        const historyEntry = {
             isWin: isWin,
-            betAmount: betAmount,
+            betAmount: numericBetAmount,
+            multiplier: numericMultiplier,
             winAmount: winAmount,
-            date: new Date()
-        })
+            level: level,
+            date: new Date(),
+        };
 
-        // save bet result
+        const userRocketHistory = await RocketHistory.findOneAndUpdate(
+            { user: user._id },
+            { $push: { history: historyEntry } },
+            {
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert: true,
+                projection: { history: 1, _id: 0 }
+            }
+        ).lean();
+
+        // save bet result data in background to keep response path fast
         const data = {
             userName: user.altas,
             avatar: user.avatar,
-            isWin: isWin,   
-            multiplier: isWin ? multiplier : 0,
-            bet: betAmount,
+            isWin: isWin,
+            multiplier: isWin ? numericMultiplier : 0,
+            bet: numericBetAmount,
             win: winAmount,
             date: new Date()
         };
-        await RocketResult.create(data);
 
-        // send ably for real view
-        const ably = req.app.locals.ably;
-        if (ably) {
-            const channelName = "rocketResult";
-            const channel = ably.channels.get(channelName);
+        res.json({
+            balance: isWin ? winAmount : 0,
+            rocketHistory: userRocketHistory?.history || []
+        });
 
-            channel.publish("ROCKET_RESULT", data);
-        }
-        const userRocketHistory = await RocketHistory.findOne({ user: user._id });
-        
-        if(isWin) {
-            return  res.json({ balance: winAmount, rocketHistory: userRocketHistory.history } );
-        } else {
-            return res.json({ balance: 0, rocketHistory: userRocketHistory.history } );
-        }
-        
+        // Fire-and-forget writes/publish that are not required for this request response.
+        setImmediate(async () => {
+            try {
+                await Promise.all([
+                    CalendarRocket.create({
+                        userName: user.altas,
+                        isWin: isWin,
+                        betAmount: numericBetAmount,
+                        winAmount: winAmount,
+                        date: new Date()
+                    }),
+                    RocketResult.create(data),
+                ]);
+
+                const ably = req.app.locals.ably;
+                if (ably) {
+                    const channelName = "rocketResult";
+                    const channel = ably.channels.get(channelName);
+                    channel.publish("ROCKET_RESULT", data).catch((ablyErr) => {
+                        console.error("Failed to publish ROCKET_RESULT:", ablyErr);
+                    });
+                }
+            } catch (asyncError) {
+                console.error("shotResult async post-processing error:", asyncError);
+            }
+        });
+        return;
     } catch (error) {
         console.error(error);
+        return res.status(500).json({ message: "Internal server error" });
     }
 }
 

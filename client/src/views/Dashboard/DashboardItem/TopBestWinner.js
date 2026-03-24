@@ -15,6 +15,7 @@ import {
 } from "@chakra-ui/react";
 import Card from "components/Card/Card";
 import CardHeader from "components/Card/CardHeader";
+import CardBody from "components/Card/CardBody";
 import { getWinners } from "action/AuthActions"
 import LocalPoliceRoundedIcon from '@mui/icons-material/LocalPoliceRounded';
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
@@ -64,7 +65,7 @@ function TopBestWinner() {
 
 
   return (
-    <Card p="16px" overflowX="hidden">
+    <Card p="16px" overflowX="hidden" h="100%">
       <CardHeader p="0px 0px 28px 0px">
         <Flex direction="column">
           <Text color="#00D4FF"
@@ -76,39 +77,42 @@ function TopBestWinner() {
                 marginRight: "8px",
 
               }} />
-            Top Best 10 Winners
+            Top Best Winners
           </Text>
         </Flex>
       </CardHeader>
 
-      <Box
-        maxH={{ sm: "425px" }}
-        overflowY="auto"
-        overflowX="hidden"
-        width="100%"
-        sx={{
-          "&::-webkit-scrollbar": {
-            width: "6px",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            background: "#555b5e",
-            borderRadius: "8px",
-          },
-        }}
-      >
-        <Table
-          variant="simple"
-          color="#fff"
+      <CardBody p="0">
+        <Box
+          minH="400px"
+          maxH="420px"
+          overflowY="auto"
+          overflowX="auto"
           width="100%"
-          sx={{ tableLayout: "fixed" }}
+          sx={{
+            "&::-webkit-scrollbar": {
+              width: "6px",
+              height: "6px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              background: "#555b5e",
+              borderRadius: "8px",
+            },
+          }}
         >
+          <Table
+            variant="simple"
+            color="#fff"
+            width="100%"
+            minW="760px"
+          >
           <Thead>
             <Tr>
               <Th color="white" textAlign="left" className="real_th_font" w="10%">
                 No
               </Th>
 
-              <Th color="white" className="real_th_font" w="30%">
+              <Th color="white" className="real_th_font" w="30%" textAlign="left">
                 User
               </Th>
 
@@ -116,11 +120,11 @@ function TopBestWinner() {
                 Game Type
               </Th>
 
-              <Th color="white" className="real_th_font" w="22%">
+              <Th color="white" className="real_th_font" w="22%" textAlign="left">
                 Win Amount
               </Th>
 
-              <Th color="white" className="real_th_font" w="20%">
+              <Th color="white" className="real_th_font" w="20%" textAlign="left">
                 Date
               </Th>
             </Tr>
@@ -137,7 +141,7 @@ function TopBestWinner() {
                   </Td>
 
                   <Td ps='0px' border={isLast ? "none" : null} borderBottomColor='#56577A'>
-                    <Flex align='center' minWidth='100%' flexWrap='nowrap' gap="8px">
+                    <Flex align='center' minWidth='100%' flexWrap='nowrap' gap="8px" overflow="hidden">
                       <Avatar src={row.avatar} w="28px" h="28px" />
                       <Text fontSize='sm' color='#fff' fontWeight='normal' isTruncated>
                         {row.username || "-"}
@@ -152,6 +156,7 @@ function TopBestWinner() {
                         bg: getBadgeBgForGameType(row.gameType),
                         color: "#FFFFFF",
                       }}
+                      whiteSpace="nowrap"
                     >
                       {row.gameType || "Unknown"}
                     </Badge>
@@ -164,7 +169,7 @@ function TopBestWinner() {
                   </Td>
 
                   <Td textAlign="left" border={isLast ? "none" : null} borderBottomColor='#56577A'>
-                    <Text fontSize='sm' color='#fff' fontWeight='normal'>
+                    <Text fontSize='sm' color='#fff' fontWeight='normal' whiteSpace="nowrap">
                       {formatDate(row.date)}
                     </Text>
                   </Td>
@@ -172,8 +177,9 @@ function TopBestWinner() {
               );
             })}
           </Tbody>
-        </Table>
-      </Box>
+          </Table>
+        </Box>
+      </CardBody>
     </Card>
   );
 }

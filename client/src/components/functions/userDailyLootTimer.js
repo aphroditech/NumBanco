@@ -7,6 +7,7 @@ export default function useDailyLootTimer(user) {
     const dispatch = useDispatch();
     const timerRef = useRef(null);
     const userRef = useRef(user);
+    const lastUserIdRef = useRef(null);
 
     // Keep userRef in sync with user prop
     useEffect(() => {
@@ -14,14 +15,24 @@ export default function useDailyLootTimer(user) {
     }, [user]);
 
     useEffect(() => {
+        const userId = user?.userAuthId || null;
+
         // Clear timer if user logs out
-        if (!user) {
+        if (!userId) {
             if (timerRef.current) {
                 clearInterval(timerRef.current);
                 timerRef.current = null;
             }
+            lastUserIdRef.current = null;
             return;
         }
+
+        // Avoid repeated /lottery/dailyloot calls when user object changes
+        // but identity stays the same and countdown already runs locally.
+        if (lastUserIdRef.current === userId && timerRef.current) {
+            return;
+        }
+        lastUserIdRef.current = userId;
 
         let remaining;
 
@@ -101,5 +112,5 @@ export default function useDailyLootTimer(user) {
                 timerRef.current = null;
             }
         };
-    }, [user,dispatch]);
+    }, [user?.userAuthId, dispatch]);
 }

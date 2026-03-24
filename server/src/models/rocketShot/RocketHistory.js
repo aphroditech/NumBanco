@@ -38,4 +38,7 @@ const RocketHistorySchema = new mongoose.Schema({
         ]
     },
 });
+
+RocketHistorySchema.index({ user: 1 });
+
 export default mongoose.model("RocketHistory", RocketHistorySchema);

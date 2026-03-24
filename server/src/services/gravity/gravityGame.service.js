@@ -482,26 +482,31 @@ export async function placeGravityBet({ user, amount, direction }) {
   if (exists) throw new Error("You already placed a bet in this round");
 
   if (!isBot) {
-    // Real users: deduct balance immediately.
-    user.balance = round2(user.balance - parsedAmount);
-    user.totalBet = round2((user.totalBet || 0) + parsedAmount);
-    user.refreshBet = round2((user.refreshBet || 0) + parsedAmount);
-    user.totalhistory.push({
-      amount: -parsedAmount,
-      date: new Date(),
-      type: "gravity",
-    });
-
-    // Notification stored in User.notification[].
-    const notif = buildUserNotification(
-      `You bet $${parsedAmount.toFixed(2)} in round ${currentRound.roundId}`,
-      "success",
-      "Gravity",
-      user.userId
+    // Real users: deduct balance immediately via targeted atomic update.
+    await User.updateOne(
+      { userId: user.userId },
+      {
+        $inc: {
+          balance: -parsedAmount,
+          totalBet: parsedAmount,
+          refreshBet: parsedAmount,
+        },
+        $push: {
+          totalhistory: {
+            amount: -parsedAmount,
+            date: new Date(),
+            type: "gravity",
+          },
+          notification: buildUserNotification(
+            `You bet $${parsedAmount.toFixed(2)} in round ${currentRound.roundId}`,
+            "success",
+            "Gravity",
+            user.userId
+          ),
+        },
+      }
     );
-    user.notification.push(notif);
   }
-  await user.save();
 
   const betId = isBot ? buildBetId() : undefined;
   const betDoc = isBot
@@ -522,7 +527,7 @@ export async function placeGravityBet({ user, amount, direction }) {
   currentRound.users = Array.isArray(currentRound.users) ? currentRound.users : [];
 
   const storedBetId = betDoc?._id ? String(betDoc._id) : String(betId);
-  currentRound.users.push({
+  const newUserBet = {
     betId: storedBetId,
     userId: user.userId,
     userName: user.altas,
@@ -530,8 +535,21 @@ export async function placeGravityBet({ user, amount, direction }) {
     direction,
     betAmount: parsedAmount,
     isBot,
-  });
-  await currentRound.save();
+  };
+  currentRound.users.push(newUserBet);
+
+  // Persist round deltas atomically to avoid parallel `save()` on same doc.
+  const roundInc = {};
+  if (!isBot && direction === "up") roundInc.upTotalBet = parsedAmount;
+  if (!isBot && direction === "down") roundInc.downTotalBet = parsedAmount;
+
+  await GravityRound.updateOne(
+    { _id: currentRound._id },
+    {
+      ...(Object.keys(roundInc).length ? { $inc: roundInc } : {}),
+      $push: { users: newUserBet },
+    }
+  );
 
   const row = {
     userName: user.altas,
@@ -729,7 +747,10 @@ export async function startGravityGameLoop(ably) {
           return;
         }
         currentRound.phase = "closed";
-        await currentRound.save();
+        await GravityRound.updateOne(
+          { _id: currentRound._id },
+          { $set: { phase: "closed" } }
+        );
         currentRound = await createRound();
         scheduleRoundTimers(currentRound);
         await publish(ably, EVENT_STATE, await getGravityStateSnapshot());

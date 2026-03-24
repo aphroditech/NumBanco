@@ -426,7 +426,7 @@ export default function PumpingPage() {
             bangTimeoutRef.current = null;
         }, 900);
 
-        const result = pumping?.user?.pumpingHistory?.filter(item => item.active === false)[0].result;
+        const result = Number(pumping?.betResult) || 0;
         setPumpingResult(result);
 
         setTimeout(() => {

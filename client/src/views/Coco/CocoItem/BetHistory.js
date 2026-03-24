@@ -193,8 +193,9 @@ export default function CocoBetHistory({ results = [] }) {
                                     const globalIndex = (currentPage - 1) * itemsPerPage + index;
                                     const win = Number(result.profit || 0);
                                     const t = rowTime(result);
+                                    const rowKey = `${result?._id ?? result?.id ?? "coco-row"}-${t ?? "no-time"}-${globalIndex}`;
                                     return (
-                                        <Tr key={result._id || `${globalIndex}-${t}`}>
+                                        <Tr key={rowKey}>
                                             <Td
                                                 textAlign="center"
                                                 border={lastItem ? 'none' : null}
@@ -376,7 +377,7 @@ export default function CocoBetHistory({ results = [] }) {
                                                         }
                                                         return (
                                                             <Button
-                                                                key={page}
+                                                                key={`page-${page}-${idx}`}
                                                                 size="sm"
                                                                 minW="36px"
                                                                 h="36px"

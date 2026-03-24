@@ -10,6 +10,8 @@ import { getGravityState, getMyGravityHistory, placeGravityBet } from "action/Gr
 import { toast } from "react-toastify";
 
 const phaseColor = { betting: "green", viewing: "yellow", result: "red" };
+const MAX_LIVE_ROWS = 120;
+const MAX_MY_HISTORY_ROWS = 200;
 
 const roundTo2 = (n) => {
   const num = Number(n);
@@ -18,6 +20,7 @@ const roundTo2 = (n) => {
 
 export default function GravityPage() {
   const dispatch = useDispatch();
+  const defer = (fn) => setTimeout(fn, 0);
   const [state, setState] = useState(null);
   const [amount, setAmount] = useState("1");
   const [direction, setDirection] = useState("up");
@@ -29,6 +32,30 @@ export default function GravityPage() {
   const [optimisticPlacedSides, setOptimisticPlacedSides] = useState({ up: false, down: false });
   const [timeLeft, setTimeLeft] = useState(0);
   const [nowMs, setNowMs] = useState(Date.now());
+  const initializedRef = React.useRef(false);
+  const historyRequestRef = React.useRef(null);
+  const lastHistoryFetchAtRef = React.useRef(0);
+  const lastResultRoundIdRef = React.useRef(null);
+  const lastResultHistorySyncAtRef = React.useRef(0);
+  const recentOwnBetIdsRef = React.useRef(new Map());
+
+  const fetchMyHistoryOnce = React.useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastHistoryFetchAtRef.current < 1200) {
+      return [];
+    }
+    if (historyRequestRef.current) return historyRequestRef.current;
+    historyRequestRef.current = getMyGravityHistory({ force })
+      .then((data) => {
+        lastHistoryFetchAtRef.current = Date.now();
+        return data;
+      })
+      .catch(() => [])
+      .finally(() => {
+        historyRequestRef.current = null;
+      });
+    return historyRequestRef.current;
+  }, []);
 
   const graphHeight = useBreakpointValue({ base: 280, md: 340 }) ?? 280;
 
@@ -49,19 +76,23 @@ export default function GravityPage() {
       if (!map.has(key)) map.set(key, r);
     }
 
-    return Array.from(map.values());
+    return Array.from(map.values()).slice(0, MAX_LIVE_ROWS);
   };
 
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     let mounted = true;
     (async () => {
       try {
-        const [s, me] = await Promise.all([getGravityState(), getMyGravityHistory()]);
+        const [s, me] = await Promise.all([getGravityState(), fetchMyHistoryOnce()]);
         if (!mounted) return;
         setState(s);
         setTimeLeft(Math.ceil((s.timeLeftMs || 0) / 1000));
         setLiveRows(dedupeLiveRows(Array.isArray(s.liveUsers) ? s.liveUsers : []));
-        setMyHistory(me || []);
+        const initialHistory = Array.isArray(me) ? me.slice(-MAX_MY_HISTORY_ROWS) : [];
+        setMyHistory(initialHistory);
       } catch {
         toast.error("Failed to load Gravity");
       }
@@ -78,29 +109,55 @@ export default function GravityPage() {
     const onBet = (msg) => {
       const data = msg?.data;
       if (!data) return;
-      setLiveRows((prev) => {
-        const prevArr = Array.isArray(prev) ? prev : [];
-        // Prefer betId (backend sends it); fallback to a composite key.
-        const key = data?.betId
-          ? { betId: String(data.betId) }
-          : {
-              roundId: String(data?.roundId ?? ""),
-              userId: String(data?.userId ?? ""),
-              direction: String(data?.direction ?? ""),
-            };
 
-        const filtered = prevArr.filter((r) => {
-          if (key.betId) return String(r?.betId) !== key.betId;
-          return !(
-            String(r?.roundId ?? "") === key.roundId &&
-            String(r?.userId ?? "") === key.userId &&
-            String(r?.direction ?? "") === key.direction
-          );
+      // If this bet was already applied optimistically on this client, skip the heavy list merge.
+      const incomingBetId = data?.betId ? String(data.betId) : "";
+      if (incomingBetId) {
+        const seenAt = recentOwnBetIdsRef.current.get(incomingBetId);
+        if (seenAt) {
+          recentOwnBetIdsRef.current.delete(incomingBetId);
+          defer(() => {
+            setState((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    upTotalBet: data.upTotalBet ?? prev.upTotalBet,
+                    downTotalBet: data.downTotalBet ?? prev.downTotalBet,
+                  }
+                : prev
+            );
+          });
+          return;
+        }
+      }
+
+      defer(() => {
+        setLiveRows((prev) => {
+          const prevArr = Array.isArray(prev) ? prev : [];
+          // Prefer betId (backend sends it); fallback to a composite key.
+          const key = data?.betId
+            ? { betId: String(data.betId) }
+            : {
+                roundId: String(data?.roundId ?? ""),
+                userId: String(data?.userId ?? ""),
+                direction: String(data?.direction ?? ""),
+              };
+
+          const filtered = prevArr.filter((r) => {
+            if (key.betId) return String(r?.betId) !== key.betId;
+            return !(
+              String(r?.roundId ?? "") === key.roundId &&
+              String(r?.userId ?? "") === key.userId &&
+              String(r?.direction ?? "") === key.direction
+            );
+          });
+
+          return dedupeLiveRows([data, ...filtered]);
         });
-
-        return dedupeLiveRows([data, ...filtered]);
       });
-      setState((prev) => (prev ? { ...prev, upTotalBet: data.upTotalBet ?? prev.upTotalBet, downTotalBet: data.downTotalBet ?? prev.downTotalBet } : prev));
+      defer(() => {
+        setState((prev) => (prev ? { ...prev, upTotalBet: data.upTotalBet ?? prev.upTotalBet, downTotalBet: data.downTotalBet ?? prev.downTotalBet } : prev));
+      });
     };
     const onResult = async (msg) => {
       const data = msg?.data;
@@ -131,8 +188,23 @@ export default function GravityPage() {
           });
         }
 
-        const me = await getMyGravityHistory();
-        if (mounted) setMyHistory(me || []);
+        const resultRoundId = data?.roundId ?? null;
+        if (resultRoundId && lastResultRoundIdRef.current === resultRoundId) {
+          return;
+        }
+        const now = Date.now();
+        if (now - lastResultHistorySyncAtRef.current < 3000) {
+          return;
+        }
+        if (resultRoundId) {
+          lastResultRoundIdRef.current = resultRoundId;
+        }
+        lastResultHistorySyncAtRef.current = now;
+
+        const me = await fetchMyHistoryOnce(false);
+        if (mounted && Array.isArray(me) && me.length) {
+          setMyHistory(me.slice(-MAX_MY_HISTORY_ROWS));
+        }
       } catch {}
     };
     channel.subscribe("GRAVITY_STATE", onState);
@@ -144,7 +216,7 @@ export default function GravityPage() {
       channel.unsubscribe("GRAVITY_NEW_BET", onBet);
       channel.unsubscribe("GRAVITY_RESULT", onResult);
     };
-  }, [toast]);
+  }, [toast, fetchMyHistoryOnce]);
 
   // Keep a ref to the server round start timestamp for phase gating.
   useEffect(() => {
@@ -159,7 +231,7 @@ export default function GravityPage() {
 
   // Needed so the circular "timeline charge" can smoothly increase 0% -> 100%.
   useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 200);
+    const id = setInterval(() => setNowMs(Date.now()), 500);
     return () => clearInterval(id);
   }, []);
 
@@ -222,7 +294,7 @@ export default function GravityPage() {
       .sort((a, b) => a.t - b.t);
     if (!mapped.length) return null;
     return mapped[mapped.length - 1].price >= mapped[0].price;
-  }, [state]);
+  }, [state?.points]);
 
   const timelineColor =
     phaseLocal === "betting"
@@ -296,7 +368,7 @@ export default function GravityPage() {
     }
 
     return dense;
-  }, [state]);
+  }, [state?.points]);
   const chartMin = useMemo(() => {
     if (!chartData.length) return 0;
     return Math.min(...chartData.map((d) => d.price)) - 2;
@@ -353,39 +425,26 @@ export default function GravityPage() {
   const handleBet = async (dir = direction) => {
     try {
       const res = await placeGravityBet({ amount: Number(amount), direction: dir }, dispatch);
-      setDirection(dir);
       const betId = res?.betId || res?.row?.betId;
       const betAmount = res?.betAmount ?? Number(amount);
       const roundId = res?.roundId ?? state?.roundId;
-      toast.success(`You bet $${Number(betAmount || 0).toFixed(2)} in round ${roundId ?? "-"}`);
       setOptimisticPlacedSides((prev) => ({ ...prev, [String(dir).toLowerCase()]: true }));
 
-      // Optimistic UI: show it immediately in both the right panel and Bet History table.
-      // Bet history UI only refreshes on GRAVITY_RESULT otherwise.
-      const userObj = res?.user || {};
-      const row = {
-        userId: userObj?.userId,
-        userName: userObj?.altas,
-        avatar: userObj?.avatar,
-        amount: Number(betAmount || 0),
-        betAmount: Number(betAmount || 0),
-        direction: dir,
-        roundId: roundId ?? state?.roundId,
-        betId: betId ? String(betId) : undefined,
-        isBot: false,
-      };
-      setLiveRows((prev) => dedupeLiveRows([row, ...(Array.isArray(prev) ? prev : [])]));
+      // Mark as own bet so the immediate Ably echo doesn't trigger duplicate heavy list work.
+      if (betId) {
+        recentOwnBetIdsRef.current.set(String(betId), Date.now());
+      }
 
+      // Keep click path as light as possible; avoid optimistic history row rendering
+      // to prevent bettor-only chart hitching. History sync arrives from result event.
       if (betId && roundId) {
-        const optimisticHistoryEntry = {
-          _id: String(betId),
-          roundId,
-          direction: dir,
-          betAmount: Number(betAmount || 0),
-          winAmount: 0,
-          createdAt: new Date().toISOString(),
-        };
-        setMyHistory((prev) => [...(Array.isArray(prev) ? prev : []), optimisticHistoryEntry]);
+        // no-op: intentionally skipping optimistic myHistory update for smoother graph motion
+      }
+
+      // Cleanup old ids to keep map tiny.
+      const now = Date.now();
+      for (const [id, ts] of recentOwnBetIdsRef.current.entries()) {
+        if (now - ts > 10000) recentOwnBetIdsRef.current.delete(id);
       }
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to place bet");
