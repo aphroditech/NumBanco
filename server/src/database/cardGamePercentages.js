@@ -6,9 +6,9 @@ export const initializeCardGamePercentages = async () => {
 
     if (count === 0) {
       await CardGamePercentage.insertMany([
-        { arrow: '>', easy: 60, normal: 60, hard: 50 },
-        { arrow: '=', easy: 57, normal: 57, hard: 48 },
-        { arrow: '<', easy: 54, normal: 54, hard: 46 },
+        { arrow: '>', easy: 75, normal: 65, hard: 55 },
+        { arrow: '=', easy: 8, normal: 6, hard: 4 },
+        { arrow: '<', easy: 15, normal: 12, hard: 9 },
       ]);
     }
   } catch (error) {

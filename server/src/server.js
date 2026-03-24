@@ -77,9 +77,9 @@ connectDB()
             // startPartnerDepositCron(ably);
             // startWithdrawApprovalCron(ably);
             // getUserStatusChannel(ably);
-            // cardGameBot(ably);
-            // pumpingBot(ably);
-            // jokerCrashBot(ably);
+            cardGameBot(ably);
+            pumpingBot(ably);
+            jokerCrashBot(ably);
             // rubicBot(ably);
             // miningBot(ably);
             // minesBot(ably);

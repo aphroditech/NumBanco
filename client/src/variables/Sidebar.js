@@ -38,7 +38,7 @@ import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
 import TrafficIcon from '@mui/icons-material/Traffic';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-
+import CoinPage from "views/Coin/CoinPage";
 
 export const TierA = {
     path: "/tierA",
@@ -195,5 +195,13 @@ export const AlphaTreeGame = {
     name: "ALPHA TREE",
     icon: <ForestIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AlphaTreePage,
+    layout: "/game",
+}
+
+export const Coin = {
+    path: "/coin",
+    name: "COIN FLIP",
+    icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CoinPage,
     layout: "/game",
 }

@@ -213,14 +213,14 @@ export default function JokerCrashPage() {
 
     const handleBet = async () => {
         if (isFlipping) return;
-        setIsPumpingWin(false);
-        setIsPumpingMulti(false);
-        if (pumpingMultiTimeoutRef.current) clearTimeout(pumpingMultiTimeoutRef.current);
-        setWin(null);
         const res = await jokerCrashBet({ amount, operator }, dispatch, history);
-
-        console.log("res", res);
+        
         if (res) {
+            console.log("res", res);
+            setIsPumpingWin(false);
+            setIsPumpingMulti(false);
+            if (pumpingMultiTimeoutRef.current) clearTimeout(pumpingMultiTimeoutRef.current);
+            setWin(null);
             setBet(true);
             setIsFlipping(true);
             setFlipTransitionEnabled(true);
