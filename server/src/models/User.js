@@ -533,6 +533,112 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  cardGameMode: {
+    type: String,
+    default: 1
+  },
+
+  cardGameHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        arrow: {
+          type: String,
+          enum: ['<', '=', '>'],
+        },
+        left: {
+          type: Number,
+        },
+        right: {
+          type: Number,
+        },
+        win: {
+          type: Number,
+          default: 0
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        cardGameBalance: {
+          type: Number,
+          default: 0
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        },
+      }
+    ],
+    default: []
+  },
+
+  jokerCrashMode: {
+    type: String,
+    default: 1
+  },
+
+  jokerCrashHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        win: {
+          type: Number,
+          required: true
+        },
+        step: {
+          type: Number,
+          required: true,
+        },
+        multi: {
+          type: Number,
+          required: true
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        jokerCrashBalance: {
+          type: Number,
+          default: 0
+        },
+        info: {
+          type: [
+            {
+              step: Number,
+              card: Number,
+              multi: Number,
+              status: Number,
+              operator: String,
+              imulti: Number,
+            }
+          ]
+        },
+        active: {
+          type: Boolean,
+          default: false
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
   rubicHistory: {
     type: [
       {

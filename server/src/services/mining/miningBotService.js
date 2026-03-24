@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import MiningSettings from "../../models/MiningSettings.js";
-import MiningResult from "../../models/MiningResult.js";
+import MiningSettings from "../../models/jackal/MiningSettings.js";
+import MiningResult from "../../models/jackal/MiningResult.js";
 
 const MIN_TURNS = 1;
 const MAX_TURNS = 8;
@@ -78,6 +78,7 @@ export const miningBot = async (ably) => {
                 multiplier = Math.round(rawMult * 100) / 100;
                 winAmount = Math.round(betAmount * multiplier * 1000) / 1000;
                 user.totalEarn = Math.round((user.totalEarn + winAmount) * 1000) / 1000;
+                user.miningWinAmount = Math.round((user.miningWinAmount + winAmount) * 1000) / 1000;
             }
             user.totalBet = Math.round((user.totalBet + betAmount) * 1000) / 1000;
             await user.save();

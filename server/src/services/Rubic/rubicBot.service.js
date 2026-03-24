@@ -1,8 +1,8 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import RubicResult from "../../models/RubicResult.js";
+import RubicResult from "../../models/rubic/RubicResult.js";
 
-import RubicSetting from "../../models/RubicSetting.js";
+import RubicSetting from "../../models/rubic/RubicSetting.js";
 
 const DICE = [1, 2, 3, 4, 5, 6];
 
@@ -140,12 +140,13 @@ export const rubicBot = async (ably) => {
                 multiplier = calc.multiplier;
                 winAmount = calc.winAmount;
                 user.totalEarn = Math.round((user.totalEarn + winAmount) * 1000) / 1000;
+                user.rubicWinAmount = Math.round((user.rubicWinAmount + winAmount) * 1000) / 1000;
             }
             user.totalBet = Math.round((user.totalBet + betAmount) * 1000) / 1000;
 
             await user.save();
 
-            await RubicResult.create({
+            const newResult = new RubicResult({
                 userName: user.altas,
                 avatar: user.avatar,
                 isWin,
@@ -154,6 +155,7 @@ export const rubicBot = async (ably) => {
                 multiplier,
                 createAt: new Date(),
             });
+            await newResult.save();
             const recent = await RubicResult.find()
                 .sort({ createAt: -1 }) // newest first
                 .limit(30)

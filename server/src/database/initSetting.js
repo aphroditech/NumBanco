@@ -24,6 +24,9 @@ export const initializeSetting = async () => {
                 tronLimitFee: 5,
                 pumpingLimitTarget: 20,
                 pumpingLimitAmount: 100,
+                cardGameGreaterMultipler: 1.2,
+                cardGameLesserMultipler: 2,
+                cardGameEqualMultipler: 3,
             });
             await defaultSetting.save();
             console.log('✅ Default Setting document created');

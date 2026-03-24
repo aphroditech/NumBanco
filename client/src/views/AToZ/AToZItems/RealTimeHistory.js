@@ -21,16 +21,22 @@ import Loading from 'components/Loading/Loading';
 function RealTimeHistory() {
     const { aToZResults, setAToZResults } = useAblyAtoZResults();
     const history = useHistory();
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect( async () => {
         let isMounted = true;
         const res = await getAToZResults(history);
         if (isMounted) {
             setAToZResults(res.aToZResults);
+            setIsLoading(false);
         }
         return () => { isMounted = false; };
     }, [history]);
     
+    if (isLoading) {
+        return <Loading />;
+    }
+
     return (
         <Card
             p="24px"

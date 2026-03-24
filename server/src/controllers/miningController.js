@@ -1,9 +1,9 @@
-import MiningSettings from "../models/MiningSettings.js";
+import MiningSettings from "../models/jackal/MiningSettings.js";
 import User from "../models/User.js";
-import MiningHistory from "../models/MiningHistory.js";
-import MiningResult from "../models/MiningResult.js";
+import MiningHistory from "../models/jackal/MiningHistory.js";
+import MiningResult from "../models/jackal/MiningResult.js";
 
-import CalendarMining from "../models/CalendarMining.js";
+import CalendarMining from "../models/jackal/CalendarMining.js";
 
 
 export const checkCanWin = async (req, res) => {

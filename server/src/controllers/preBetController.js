@@ -1,4 +1,4 @@
-import BetTicket from "../models/BetTicket.js";
+import BetTicket from "../models/numBanco/BetTicket.js";
 
 export const getPreBetData = async (req, res) => {
     try {

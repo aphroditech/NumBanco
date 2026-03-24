@@ -114,9 +114,6 @@ function History() {
                                         <Th color="white" textAlign="left" className="real_th_font" width="12%">
                                             Win
                                         </Th>
-                                        <Th color="white" textAlign="left" className="real_th_font" width="12%">
-                                            Level
-                                        </Th>
                                         <Th color="white" textAlign="left" className="real_th_font" width="15%">
                                             Multiplier
                                         </Th>
@@ -163,17 +160,6 @@ function History() {
                                                     fontWeight='normal'
                                                 >
                                                     ${truncateToTwo(result.winAmount)}
-                                                </Td>
-                                                <Td
-                                                    textAlign="left"
-                                                    border={lastItem ? "none" : null}
-                                                    borderBottomColor='#56577A'
-                                                    overflow="hidden"
-                                                    fontSize='sm'
-                                                    color='#fff'
-                                                    fontWeight='normal'
-                                                >
-                                                    {result.level}
                                                 </Td>
                                                 <Td
                                                     textAlign="left"

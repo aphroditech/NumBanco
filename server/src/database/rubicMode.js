@@ -1,4 +1,4 @@
-import RubicMode from "../models/RubicMode.js";
+import RubicMode from "../models/rubic/RubicMode.js";
 
 export const initializeRubicMode = async () => {
     try {

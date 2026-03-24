@@ -1,4 +1,4 @@
-import RocketSettings from '../models/RocketSettings.js';
+import RocketSettings from '../models/rocketShot/RocketSettings.js';
 
 export const initRocketSetting = async () => {
     try {

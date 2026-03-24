@@ -73,6 +73,18 @@ const settingSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    cardGameGreaterMultipler: {
+        type: Number,
+        required: true
+    },
+    cardGameLesserMultipler: {
+        type: Number,
+        required: true
+    },
+    cardGameEqualMultipler: {
+        type: Number,
+        required: true
+    },
 }, { timestamps: true });
 
 export default mongoose.model('Setting', settingSchema);

@@ -1,8 +1,8 @@
 import User from "../models/User.js";
-import AToZSetting from "../models/AToZSetting.js";
-import AToZHistory from "../models/AToZHistory.js";
-import AToZResult from "../models/AToZResult.js";
-import CalendarDigit from "../models/CalendarDigit.js";
+import AToZSetting from "../models/digitsSlot/AToZSetting.js";
+import AToZHistory from "../models/digitsSlot/AToZHistory.js";
+import AToZResult from "../models/digitsSlot/AToZResult.js";
+import CalendarDigit from "../models/digitsSlot/CalendarDigit.js";
 
 export const bet = async (req, res) => {
     try {

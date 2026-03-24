@@ -38,16 +38,23 @@ import NumbersIcon from '@mui/icons-material/Numbers';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import SupportPage from "views/Support/Support";
 import GavelIcon from '@mui/icons-material/Gavel';
+import DangerousIcon from '@mui/icons-material/Dangerous';
+import WhatshotIcon from '@mui/icons-material/Whatshot';
+import StyleIcon from '@mui/icons-material/Style';
+
 import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
 import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
 import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import FishingPage from "views/Fishing/FishingPage";
+import CardGamePage from "views/CardGame/CardGamePage";
+import JokerCrashPage from "views/JokerCrash/JokerCrashPage";
 import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
 import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
+import CoinPage from "views/Coin/CoinPage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -56,6 +63,8 @@ import { GiChicken, GiFishingHook } from "react-icons/gi";
 import AToZPage from "views/AToZ/AToZ";
 import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+
 
 import {
   DocumentIcon,
@@ -128,6 +137,22 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/card-game",
+    name: "CARD GAME",
+    icon: <StyleIcon  style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CardGamePage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/joker-crash",
+    name: "JOKER CRASH",
+    icon: <WhatshotIcon  style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: JokerCrashPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/gravity",
     name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -188,6 +213,14 @@ var dashRoutes = [
     name: "ROCKET SHOT",
     icon: <RocketLaunchIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: RocketShotPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/coin",
+    name: "COIN",
+    icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CoinPage,
     layout: "/game",
   },
   {

@@ -1036,7 +1036,7 @@ export default function PumpingPage() {
                                                     }
                                                 }
                                             }
-                                            label={isMultiBetActive ? "STOP" : "Multi BET"}
+                                            label={isMultiBetActive ? "STOP" : "Auto BET"}
                                         />
                                     </Grid>
                                 </FormControl>
@@ -1291,10 +1291,10 @@ export default function PumpingPage() {
 
                                         <Box>
                                             <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                5. Multi BET
+                                                5. Auto BET
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                By clicking the 'Multi BET' button, you can place bets on multiple games simultaneously. This feature allows you to select several game outcomes at once, giving you the opportunity to maximize your chances of winning with multiple bets in one go.
+                                                By clicking the 'Auto BET' button, you can place bets on auto games simultaneously. This feature allows you to select several game outcomes at once, giving you the opportunity to maximize your chances of winning with multiple bets in one go.
                                             </Text>
                                         </Box>
                                         <Box>

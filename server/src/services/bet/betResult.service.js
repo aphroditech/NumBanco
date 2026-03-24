@@ -1,8 +1,8 @@
 import User from "../../models/User.js";
-import Bet_TierA from "../../models/Bet_TierA.js";
-import Bet_TierB from "../../models/Bet_TierB.js";
-import Bet_TierC from "../../models/Bet_TierC.js";
-import BetTicket from "../../models/BetTicket.js";
+import Bet_TierA from "../../models/numBanco/Bet_TierA.js";
+import Bet_TierB from "../../models/numBanco/Bet_TierB.js";
+import Bet_TierC from "../../models/numBanco/Bet_TierC.js";
+import BetTicket from "../../models/numBanco/BetTicket.js";
 import RealTimeWinner from "../../models/RealTimeWinner.js";
 import * as Random from "../../math.randomfunctions/randomResult.js";
 import { getChannel } from "../ably.service.js";
