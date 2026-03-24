@@ -1,5 +1,4 @@
 import User from "../models/User.js";
-import { sendUserResponse } from "../utils/responses.js";
 import CocoView from "../models/CocoView.js";
 import CocoState from "../models/CocoState.js";
 import CocoRate from "../models/CocoRate.js";
@@ -18,6 +17,21 @@ const multiTable = [
 
 const TARGET_SUM = 6;
 const RATE_CACHE_TTL_MS = 30 * 1000;
+const COCO_USER_SELECT = {
+    userId: 1,
+    userAuthId: 1,
+    username: 1,
+    altas: 1,
+    avatar: 1,
+    membership: 1,
+    balance: 1,
+    cocoHistory: 1,
+    cocoMode: 1,
+    cocoTotalProfit: 1,
+    cocoTotalBet: 1,
+    totalhistory: 1,
+    partnerLevel: 1,
+};
 
 const rand = (min, max) => min + Math.random() * (max - min);
 
@@ -154,7 +168,7 @@ async function getCocoSuccessRateByCombo(combo, cocoMode) {
 }
 
 async function getState(userId) {
-    return CocoState.findOne({ userId });
+    return CocoState.findOne({ userId }).lean();
 }
 
 async function setState(userId, state) {
@@ -182,6 +196,22 @@ async function scheduleCreditAndBroadcast(userId, win, app) {
     }
 }
 
+function buildCocoUserPayload(user) {
+    return {
+        userId: user.userId,
+        userAuthId: user.userAuthId,
+        username: user.username,
+        altas: user.altas,
+        avatar: user.avatar,
+        membership: user.membership,
+        balance: user.balance,
+        cocoHistory: user.cocoHistory,
+        cocoMode: user.cocoMode,
+        cocoTotalProfit: user.cocoTotalProfit,
+        cocoTotalBet: user.cocoTotalBet,
+    };
+}
+
 
 export const smash = async (req, res) => {
     try {
@@ -196,16 +226,10 @@ export const smash = async (req, res) => {
             return res.status(400).json({ error: "Invalid bet amount" });
         }
 
-        const user = await User.findOne(
-            { userAuthId: req.user.userAuthId },
-            {
-                "wallets.eth.privateKey": 0,
-                "wallets.bsc.privateKey": 0,
-                "wallets.tron.privateKey": 0,
-                password: 0,
-                country: 0,
-            }
-        );
+        const [user, stateFromDb] = await Promise.all([
+            User.findOne({ userAuthId: req.user.userAuthId }, COCO_USER_SELECT),
+            getState(userId),
+        ]);
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });
@@ -219,7 +243,7 @@ export const smash = async (req, res) => {
         }
 
         user.balance = newBalance;
-        let state = await getState(userId);
+        let state = stateFromDb;
 
 
         // Allow changing betAmount between hits: always sync the in-round state bet
@@ -242,7 +266,6 @@ export const smash = async (req, res) => {
                 totalSum: 0,
                 ready: false,
             };
-            await setState(userId, state);
         }
 
         // FINAL HIT (tower break on next smash)
@@ -277,7 +300,7 @@ export const smash = async (req, res) => {
 
             await Promise.all([
                 clearState(userId),
-                user.save(),
+                user.save({ validateBeforeSave: false }),
                 CocoView.create({
                 userId: req.user.userId,
                 bet: state.bet,
@@ -292,7 +315,9 @@ export const smash = async (req, res) => {
                 CREDIT_DELAY_MS
             );
 
-            return sendUserResponse(res, "", user, {
+            return res.json({
+                message: "",
+                user: buildCocoUserPayload(user),
                 multi: finalMulti,
                 lastWin: win,
                 combo: state.successCount,
@@ -310,13 +335,6 @@ export const smash = async (req, res) => {
         if (!success) {
             state.successCount = 0;
             state.currentMultiplier = 0.0;
-            await setState(userId, {
-                bet: state.bet,
-                successCount: state.successCount,
-                currentMultiplier: state.currentMultiplier,
-                totalSum: state.totalSum,
-                ready: state.ready,
-            });
 
             // Store the result snapshot for this (failed) smash.
             user.cocoHistory = pushWithCap(user.cocoHistory, {
@@ -331,7 +349,14 @@ export const smash = async (req, res) => {
             applyCocoResultAndUpdateMode(user, state.bet, 0);
 
             await Promise.all([
-                user.save(),
+                setState(userId, {
+                    bet: state.bet,
+                    successCount: state.successCount,
+                    currentMultiplier: state.currentMultiplier,
+                    totalSum: state.totalSum,
+                    ready: state.ready,
+                }),
+                user.save({ validateBeforeSave: false }),
                 CocoView.create({
                 userId: req.user.userId,
                 bet: state.bet,
@@ -347,7 +372,9 @@ export const smash = async (req, res) => {
                 CREDIT_DELAY_MS
             );
 
-            return sendUserResponse(res, "", user, {
+            return res.json({
+                message: "",
+                user: buildCocoUserPayload(user),
                 multi: 0,
                 lastWin: 0,
                 combo: 0,
@@ -407,7 +434,7 @@ export const smash = async (req, res) => {
                 totalSum: state.totalSum,
                 ready: state.ready,
             }),
-            user.save(),
+            user.save({ validateBeforeSave: false }),
             CocoView.create({
                 userId: req.user.userId,
                 bet: state.bet,
@@ -422,7 +449,9 @@ export const smash = async (req, res) => {
             CREDIT_DELAY_MS
         );
 
-        return sendUserResponse(res, "", user, {
+        return res.json({
+            message: "",
+            user: buildCocoUserPayload(user),
             multi: state.currentMultiplier,
             lastWin: win,
             combo: state.successCount,
@@ -447,20 +476,14 @@ export const restart = async (req, res) => {
 
         const user = await User.findOne(
             { userAuthId: req.user.userAuthId },
-            {
-                "wallets.eth.privateKey": 0,
-                "wallets.bsc.privateKey": 0,
-                "wallets.tron.privateKey": 0,
-                password: 0,
-                country: 0,
-            }
+            COCO_USER_SELECT
         );
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
-        return sendUserResponse(res, "", user);
+        return res.json({ message: "", user: buildCocoUserPayload(user) });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }

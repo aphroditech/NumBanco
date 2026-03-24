@@ -43,14 +43,14 @@ const EGG_SLOT_LIFT_PX = 48;
 const CLOUD_RISE_PER_BREAK_PX = 48;
 const EGG_TOWER_COUNT = 7;  
 /** egg1 breaks → remove egg1, egg2–egg7 rise (gap at old egg7 spot) → new egg fills bottom */
-const EGG_NORMAL_REMOVE_TOP_MS = 380;
+const EGG_NORMAL_REMOVE_TOP_MS = 260;
 /** Pause so empty bottom slot is visible before new egg7 appears */
-const EGG_NORMAL_ADD_BOTTOM_RISE_MS = 180;
+const EGG_NORMAL_ADD_BOTTOM_RISE_MS = 110;
 /** Big multi (final): chicken lands here; eggs all break then cleared */
 const CHICKEN_LAND_BOTTOM = 22;
-const BIG_MULTI_BREAK_EACH_MS = 130;
+const BIG_MULTI_BREAK_EACH_MS = 90;
 const BIG_MULTI_CLEAR_EGGS_MS = BIG_MULTI_BREAK_EACH_MS * EGG_TOWER_COUNT + 120;
-const BIG_MULTI_CHICKEN_DOWN_MS = 900;
+const BIG_MULTI_CHICKEN_DOWN_MS = 620;
 /**
  * One vertical loop (px). Taller than typical sky so each cycle has empty sky on top
  * and clouds only in the lower band — recycled clouds enter from bottom and rise.
@@ -61,7 +61,7 @@ const CLOUD_LAND_MASK =
     'linear-gradient(to bottom, #000 0%, #000 70%, rgba(0,0,0,0.35) 84%, transparent 100%)';
 /** Smooth motion for egg gap + cloud scroll */
 const EGG_TOWER_SMOOTH_MS = 120;
-const CLOUD_SCROLL_SMOOTH_MS = 480;
+const CLOUD_SCROLL_SMOOTH_MS = 260;
 /**
  * `top` is offset from each band’s start (0, CLOUD_LOOP_PX, …).
  * Keep values in the lower ~35% of the band so repeats rise from below, not mid-sky.
@@ -79,7 +79,11 @@ const COCO_SCENE_DEFAULT_HEIGHT = 506;
 /** Minimum time the "Starting game…" fog stays visible after Play */
 const START_GAME_FOG_MIN_MS = 900;
 /** Minimum visible time for SMASH loading state */
-const SMASH_LOADING_MIN_MS = 1000;
+const SMASH_LOADING_MIN_MS = 300;
+const CHICKEN_HIT_SWITCH_MS = 110;
+const RESULT_START_DELAY_MS = 40;
+const SHAKE_STEP_MS = 28;
+const SHAKE_TOTAL_MS = 180;
 const COCO_SESSION_STORAGE_KEY = "cocoGameSessionState";
 
 function positiveMod(n, m) {
@@ -319,12 +323,12 @@ export default function CocoPage() {
             setShakeX(i % 2 === 0 ? -6 : 6);
             i++;
     
-        }, 40); // speed of shake
+        }, SHAKE_STEP_MS); // speed of shake
     
         const timeoutId = setTimeout(() => {
             clearInterval(id);
             setShakeX(0);
-        }, 300); // duration of shake
+        }, SHAKE_TOTAL_MS); // duration of shake
     
         return () => {
             clearInterval(id);
@@ -524,7 +528,7 @@ export default function CocoPage() {
             registerAnimTimeout(() => {
                 setAnimState("hit");
                 setChickenBottom(CHICKEN_BOTTOM_IDLE);
-            }, 160);
+            }, CHICKEN_HIT_SWITCH_MS);
     
             // wait result
             const data = await smashPromise;
@@ -663,7 +667,7 @@ export default function CocoPage() {
                     }
                 }
     
-            }, 150);
+            }, RESULT_START_DELAY_MS);
     
             setLatestWin((data?.lastWin ?? 0).toFixed(2));
             setLatestMulti((data?.multi ?? 0).toFixed(2));
@@ -1259,8 +1263,8 @@ export default function CocoPage() {
                                                 animState === "finalDown" ||
                                                 animState === "finalStand" ||
                                                 animState === "showMulti"
-                                                    ? "bottom 0.95s cubic-bezier(0.33, 1, 0.68, 1)"
-                                                    : "all 0.2s linear",
+                                                    ? "bottom 0.62s cubic-bezier(0.2, 0.8, 0.2, 1)"
+                                                    : "all 0.14s cubic-bezier(0.2, 0.8, 0.2, 1)",
 
                                             bottom: chickenBottom,
 
