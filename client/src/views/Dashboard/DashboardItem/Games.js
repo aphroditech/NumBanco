@@ -26,6 +26,8 @@ import jackal from "assets/img/Games/jackal.png"
 import rocket from "assets/img/Games/rocket.png"
 import fishing from "assets/img/Games/fishing.png"
 import mine from "assets/img/Games/mine.png"
+import cardGame from "assets/img/Games/cardgame.png"
+import jokerCrash from "assets/img/Games/jokercrash.png"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -37,6 +39,8 @@ const DASHBOARD_GAMES = [
     { img: rubic, name: "Rubic", path: "/game/rubic", reduxKey: "rubicUsers", tickMs: 6000 },
     { img: pumping, name: "Pumping", path: "/game/pumping", reduxKey: "pumpingUsers", tickMs: 3800 },
     { img: fishing, name: "Fishing", path: "/game/fishing", reduxKey: "fishingUsers", tickMs: 4200 },
+    { img: jokerCrash, name: "Joker Crash", path: "/game/joker-crash", reduxKey: "jokerCrashUsers", tickMs: 4200 },
+    { img: cardGame, name: "Card Game", path: "/game/card-game", reduxKey: "cardGameUsers", tickMs: 4200 },
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
     { img: dove, name: "Dove Cross", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },

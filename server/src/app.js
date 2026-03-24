@@ -27,8 +27,10 @@ import miningRoutes from "./routes/miningRoutes.js";
 import rocketRoutes from "./routes/rocketRoutes.js";
 import cocoRoutes from "./routes/cocoRoutes.js";
 import fishingRoutes from "./routes/fishingRoutes.js";
+import jokerCrashRoutes from "./routes/jokerCrashRoutes.js";
 import minesRoutes from "./routes/minesRoutes.js";
 import gravityRoutes from "./routes/gravityRoutes.js";
+import cardGameRoutes from "./routes/cardGameRoutes.js";
 import moralisWebhook from "./webhooks/moralisWebhook.js";
 dotenv.config();
 
@@ -66,6 +68,7 @@ app.use("/api/stats", statsRouter);
 app.use("/api/ably", ablyRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/pumping", pumpingRoutes);
+app.use("/api/cardGame", cardGameRoutes);
 app.use("/api/rubic", rubicRoutes);
 app.use("/api/mining", miningRoutes);
 app.use("/api/rocket", rocketRoutes);
@@ -73,6 +76,7 @@ app.use("/api/coco", cocoRoutes);
 app.use("/api/fishing", fishingRoutes);
 app.use("/api/mines", minesRoutes);
 app.use("/api/gravity", gravityRoutes);
+app.use("/api/jokerCrash", jokerCrashRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },

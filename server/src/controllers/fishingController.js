@@ -88,6 +88,10 @@ export const bet = async (req, res) => {
     const user = await getFishingUser(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    if(amount > user.balance) {
+        return sendUserResponse(res, "You don't have enough balance to bet", user, {status: "error"});
+    }
+
     user.balance -= amount;
 
     user.totalBet = addToThousand(user.totalBet, amount);
@@ -125,8 +129,9 @@ export const bet = async (req, res) => {
     // Avoid Mongoose optimistic concurrency failures (VersionError) on fast repeated requests.
     await user.save({ optimisticConcurrency: false });
 
-    return sendUserResponse(res, "", user);
+    return sendUserResponse(res, "", user, {status: "success"});
 };
+
 export const pullStay = async (req, res) => {
     try {
         const { userId } = req.user;
