@@ -98,20 +98,33 @@ export const bet = async (req, res) => {
 };
 
 function getMultiplier(mode, normalMultiple, hardMultiple) {
-
-    const multipliers = mode === 0 ? normalMultiple : hardMultiple;
-
-    const totalWeight = multipliers.reduce((sum, m) => sum + m.probability, 0);
+    const defaultNormalMultipliers = [{ number: 0.5, probability: 5 }];
+    const defaultHardMultipliers = [{ number: 1, probability: 5 }];
+    const candidate = mode === 0 ? normalMultiple : hardMultiple;
+    const fallback = mode === 0 ? defaultNormalMultipliers : defaultHardMultipliers;
+    const multipliers = Array.isArray(candidate) && candidate.length > 0 ? candidate : fallback;
+    const normalizedMultipliers = multipliers.filter(
+        (m) => Number.isFinite(Number(m?.number)) && Number.isFinite(Number(m?.probability)) && Number(m.probability) > 0
+    );
+    if (normalizedMultipliers.length === 0) {
+        return fallback[0].number;
+    }
+    const totalWeight = normalizedMultipliers.reduce((sum, m) => sum + Number(m.probability), 0);
+    if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+        return normalizedMultipliers[0].number;
+    }
   
     let random = Math.random() * totalWeight;
   
-    for (let m of multipliers) {
-        if (random < m.probability) {
-            return m.number;
+    for (const m of normalizedMultipliers) {
+        const probability = Number(m.probability);
+        const number = Number(m.number);
+        if (random < probability) {
+            return number;
         }
-        random -= m.probability;
+        random -= probability;
     }
-    return 0;
+    return Number(normalizedMultipliers[normalizedMultipliers.length - 1].number);
 }
 
 // check if the user should be in hard mode or normal mode Normal to Hard

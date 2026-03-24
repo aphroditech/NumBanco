@@ -13,7 +13,9 @@ export const rocketBet = async (data, dispatch, history) => {
         return res.data.multiplier;
     } catch (error) {
         console.error(error);
-        if(error.response.message) toast.error(err.response.message);
+        if (error.response?.data?.message) {
+            toast.error(error.response.data.message);
+        }
         if (error.response?.status === 401 && history) {
             history.push("/auth/landing");
         }
