@@ -27,17 +27,19 @@ import miningRoutes from "./routes/miningRoutes.js";
 import rocketRoutes from "./routes/rocketRoutes.js";
 import cocoRoutes from "./routes/cocoRoutes.js";
 import fishingRoutes from "./routes/fishingRoutes.js";
+import jokerCrashRoutes from "./routes/jokerCrashRoutes.js";
 import minesRoutes from "./routes/minesRoutes.js";
 import gravityRoutes from "./routes/gravityRoutes.js";
+import cardGameRoutes from "./routes/cardGameRoutes.js";
 import cloudSpreadRoutes from "./routes/cloudSpreadRoutes.js";
 import alphaTreeRoutes from "./routes/alphaTreeRoutes.js";
 import moralisWebhook from "./webhooks/moralisWebhook.js";
 import aToZRoutes from "./routes/aToZRoutes.js";
 dotenv.config();
 
+/** Dev often uses localhost OR 127.0.0.1 — both must be allowed or the browser blocks API calls. */
 const app = express();
 
-/** Dev often uses localhost OR 127.0.0.1 — both must be allowed or the browser blocks API calls. */
 const defaultCorsOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
@@ -79,6 +81,7 @@ app.use("/api/stats", statsRouter);
 app.use("/api/ably", ablyRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/pumping", pumpingRoutes);
+app.use("/api/cardGame", cardGameRoutes);
 app.use("/api/rubic", rubicRoutes);
 app.use("/api/mining", miningRoutes);
 app.use("/api/rocket", rocketRoutes);
@@ -86,6 +89,7 @@ app.use("/api/coco", cocoRoutes);
 app.use("/api/fishing", fishingRoutes);
 app.use("/api/mines", minesRoutes);
 app.use("/api/gravity", gravityRoutes);
+app.use("/api/jokerCrash", jokerCrashRoutes);
 app.use("/api/cloud-spread", cloudSpreadRoutes);
 app.use("/api/aToZ", aToZRoutes);
 app.use("/api/alpha-tree", alphaTreeRoutes);

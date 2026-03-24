@@ -4,16 +4,36 @@ import RocketHistory from "../models/rocketShot/RocketHistory.js";
 import RocketResult from "../models/rocketShot/RocketResult.js";
 import CalendarRocket from "../models/rocketShot/CalendarRocket.js";
 
+let rocketSettingsCache = null;
+let rocketSettingsCacheAt = 0;
+const ROCKET_SETTINGS_CACHE_MS = 5000;
+
+async function getRocketSettingsCached() {
+    const now = Date.now();
+    if (rocketSettingsCache && now - rocketSettingsCacheAt < ROCKET_SETTINGS_CACHE_MS) {
+        return rocketSettingsCache;
+    }
+    const settings = await RocketSettings.findOne().lean();
+    rocketSettingsCache = settings;
+    rocketSettingsCacheAt = now;
+    return settings;
+}
+
 export const bet = async (req, res) => {
     try {
         const { bet, level } = req.body;
-        const betNum = Number(bet) || 0;
-        const [baseUser, rocketSettings] = await Promise.all([
-            User.findById(req.user._id).select("balance rocketAmount rocketWinAmount rocketMode"),
-            RocketSettings.findOne().lean()
+        const betAmount = Number(bet);
+        if (!Number.isFinite(betAmount) || betAmount <= 0) {
+            return res.status(400).json({ message: "Invalid bet amount" });
+        }
+
+        const [user, rocketSettings] = await Promise.all([
+            User.findById(req.user._id)
+                .select("balance rocketAmount rocketWinAmount rocketMode")
+                .lean(),
+            getRocketSettingsCached()
         ]);
 
-        const user = baseUser;
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
@@ -21,56 +41,55 @@ export const bet = async (req, res) => {
             return res.status(404).json({ error: "Rocket settings not found" });
         }
 
-        if (betNum <= 0) {
-            return res.status(400).json({ message: "Invalid bet amount." });
-        }
-
-        if (betNum > user.balance) {
+        if (betAmount > user.balance) {
             return res.status(400).json({message: "You don't have engough money to fire."})
         }
 
         const normalToHard = checkNormalToHard(user.rocketAmount, user.rocketWinAmount, rocketSettings.limitNormalToHard);
         const hardToNormal = checkHardToNormal(user.rocketAmount, user.rocketWinAmount, rocketSettings.limitHardToNormal);
+
+        let nextMode = user.rocketMode;
         // mode check and change
-        let rocketMode = user.rocketMode;
-        if (rocketMode === 0 && normalToHard) {
-            rocketMode = 1;
-        } else if (rocketMode === 1 && hardToNormal) {
-            rocketMode = 0;
+        if (user.rocketMode === 0 && normalToHard) {
+            nextMode = 1;
+        } else if (user.rocketMode === 1 && hardToNormal) {
+            nextMode = 0;
         }
 
         // get multiplier via mode
-        let multiplier = getMultiplier(rocketMode, rocketSettings.normalMultiple, rocketSettings.hardMultiple);
-
-        await User.updateOne(
-            { _id: user._id },
-            {
-                $set: { rocketMode },
-                $inc: {
-                    balance: -betNum,
-                    totalBet: betNum,
-                    lotterybet: betNum,
-                    refreshBet: betNum,
-                    rocketAmount: betNum,
-                },
-                $push: {
-                    totalhistory: {
-                        amount: -betNum,
-                        date: new Date(),
-                        type: "Rocket Shot",
-                    }
-                }
-            }
-        );
-
+        let multiplier = getMultiplier(nextMode, rocketSettings.normalMultiple, rocketSettings.hardMultiple);
+        
         if (level === "normal") {
             multiplier *= 1100;
-            multiplier /= 1000;
+            multiplier /= 1000;  
         } else if (level === "hard") {
             multiplier *= 1200;
             multiplier /= 1000;
         }
-        return res.json({ balance: -betNum, multiplier: multiplier });
+
+        // single DB write for this endpoint (instead of multiple save() calls)
+        await User.updateOne(
+            { _id: req.user._id },
+            {
+                $set: { rocketMode: nextMode },
+                $inc: {
+                    balance: -betAmount,
+                    totalBet: betAmount,
+                    lotterybet: betAmount,
+                    refreshBet: betAmount,
+                    rocketAmount: betAmount,
+                },
+                $push: {
+                    totalhistory: {
+                        amount: -betAmount,
+                        date: new Date(),
+                        type: "Rocket Shot",
+                    },
+                },
+            }
+        );
+
+        return res.json({ balance: -betAmount, multiplier: multiplier });
 
     } catch (error) {
         console.error(error);
@@ -79,38 +98,33 @@ export const bet = async (req, res) => {
 };
 
 function getMultiplier(mode, normalMultiple, hardMultiple) {
-    const selected = mode === 0 ? normalMultiple : hardMultiple;
-    const fallback = mode === 0
-        ? [{ number: 0.5, probability: 1 }]
-        : [{ number: 1, probability: 1 }];
-
-    const multipliers = Array.isArray(selected) && selected.length > 0 ? selected : fallback;
-    const normalized = multipliers
-        .map((m) => ({
-            number: Number(m?.number),
-            probability: Number(m?.probability),
-        }))
-        .filter((m) => Number.isFinite(m.number) && m.number > 0 && Number.isFinite(m.probability) && m.probability > 0);
-
-    // If settings were malformed, still return a safe non-zero multiplier.
-    if (normalized.length === 0) {
+    const defaultNormalMultipliers = [{ number: 0.5, probability: 5 }];
+    const defaultHardMultipliers = [{ number: 1, probability: 5 }];
+    const candidate = mode === 0 ? normalMultiple : hardMultiple;
+    const fallback = mode === 0 ? defaultNormalMultipliers : defaultHardMultipliers;
+    const multipliers = Array.isArray(candidate) && candidate.length > 0 ? candidate : fallback;
+    const normalizedMultipliers = multipliers.filter(
+        (m) => Number.isFinite(Number(m?.number)) && Number.isFinite(Number(m?.probability)) && Number(m.probability) > 0
+    );
+    if (normalizedMultipliers.length === 0) {
         return fallback[0].number;
     }
-
-    const totalWeight = normalized.reduce((sum, m) => sum + m.probability, 0);
+    const totalWeight = normalizedMultipliers.reduce((sum, m) => sum + Number(m.probability), 0);
     if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
-        return normalized[0].number;
+        return normalizedMultipliers[0].number;
     }
-
+  
     let random = Math.random() * totalWeight;
-
-    for (const m of normalized) {
-        if (random < m.probability) {
-            return m.number;
+  
+    for (const m of normalizedMultipliers) {
+        const probability = Number(m.probability);
+        const number = Number(m.number);
+        if (random < probability) {
+            return number;
         }
-        random -= m.probability;
+        random -= probability;
     }
-    return normalized[normalized.length - 1].number;
+    return Number(normalizedMultipliers[normalizedMultipliers.length - 1].number);
 }
 
 // check if the user should be in hard mode or normal mode Normal to Hard

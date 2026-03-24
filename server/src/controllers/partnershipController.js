@@ -73,12 +73,6 @@ export const partnershipDeposit = async (req, res) => {
 
         await user.save();
 
-        const token = jwt.sign(
-            { id: user._id },
-            process.env.JWT_SECRET,
-            { expiresIn: "1h" }
-        );
-
         const tempUser = await User.findOne(
             { userAuthId: req.user.userAuthId },
             {
@@ -100,7 +94,6 @@ export const partnershipDeposit = async (req, res) => {
             res,
             `Successfully converted to credit $${calculatedPartnerEarn}`,
             tempUser,
-            { token }
         );
 
     } catch (err) {

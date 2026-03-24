@@ -6,6 +6,8 @@ import {
     cashOut,
     getState,
     getAlphaTreeView,
+    getSettings,
+    putSettings,
 } from "../controllers/alphaTreeController.js";
 
 const router = Router();
@@ -34,6 +36,16 @@ router.get(
     "/getAlphaTreeView",
     passport.authenticate("jwt", { session: false }),
     getAlphaTreeView
+);
+router.get(
+    "/settings",
+    passport.authenticate("jwt", { session: false }),
+    getSettings
+);
+router.put(
+    "/settings",
+    passport.authenticate("jwt", { session: false }),
+    putSettings
 );
 
 export default router;

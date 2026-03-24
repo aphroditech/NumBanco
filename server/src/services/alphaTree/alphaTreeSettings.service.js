@@ -1,28 +1,15 @@
 import AlphaTreeSettings from "../../models/AlphaTreeSettings.js";
 
-/** Defaults match previous hardcoded controller behavior */
 export const DEFAULT_ALPHA_TREE_SETTINGS = {
-    baseMultiplier: 0.6,
-    easyBustRerollChance: 0.18,
-    midPowEasy: 0.78,
-    midPowHard: 1.28,
-    highStretchEasy: 1.065,
-    highStretchHard: 0.935,
-    highStretchNormal: 1,
-    // Original behavior was one-high-per-step across 3 letters → probability ~1/3.
     highBandRate: 0.3333,
-    step10MultEasy: 1.02,
-    step10MultHard: 0.98,
 };
 
 function pickDefined(doc) {
     if (!doc || typeof doc !== "object") return {};
     const out = {};
-    for (const k of Object.keys(DEFAULT_ALPHA_TREE_SETTINGS)) {
-        const v = doc[k];
-        if (v !== undefined && v !== null && Number.isFinite(Number(v))) {
-            out[k] = Number(v);
-        }
+    const v = doc.highBandRate;
+    if (v !== undefined && v !== null && Number.isFinite(Number(v))) {
+        out.highBandRate = Number(v);
     }
     return out;
 }
@@ -32,5 +19,21 @@ function pickDefined(doc) {
  */
 export async function getAlphaTreeSettingsMerged() {
     const doc = await AlphaTreeSettings.findById("global").lean();
-    return { ...DEFAULT_ALPHA_TREE_SETTINGS, ...pickDefined(doc) };
+    return normalizeAlphaTreeSettings({ ...DEFAULT_ALPHA_TREE_SETTINGS, ...pickDefined(doc) });
+}
+
+export function normalizeAlphaTreeSettings(raw) {
+    const merged = { ...DEFAULT_ALPHA_TREE_SETTINGS, ...pickDefined(raw) };
+    merged.highBandRate = Math.min(1, Math.max(0, Number(merged.highBandRate)));
+    return { highBandRate: merged.highBandRate };
+}
+
+export async function updateAlphaTreeSettings(patch) {
+    const next = normalizeAlphaTreeSettings(patch);
+    const doc = await AlphaTreeSettings.findByIdAndUpdate(
+        "global",
+        { $set: next },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean();
+    return normalizeAlphaTreeSettings(doc);
 }

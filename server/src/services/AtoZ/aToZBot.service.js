@@ -96,6 +96,7 @@ export const aToZBot = async (ably) => {
             user.totalBet = Math.round((user.totalBet + betAmount) * 1000) / 1000;
             if (winAmount > 0) {
                 user.totalEarn = Math.round((user.totalEarn + winAmount) * 1000) / 1000;
+                user.aToZWinAmount = Math.round((user.aToZWinAmount + winAmount) * 1000) / 1000;
             }
             await user.save();
 
@@ -108,7 +109,8 @@ export const aToZBot = async (ably) => {
                 winAmount,
                 date: new Date(),
             };
-            await AToZResult.create(data);
+            const newResult = new AToZResult(data);
+            await newResult.save();
 
             const recent = await AToZResult.find()
                 .sort({ date: -1 })

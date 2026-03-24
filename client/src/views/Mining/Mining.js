@@ -36,6 +36,9 @@ import OtherUserHistory from './OtherUserHistory';
 import HelpIcon from '@mui/icons-material/Help';
 import { useHistory } from 'react-router-dom';
 
+import { toast } from 'react-toastify';
+
+
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
 const TOTAL_TILES = 16;
@@ -123,6 +126,7 @@ export default function Mining() {
     };
 
     const startGame = async () => {
+        setGameState('playing');
         const bet = parseFloat(amount) || 0;
         if (bet < MIN_AMOUNT || bet > MAX_AMOUNT || bet > balance) return;
 
@@ -139,12 +143,15 @@ export default function Mining() {
         setFlippedCount(0);
         setFlippedIndices(new Set());
         setJackalCelebrationKey(0);
-        setGameState('playing');
+        
         setResultMessage('Good luck! Play your best!');
     };
 
     const flipTile = (index) => {
-        if (gameState !== 'playing') return;
+        if (gameState !== 'playing') {
+            toast.warning('You are not playing the game. Please start the game first.');
+            return;  
+        } 
         if (flippedIndices.has(index)) return;
         if (flippedCount >= maxTurns) return;
 
@@ -449,7 +456,7 @@ export default function Mining() {
 
                 {/* Center – 16 tiles (find the jackal) */}
                 <GridItem area="game" minH="450px">
-                    <Card pt="30px" pb="22px" px="22px" overflow="visible" minH="450px" position="relative">
+                    <Card pt="30px" pb="22px" px="22px" overflow="visible" minH="450px"  position="relative">
                         <CardBody overflow="visible" display="flex" flexDirection="column" alignItems="center" justifyContent="center" minH="100%" position="relative">
                             <Box position="absolute" top="16px" left="22px" zIndex={2}>
                                 <Text fontSize="sm" color="rgba(255,255,255,0.7)" mb="2px">Bet</Text>
@@ -483,7 +490,6 @@ export default function Mining() {
                                             w="100%"
                                             h="64px"
                                             borderRadius="16px"
-                                            isDisabled={!canFlip}
                                             onClick={() => flipTile(index)}
                                             _focusVisible={
                                                 canFlip
