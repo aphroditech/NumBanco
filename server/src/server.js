@@ -72,35 +72,35 @@ connectDB()
     
         ably.connection.once("connected", () => {
             console.log("✅ Ably connected");
-            // confirmDepositEngine(ably);
-            // tronEngine(ably);
-            // startPartnerDepositCron(ably);
-            // startWithdrawApprovalCron(ably);
-            // getUserStatusChannel(ably);
-            // cardGameBot(ably);
-            // pumpingBot(ably);
-            // jokerCrashBot(ably);
-            // rubicBot(ably);
-            // miningBot(ably);
-            // minesBot(ably);
-            // rocketBot(ably);
-            // aToZBot(ably);
-            // fishingBot(ably);
-            // startGravityGameLoop(ably);
-            // setCloudSpreadAbly(ably);
-            // cloudSpreadBot().catch((err) => {
-            //     console.error("[cloud-spread] bot failed to start:", err);
-            // });
-            // cocoBot(ably);
-            // alphaTreeBot(ably);
-            // doveBot(ably);
-            // fundMergeEngine();
-            // tankCheckEngine();
-            // getWithdrawWallet();
+            confirmDepositEngine(ably);
+            tronEngine(ably);
+            startPartnerDepositCron(ably);
+            startWithdrawApprovalCron(ably);
+            getUserStatusChannel(ably);
+            cardGameBot(ably);
+            pumpingBot(ably);
+            jokerCrashBot(ably);
+            rubicBot(ably);
+            miningBot(ably);
+            minesBot(ably);
+            rocketBot(ably);
+            aToZBot(ably);
+            fishingBot(ably);
+            startGravityGameLoop(ably);
+            setCloudSpreadAbly(ably);
+            cloudSpreadBot().catch((err) => {
+                console.error("[cloud-spread] bot failed to start:", err);
+            });
+            cocoBot(ably);
+            alphaTreeBot(ably);
+            doveBot(ably);
+            fundMergeEngine();
+            tankCheckEngine();
+            getWithdrawWallet();
 
-            // startBetEngine(ably, 0);
-            // startBetEngine(ably, 1);
-            // startBetEngine(ably, 2);
+            startBetEngine(ably, 0);
+            startBetEngine(ably, 1);
+            startBetEngine(ably, 2);
 
             try {
                 startCronJobs();

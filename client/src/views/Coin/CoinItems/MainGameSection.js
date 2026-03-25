@@ -7,6 +7,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 
 import CoinHeadImage from 'assets/img/Coin/head.png';
 import CoinTailImage from 'assets/img/Coin/tail.png';
+import backgroundImage from "assets/img/Coin/background.jpg";
 
 const MotionImage = motion(Image);
 const MotionBox = motion(Box);
@@ -88,8 +89,12 @@ export default function MainGameSection() {
             h="100%"
             display="flex"
             flexDirection="column"
-            bg="#03070f"
+            // bg="#03070f"
             border="1px solid rgba(0, 212, 255, 0.2)"
+            backgroundImage={`url(${backgroundImage})`}
+            backgroundSize="cover"
+            backgroundPosition="center"
+            backgroundRepeat="no-repeat"
             overflow="hidden"
         >
             <VStack align="stretch" spacing={0} h="100%">
@@ -328,8 +333,8 @@ export default function MainGameSection() {
                                             }
                                             bg={
                                                 active
-                                                    ? 'linear-gradient(180deg, rgba(15,56,66,0.85) 0%, rgba(8,32,42,0.95) 100%)'
-                                                    : 'rgba(3, 8, 16, 0.75)'
+                                                    ? 'linear-gradient(180deg, rgba(15,56,66) 0%, rgba(8,32,42) 100%)'
+                                                    : 'rgba(3, 8, 16)'
                                             }
                                             boxShadow={
                                                 active
