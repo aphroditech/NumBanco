@@ -98,9 +98,9 @@ connectDB()
             // tankCheckEngine();
             // getWithdrawWallet();
 
-            startBetEngine(ably, 0);
-            startBetEngine(ably, 1);
-            startBetEngine(ably, 2);
+            // startBetEngine(ably, 0);
+            // startBetEngine(ably, 1);
+            // startBetEngine(ably, 2);
 
             try {
                 startCronJobs();

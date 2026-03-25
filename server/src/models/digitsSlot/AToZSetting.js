@@ -54,6 +54,29 @@ const aToZSettingSchema = new mongoose.Schema({
             type: String,
             defualt: "TWO_ORDERED"
         },
+        limits: {
+            type: [
+                {
+                    min: {
+                        type: Number,
+                        required: true
+                    },
+                    max: {
+                        type: Number,
+                        required: true
+                    },
+                    totalNumber: {
+                        type: Number,
+                        required: true
+                    },
+                    canWinNumber: {
+                        type: Number,
+                        required: true
+                    }
+                }
+            ],
+            default: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
+        },
         multiplier: {
             type: Number,
             default: 15
@@ -75,6 +98,29 @@ const aToZSettingSchema = new mongoose.Schema({
         probability: {
             type: Number,
             default: 0.04
+        },
+        limits: {
+            type: [
+                {
+                    min: {
+                        type: Number,
+                        required: true
+                    },
+                    max: {
+                        type: Number,
+                        required: true
+                    },
+                    totalNumber: {
+                        type: Number,
+                        required: true
+                    },
+                    canWinNumber: {
+                        type: Number,
+                        required: true
+                    }
+                }
+            ],
+            default: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
         }
     },
     ONE_ORDERED: {
@@ -89,6 +135,29 @@ const aToZSettingSchema = new mongoose.Schema({
         probability: {
             type: Number,
             default: 0.18
+        },
+        limits: {
+            type: [
+                {
+                    min: {
+                        type: Number,
+                        required: true
+                    },
+                    max: {
+                        type: Number,
+                        required: true
+                    },
+                    totalNumber: {
+                        type: Number,
+                        required: true
+                    },
+                    canWinNumber: {
+                        type: Number,
+                        required: true
+                    }
+                }
+            ],
+            default: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
         }
     },
     ONE_UNORDERED: {
@@ -103,6 +172,29 @@ const aToZSettingSchema = new mongoose.Schema({
         probability: {
             type: Number,
             default: 0.32
+        },
+        limits: {
+            type: [
+                {
+                    min: {
+                        type: Number,
+                        required: true
+                    },
+                    max: {
+                        type: Number,
+                        required: true
+                    },
+                    totalNumber: {
+                        type: Number,
+                        required: true
+                    },
+                    canWinNumber: {
+                        type: Number,
+                        required: true
+                    }
+                }
+            ],
+            default: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
         }
     },
     NONE: {
@@ -117,6 +209,29 @@ const aToZSettingSchema = new mongoose.Schema({
         probability: {
             type: Number,
             default: 0.45
+        },
+        limits: {
+            type: [
+                {
+                    min: {
+                        type: Number,
+                        required: true
+                    },
+                    max: {
+                        type: Number,
+                        required: true
+                    },
+                    totalNumber: {
+                        type: Number,
+                        required: true
+                    },
+                    canWinNumber: {
+                        type: Number,
+                        required: true
+                    }
+                }
+            ],
+            default: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
         }
     }
 });

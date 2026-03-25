@@ -154,7 +154,7 @@ export default function MainGameSection() {
                                         scale: [1, 0.98, 0.95, 0.98, 1],
                                         opacity: [1, 1, 1, 1, 0.7, 0],
                                     }}
-                                    transition={{ duration: 0.85, ease: 'easeInOut', times: [0, 0.18, 0.32, 0.5, 0.7, 1] }}
+                                    transition={{ duration: 1.2, ease: 'easeInOut', times: [0, 0.18, 0.32, 0.5, 0.7, 1] }}
                                     onAnimationComplete={() => {
                                         setCoinFace(pendingFaceRef.current);
                                         setIsTossing(false);

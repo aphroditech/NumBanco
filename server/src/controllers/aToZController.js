@@ -45,7 +45,11 @@ export const bet = async (req, res) => {
         const pickStr = String(Math.min(999, Math.max(0, Math.floor(Number(number))))).padStart(3, "0");
 
         const outcomeKey = getOutcomeKey(pickStr, aToZSetting, user.aToZAmount, user.aToZWinAmount);
-        const { result, multiplier } = generateResult(pickStr, outcomeKey, aToZSetting);
+
+        const history = await AToZHistory.findOne({ user: req.user._id });
+        const isValid = checkValid(history?.history || [], aToZSetting[outcomeKey], normalizedBetAmount);
+
+        const { result, multiplier, valid } = generateResult(pickStr, outcomeKey, aToZSetting, isValid);
 
         const winAmount = normalizedBetAmount * multiplier;
 
@@ -124,8 +128,38 @@ function getOutcomeKey(pickStr, aToZSetting, aToZAmount, aToZWinAmount) {
     return "NONE"; // safety fallback
 }
 
+function checkValid(history, settings, betAmt) {
 
-function generateResult(userNumber, condition, aToZSetting) {
+    if(!settings) return false;
+    if(history.length === 0) return true;
+
+    // check if the last 10 results are valid
+    const tempNumbers = settings?.limits?.find(
+        r => betAmt >= r.min && betAmt < r.max
+    );
+
+    if (!tempNumbers) return false;
+
+    const { min, max, totalNumber, canWinNumber } = tempNumbers;
+
+    const filtered = history?.filter(
+        h => h.betAmount >= min && h.betAmount < max
+    );
+
+    const recentCount = filtered?.length ? filtered.length % totalNumber : 0;
+
+
+    const lastN = recentCount > 0
+        ? filtered?.slice(-recentCount)
+        : filtered?.slice(-totalNumber);
+
+    const wins = lastN?.filter(h => h.isWin === true)?.length || 0;
+    // console.log("wins", wins, "canWinNumber", canWinNumber);
+    return canWinNumber >= wins;
+    
+}
+
+function generateResult(userNumber, condition, aToZSetting, isValid) {
 
     const MULTIPLIERS = {
         THREE_ORDERED: aToZSetting.THREE_ORDERED.multiplier,
@@ -150,6 +184,9 @@ function generateResult(userNumber, condition, aToZSetting) {
 
     // Detect the exact matching condition
     function detect(user, result) {
+        if(!isValid) {
+            return "NONE";
+        }
         let ordered = 0;
         let total = 0;
         let copy = [...user];
@@ -269,7 +306,8 @@ function generateResult(userNumber, condition, aToZSetting) {
 
     return {
         result: result.join(''),
-        multiplier: MULTIPLIERS[condition]
+        multiplier: MULTIPLIERS[condition],
+        valid: isValid
     };
 
 }
