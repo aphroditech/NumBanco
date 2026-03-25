@@ -29,6 +29,17 @@ export const cocoBot = async (ably) => {
                         isUser: 0,
                     });
 
+                    const recent = await CocoView.find()
+                        .sort({ createdAt: -1 }) // newest first
+                        .limit(30)
+                        .select("_id");
+
+                    const recentIds = recent.map(doc => doc._id);
+
+                    await CocoView.deleteMany({
+                        _id: { $nin: recentIds }
+                    });
+
                     const channel = ably.channels.get("cocoGame");
                     const cocoViewUpdate = await CocoView.find()
                         .sort({ createdAt: -1 })

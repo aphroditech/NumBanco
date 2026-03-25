@@ -1,16 +1,26 @@
 import axiosInstance from "../api/axiosConfig";
-import { setUserRedux } from ".";
 import { toast } from "react-toastify";
+
+const mergeJokerCrashUser = (res, dispatch) => {
+    dispatch({
+        type: "MERGE_USER",
+        payload: res?.data?.user || {},
+    });
+};
 
 export const jokerCrashBet = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/jokerCrash/bet', data);
-        setUserRedux(res, dispatch);
+        mergeJokerCrashUser(res, dispatch);
         return res.data;
     } catch (err) {
         console.error(err);
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
+        }
+        if (err.response?.status === 409) {
+            toast.error(err.response.data.message);
+            return { error: 409 };
         }
         return;
     }
@@ -19,7 +29,7 @@ export const jokerCrashBet = async (data, dispatch, history) => {
 export const jokerCrashOperator = async (operator, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/jokerCrash/operator', operator);
-        setUserRedux(res, dispatch);
+        mergeJokerCrashUser(res, dispatch);
         return res.data.data;
     } catch (err) {
         toast.error(err.error);
@@ -34,7 +44,7 @@ export const jokerCrashOperator = async (operator, dispatch, history) => {
 export const jokerCrashCashOut = async (dispatch, history) => {
     try {
         const res = await axiosInstance.get('/jokerCrash/jokerCrashCashOut');
-        setUserRedux(res, dispatch);
+        mergeJokerCrashUser(res, dispatch);
         return res.data;
     } catch (err) {
         console.error(err);

@@ -39,6 +39,7 @@ export default function CoinPage() {
                         h="100%"
                         display="flex"
                         flexDirection="column"
+                        border="1px solid rgba(0, 212, 255, 0.2)"
                     >
                         <VStack align="stretch" spacing={3} h="100%">
                             <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" color="#00D4FF">

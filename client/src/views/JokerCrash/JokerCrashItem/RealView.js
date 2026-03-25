@@ -1,18 +1,14 @@
 import {
     Box,
-    Text,
     Table,
     Thead,
     Tbody,
     Tr,
     Th,
-    Flex,
 } from '@chakra-ui/react';
 import Card from 'components/Card/Card.js';
-import CardHeader from 'components/Card/CardHeader';
 import React, { useEffect, useState, useRef } from 'react';
 import JokerCrashRealViewRow from 'components/Tables/JokerCrashRealViewRow';
-import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import { getJokerCrashView } from 'action/JokerCrashActions';
 import { useAblyJokerCrashUpdates } from 'hooks/useAblyJokerCrashUpdates';
 import { useHistory } from 'react-router-dom';
@@ -23,15 +19,27 @@ function RealView() {
     const prevRowIdsRef = useRef(new Set());
     const hasInitializedRef = useRef(false);
     const history = useHistory();
-    const getRowId = (row) => {
-        if (!row) return "";
-        return row._id || row.id || `${row.altas || "user"}-${row.bet || 0}-${row.win || 0}`;
+
+    /** Stable unique id per row — never use altas/bet/win alone (many collisions → duplicate React keys → overlapping rows). */
+    const getRowId = (row, index) => {
+        if (!row) return `jcv-empty-${index}`;
+        if (row._id != null) return String(row._id);
+        if (row.id != null) return String(row.id);
+        const t = row.time ?? row.createdAt ?? "";
+        const uid = row.userId ?? "u";
+        return `jcv-${uid}-${t}-${row.step ?? ""}-${row.multi ?? ""}-${index}`;
+    };
+
+    const normalizeViewPayload = (payload) => {
+        if (Array.isArray(payload)) return payload;
+        if (payload && Array.isArray(payload.data)) return payload.data;
+        return [];
     };
 
     useEffect(() => {
         getJokerCrashView(history).then((res) => {
-            const payload = res?.data?.data ?? res?.data;
-            setJokerCrashView(payload);
+            const raw = res?.data?.data ?? res?.data;
+            setJokerCrashView(normalizeViewPayload(raw));
         });
     }, []);
 
@@ -44,7 +52,7 @@ function RealView() {
             return;
         }
 
-        const currentIds = new Set(jokerCrashView.map(getRowId));
+        const currentIds = new Set(jokerCrashView.map((row, i) => getRowId(row, i)));
 
         if (!hasInitializedRef.current) {
             prevRowIdsRef.current = currentIds;
@@ -75,7 +83,7 @@ function RealView() {
     
     return (
         <Card p="24px" pt="30px" overflowX="hidden" height="450px">
-            <Box overflowX="hidden" width="100%" overflowY="auto">
+            <Box overflowX="hidden" width="100%" overflowY="auto" maxH="100%">
                 <Table
                 variant="unstyled"
                 color="#fff"
@@ -97,10 +105,10 @@ function RealView() {
                     </Thead>
                     <Tbody>
                     {rowsToRender.map((row, index) => {
-                        const rowId = getRowId(row);
+                        const rowId = getRowId(row, index);
                         return (
                             <JokerCrashRealViewRow
-                                key={rowId || index}
+                                key={rowId}
                                 altas={row.altas}
                                 avatar={row.avatar}
                                 // membership={row.membership}

@@ -339,7 +339,6 @@ export default function PumpingPage() {
     }, []);
 
     const handleBet = async (multiplier) => {
-        // Capture current target value from ref to ensure we get the latest value
         const currentTarget = Number(targetRef.current || target);
         const currentAmount = Number(amountRef.current || amount);
         const currentBalance = Number(balanceRef.current || balance);
@@ -357,148 +356,152 @@ export default function PumpingPage() {
             toast.error("Target must be between 1.01 and 1000");
             return;
         }
-
+        
         const data = {
             multiplier: Number(multiplier),
             bet: currentAmount,
             target: currentTarget,
         }
-        setRoll(true);
-        setLedCount(0);
-        setDisplayHeight(0);
-        setComparisonText("");
-        setComparisonColor("#E74C3C");
-        setShowComparisonLabel(false);
-        if (ledTimeoutRef.current) {
-            clearTimeout(ledTimeoutRef.current);
-            ledTimeoutRef.current = null;
-        }
-        if (ledStepRef.current) {
-            clearInterval(ledStepRef.current);
-            ledStepRef.current = null;
-        }
-        if (ledFlickerRef.current) {
-            clearInterval(ledFlickerRef.current);
-            ledFlickerRef.current = null;
-        }
-        if (heightAnimRef.current) {
-            cancelAnimationFrame(heightAnimRef.current);
-            heightAnimRef.current = null;
-        }
-        if (heightHoldRef.current) {
-            clearTimeout(heightHoldRef.current);
-            heightHoldRef.current = null;
-        }
-        if (comparisonDelayRef.current) {
-            clearTimeout(comparisonDelayRef.current);
-            comparisonDelayRef.current = null;
-        }
-        if (comparisonHoldRef.current) {
-            clearTimeout(comparisonHoldRef.current);
-            comparisonHoldRef.current = null;
-        }
-        if (winDelayRef.current) {
-            clearTimeout(winDelayRef.current);
-            winDelayRef.current = null;
-        }
-        if (winFlickerRef.current) {
-            clearInterval(winFlickerRef.current);
-            winFlickerRef.current = null;
-        }
-        if (bangTimeoutRef.current) {
-            clearTimeout(bangTimeoutRef.current);
-            bangTimeoutRef.current = null;
-        }
-        setShowBang(false);
-        setWinLit(false);
-        setIsHammerAnimating(true);
-        setWeightPosition(WEIGHT_BOTTOM); // Reset weight to bottom
-        setWeightDirection('down'); // Reset direction
-
         const pumping = await pumpingBet(data, dispatch, history);
-
-        setShowBang(true);
-        if (bangTimeoutRef.current) {
-            clearTimeout(bangTimeoutRef.current);
-        }
-        bangTimeoutRef.current = setTimeout(() => {
-            setShowBang(false);
-            bangTimeoutRef.current = null;
-        }, 900);
-
-        const result = Number(pumping?.betResult) || 0;
-        setPumpingResult(result);
-
-        setTimeout(() => {
-            if (result && result > 0) {
-                setIsWeightMoving(true);
-                setWeightDirection('up');
-                setWeightPosition(getWeightTopFromValue(result));
-                const nextLedCount = getLedCount(result);
-                animateLedCount(nextLedCount);
-                animateHeightTo(Number(result), 800);
-                if (heightHoldRef.current) {
-                    clearTimeout(heightHoldRef.current);
-                }
-                heightHoldRef.current = setTimeout(() => {
-                    setDisplayHeight(0);
-                    heightHoldRef.current = null;
-                }, 2000);
-                if (comparisonDelayRef.current) {
-                    clearTimeout(comparisonDelayRef.current);
-                }
-                comparisonDelayRef.current = setTimeout(() => {
-                    const resultText = formatResult(Number(result));
-                    const targetText = formatResult(currentTarget);
-                    const operator =
-                        Number(result) > currentTarget
-                            ? ">"
-                            : Number(result) < currentTarget
-                                ? "<"
-                                : "=";
-                    setComparisonText(`${resultText} ${operator} ${targetText}`);
-                    setComparisonColor(
-                        Number(result) >= currentTarget ? "#6DC64B" : "#E74C3C"
-                    );
-                    setShowComparisonLabel(true);
-                    if (comparisonHoldRef.current) {
-                        clearTimeout(comparisonHoldRef.current);
-                    }
-                    comparisonHoldRef.current = setTimeout(() => {
-                        setShowComparisonLabel(false);
-                        setComparisonText("");
-                        comparisonHoldRef.current = null;
-                    }, 2000);
-                    comparisonDelayRef.current = null;
-                }, 600);
-                if (Number(result) > currentTarget) {
-                    winDelayRef.current = setTimeout(() => {
-                        startWinFlicker();
-                        winDelayRef.current = null;
-                    }, 800);
-                }
-                if (ledTimeoutRef.current) {
-                    clearTimeout(ledTimeoutRef.current);
-                }
-                ledTimeoutRef.current = setTimeout(() => {
-                    startLedFlicker(nextLedCount);
-                    ledTimeoutRef.current = null;
-                }, 2000);
-
-                setTimeout(() => {
-                    setIsWeightMoving(true);
-                    setWeightDirection('down');
-                    setWeightPosition(WEIGHT_BOTTOM);
-                    getUserData(dispatch);
-                    setTimeout(() => {
-                        setIsHammerAnimating(false);
-                        setIsWeightMoving(false);
-                        setWeightDirection('down');
-                        setRoll(false);
-                    }, 800);
-                }, 800);
+        
+        if(pumping) {
+            // Capture current target value from ref to ensure we get the latest value
+            setRoll(true);
+            setLedCount(0);
+            setDisplayHeight(0);
+            setComparisonText("");
+            setComparisonColor("#E74C3C");
+            setShowComparisonLabel(false);
+            if (ledTimeoutRef.current) {
+                clearTimeout(ledTimeoutRef.current);
+                ledTimeoutRef.current = null;
             }
-        }, 200);
+            if (ledStepRef.current) {
+                clearInterval(ledStepRef.current);
+                ledStepRef.current = null;
+            }
+            if (ledFlickerRef.current) {
+                clearInterval(ledFlickerRef.current);
+                ledFlickerRef.current = null;
+            }
+            if (heightAnimRef.current) {
+                cancelAnimationFrame(heightAnimRef.current);
+                heightAnimRef.current = null;
+            }
+            if (heightHoldRef.current) {
+                clearTimeout(heightHoldRef.current);
+                heightHoldRef.current = null;
+            }
+            if (comparisonDelayRef.current) {
+                clearTimeout(comparisonDelayRef.current);
+                comparisonDelayRef.current = null;
+            }
+            if (comparisonHoldRef.current) {
+                clearTimeout(comparisonHoldRef.current);
+                comparisonHoldRef.current = null;
+            }
+            if (winDelayRef.current) {
+                clearTimeout(winDelayRef.current);
+                winDelayRef.current = null;
+            }
+            if (winFlickerRef.current) {
+                clearInterval(winFlickerRef.current);
+                winFlickerRef.current = null;
+            }
+            if (bangTimeoutRef.current) {
+                clearTimeout(bangTimeoutRef.current);
+                bangTimeoutRef.current = null;
+            }
+            setShowBang(false);
+            setWinLit(false);
+            setIsHammerAnimating(true);
+            setWeightPosition(WEIGHT_BOTTOM); // Reset weight to bottom
+            setWeightDirection('down'); // Reset direction
+    
+    
+            setShowBang(true);
+            if (bangTimeoutRef.current) {
+                clearTimeout(bangTimeoutRef.current);
+            }
+            bangTimeoutRef.current = setTimeout(() => {
+                setShowBang(false);
+                bangTimeoutRef.current = null;
+            }, 900);
+    
+            const result = Number(pumping?.betResult) || 0;
+            setPumpingResult(result);
+    
+            setTimeout(() => {
+                if (result && result > 0) {
+                    setIsWeightMoving(true);
+                    setWeightDirection('up');
+                    setWeightPosition(getWeightTopFromValue(result));
+                    const nextLedCount = getLedCount(result);
+                    animateLedCount(nextLedCount);
+                    animateHeightTo(Number(result), 800);
+                    if (heightHoldRef.current) {
+                        clearTimeout(heightHoldRef.current);
+                    }
+                    heightHoldRef.current = setTimeout(() => {
+                        setDisplayHeight(0);
+                        heightHoldRef.current = null;
+                    }, 2000);
+                    if (comparisonDelayRef.current) {
+                        clearTimeout(comparisonDelayRef.current);
+                    }
+                    comparisonDelayRef.current = setTimeout(() => {
+                        const resultText = formatResult(Number(result));
+                        const targetText = formatResult(currentTarget);
+                        const operator =
+                            Number(result) > currentTarget
+                                ? ">"
+                                : Number(result) < currentTarget
+                                    ? "<"
+                                    : "=";
+                        setComparisonText(`${resultText} ${operator} ${targetText}`);
+                        setComparisonColor(
+                            Number(result) >= currentTarget ? "#6DC64B" : "#E74C3C"
+                        );
+                        setShowComparisonLabel(true);
+                        if (comparisonHoldRef.current) {
+                            clearTimeout(comparisonHoldRef.current);
+                        }
+                        comparisonHoldRef.current = setTimeout(() => {
+                            setShowComparisonLabel(false);
+                            setComparisonText("");
+                            comparisonHoldRef.current = null;
+                        }, 2000);
+                        comparisonDelayRef.current = null;
+                    }, 600);
+                    if (Number(result) > currentTarget) {
+                        winDelayRef.current = setTimeout(() => {
+                            startWinFlicker();
+                            winDelayRef.current = null;
+                        }, 800);
+                    }
+                    if (ledTimeoutRef.current) {
+                        clearTimeout(ledTimeoutRef.current);
+                    }
+                    ledTimeoutRef.current = setTimeout(() => {
+                        startLedFlicker(nextLedCount);
+                        ledTimeoutRef.current = null;
+                    }, 2000);
+    
+                    setTimeout(() => {
+                        setIsWeightMoving(true);
+                        setWeightDirection('down');
+                        setWeightPosition(WEIGHT_BOTTOM);
+                        getUserData(dispatch);
+                        setTimeout(() => {
+                            setIsHammerAnimating(false);
+                            setIsWeightMoving(false);
+                            setWeightDirection('down');
+                            setRoll(false);
+                        }, 800);
+                    }, 800);
+                }
+            }, 200);
+        }
     };
 
     const handleAmountChange = (e) => {

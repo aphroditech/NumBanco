@@ -9,6 +9,8 @@ const VIEW_LIMIT = 12;
 const CREDIT_DELAY_MS = 1000;
 const ROUND_4 = (x) => Math.round(x * 10000) / 10000;
 const ROUND_2 = (x) => Math.round(x * 100) / 100;
+let pumpingSettingCache = null;
+let pumpingMultiRangesCache = null;
 
 function getConsecutiveWinsAfterLastLose(pumpingHistory) {
     const lastLoseIndex = pumpingHistory.map((item) => item.win).lastIndexOf(0);
@@ -18,17 +20,14 @@ function getConsecutiveWinsAfterLastLose(pumpingHistory) {
 }
 
 async function computeWinProbability(target, consecutiveWinsCount) {
-    const pumpingMulti = await PumpingMulti.findOne({
-        from: { $lte: target },
-        to: { $gte: target },
-    });
+    const pumpingMulti = await getPumpingMultiByTarget(target);
     const base = consecutiveWinsCount > pumpingMulti?.min ? Math.floor(Math.random() * 2) : 0 || consecutiveWinsCount > pumpingMulti?.max && 1;
     return base || 0;
 }
 
 async function computeBetResult(body, user) {
     const filtered = getConsecutiveWinsAfterLastLose(user.pumpingHistory || []);
-    const setting = await Setting.findOne({});
+    const setting = await getPumpingSetting();
     const pumpingLimitTarget = setting.pumpingLimitTarget;
     const pumpingLimitAmount = setting.pumpingLimitAmount;
     const probability = await computeWinProbability(body.target, filtered.length);
@@ -66,40 +65,65 @@ async function applyPumpingMode(user, totalBet, pumpingBalance) {
     }
 }
 
-async function enrichPumpingViewsWithUser(pumpingViews) {
-    return Promise.all(
-        pumpingViews.map(async (item) => {
-            const user = await User.findOne(
-                { userId: item.userId },
-                {
-                    "wallets.eth.privateKey": 0,
-                    "wallets.bsc.privateKey": 0,
-                    "wallets.tron.privateKey": 0,
-                    country: 0,
-                    pumpingMode: 0,
-                    fishingMode: 0,
-                    rubicMode: 0,
-                    partnerId: 0,
-                    partnerActivity: 0,
-                    lastClickDate: 0,
-                    
-                });
-            const obj = item.toObject();
-            delete obj.isUser;
-            delete obj.totalBet;
-            delete obj.totalWin;
-            delete obj.pumpingBalance;
-            if (user) {
-                return {
-                    ...obj,
-                    avatar: user.avatar,
-                    altas: user.altas,
-                    membership: user.membership,
-                };
-            }
-            return obj;
-        })
+async function computePumpingMode(currentMode, totalBet, pumpingBalance) {
+    const limit =
+        (await PumpingLimit.findOne({
+            from: { $lte: totalBet },
+            to: { $gte: totalBet },
+        }).lean()) || {};
+    if (limit.limitHard != null && pumpingBalance > limit.limitHard) {
+        return 2;
+    } else if (limit.limitNormal != null && pumpingBalance < limit.limitNormal) {
+        return 1;
+    }
+    return currentMode;
+}
+
+async function getPumpingSetting() {
+    if (pumpingSettingCache) return pumpingSettingCache;
+    const setting = await Setting.findOne({}).lean();
+    pumpingSettingCache = setting || {};
+    return pumpingSettingCache;
+}
+
+async function getPumpingMultiByTarget(target) {
+    if (!pumpingMultiRangesCache) {
+        pumpingMultiRangesCache = await PumpingMulti.find({}).lean();
+    }
+    return (
+        pumpingMultiRangesCache.find(
+            (row) => Number(row?.from) <= Number(target) && Number(row?.to) >= Number(target)
+        ) || null
     );
+}
+
+async function enrichPumpingViewsWithUser(pumpingViews) {
+    if (!Array.isArray(pumpingViews) || pumpingViews.length === 0) return [];
+
+    const userIds = [...new Set(pumpingViews.map((item) => item.userId).filter(Boolean))];
+    const users = await User.find(
+        { userId: { $in: userIds } },
+        { userId: 1, avatar: 1, altas: 1, membership: 1 }
+    ).lean();
+    const userMap = new Map(users.map((u) => [u.userId, u]));
+
+    return pumpingViews.map((item) => {
+        const obj = { ...item };
+        delete obj.isUser;
+        delete obj.totalBet;
+        delete obj.totalWin;
+        delete obj.pumpingBalance;
+        const user = userMap.get(item.userId);
+        if (user) {
+            return {
+                ...obj,
+                avatar: user.avatar,
+                altas: user.altas,
+                membership: user.membership,
+            };
+        }
+        return obj;
+    });
 }
 
 async function scheduleCreditAndBroadcast(userId, win, app) {
@@ -136,7 +160,7 @@ async function scheduleCreditAndBroadcast(userId, win, app) {
 
     const ably = app?.locals?.ably;
     if (ably) {
-        const views = await PumpingView.find().sort({ createdAt: -1 }).limit(VIEW_LIMIT);
+        const views = await PumpingView.find().sort({ createdAt: -1 }).limit(VIEW_LIMIT).lean();
         const data = await enrichPumpingViewsWithUser(views);
         ably.channels.get("pumpingGame").publish("pumpingUpdate", { updatedData: data }).catch((err) => {
             console.error("❌ [pumpingController] Ably publish error:", err);
@@ -145,9 +169,19 @@ async function scheduleCreditAndBroadcast(userId, win, app) {
 }
 
 export const bet = async (req, res) => {
-    const user = await User.findOne({ userAuthId: req.user.userAuthId }).select(
-        "userId userAuthId balance totalBet refreshBet lotterybet totalhistory pumpingHistory pumpingMode"
-    );
+    const user = await User.findOne(
+        { userAuthId: req.user.userAuthId },
+        {
+            userId: 1,
+            userAuthId: 1,
+            balance: 1,
+            totalBet: 1,
+            refreshBet: 1,
+            lotterybet: 1,
+            pumpingHistory: { $slice: -120 },
+            pumpingMode: 1,
+        }
+    ).lean();
     const { target, bet: betAmountRaw } = req.body;
     const betAmount = Number(betAmountRaw) || 0;
 
@@ -163,34 +197,13 @@ export const bet = async (req, res) => {
 
     const { result, win } = await computeBetResult(req.body, user);
 
-    user.balance -= betAmount;
-    user.totalBet = (1000 * user.totalBet + 1000 * betAmount) / 1000;
-    user.refreshBet = (1000 * user.refreshBet + 1000 * betAmount) / 1000;
-    user.lotterybet = (1000 * user.lotterybet + 1000 * betAmount) / 1000;
-    user.totalhistory.push({
-        amount: -betAmount,
-        date: new Date(),
-        type: "pumping",
-    });
-
     const lastHistory =
         user.pumpingHistory?.length > 0
             ? user.pumpingHistory[user.pumpingHistory.length - 1]
             : { totalBet: 0, totalWin: 0 };
-    const lastView = (await PumpingView.find().sort({ createdAt: -1 }).limit(1))[0];
     const prevTotals = lastHistory;
     const totals = sessionTotals(prevTotals, betAmount, win);
-
-    await applyPumpingMode(user, totals.totalBet, totals.pumpingBalance);
-
-    const viewTotals = sessionTotals(
-        {
-            totalBet: lastView?.totalBet ?? 0,
-            totalWin: lastView?.totalWin ?? 0,
-        },
-        betAmount,
-        win
-    );
+    const nextMode = await computePumpingMode(user.pumpingMode, totals.totalBet, totals.pumpingBalance);
 
     const betEntry = {
         target,
@@ -203,26 +216,62 @@ export const bet = async (req, res) => {
         createAt: new Date(),
     };
 
-    user.pumpingHistory.push(betEntry);
-    await user.save();
-
-    const pumpingView = new PumpingView({
-        userId: req.user.userId,
-        target,
-        bet: betAmount,
-        result,
-        win,
-        totalBet: viewTotals.totalBet,
-        totalWin: viewTotals.totalWin,
-        pumpingBalance: viewTotals.pumpingBalance,
-        isUser: req.user.partnerLevel > 0 ? 1 : 0,
-    });
-    await pumpingView.save();
+    const updateResult = await User.updateOne(
+        { userAuthId: req.user.userAuthId, balance: { $gte: betAmount } },
+        {
+            $inc: {
+                balance: -betAmount,
+                totalBet: betAmount,
+                refreshBet: betAmount,
+                lotterybet: betAmount,
+            },
+            $push: {
+                totalhistory: {
+                    amount: -betAmount,
+                    date: new Date(),
+                    type: "pumping",
+                },
+                pumpingHistory: betEntry,
+            },
+            ...(nextMode !== user.pumpingMode ? { $set: { pumpingMode: nextMode } } : {}),
+        }
+    );
+    if (!updateResult?.matchedCount) {
+        return res.status(409).json({ message: "Pumping bet conflict" });
+    }
 
     setTimeout(
         () => scheduleCreditAndBroadcast(req.user.userId, win, req.app),
         CREDIT_DELAY_MS
     );
+
+    Promise.resolve()
+        .then(async () => {
+            const lastView = (await PumpingView.find().sort({ createdAt: -1 }).limit(1).lean())[0];
+            const viewTotals = sessionTotals(
+                {
+                    totalBet: lastView?.totalBet ?? 0,
+                    totalWin: lastView?.totalWin ?? 0,
+                },
+                betAmount,
+                win
+            );
+            const pumpingView = new PumpingView({
+                userId: req.user.userId,
+                target,
+                bet: betAmount,
+                result,
+                win,
+                totalBet: viewTotals.totalBet,
+                totalWin: viewTotals.totalWin,
+                pumpingBalance: viewTotals.pumpingBalance,
+                isUser: req.user.partnerLevel > 0 ? 1 : 0,
+            });
+            await pumpingView.save();
+        })
+        .catch((err) => {
+            console.error("pumping bet view-write error:", err);
+        });
 
     // Keep payload minimal for low-latency round-trip.
     return res.json({
@@ -235,7 +284,7 @@ export const bet = async (req, res) => {
 
 export const getPumpingView = async (req, res) => {
     try {
-        const views = await PumpingView.find().sort({ createdAt: -1 }).limit(VIEW_LIMIT);
+        const views = await PumpingView.find().sort({ createdAt: -1 }).limit(VIEW_LIMIT).lean();
         const data = await enrichPumpingViewsWithUser(views);
         return res.status(200).json({ data });
     } catch (error) {

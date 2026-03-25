@@ -54,6 +54,7 @@ import GamesIcon from '@mui/icons-material/Games';
 import Dove from "views/DovePage/Dove";
 import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
+import CoinPage from "views/Coin/CoinPage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -148,6 +149,14 @@ var dashRoutes = [
     name: "JOKER CRASH",
     icon: <WhatshotIcon  style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: JokerCrashPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/coin",
+    name: "COIN",
+    icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CoinPage,
     layout: "/game",
   },
   {

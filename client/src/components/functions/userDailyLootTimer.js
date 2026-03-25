@@ -112,5 +112,5 @@ export default function useDailyLootTimer(user) {
                 timerRef.current = null;
             }
         };
-    }, [user?.userAuthId, dispatch]);
+    }, [user, dispatch]);
 }

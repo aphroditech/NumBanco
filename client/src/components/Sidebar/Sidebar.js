@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, CardGame, JokerCrash, Gravity, DoveGame, CocoGame, AToZGame, AlphaTreeGame } from "variables/Sidebar";
+  import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, CardGame, JokerCrash, Gravity, DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -28,7 +28,7 @@ import Landing_logo from "assets/img/logo_Landing.png";
 function Sidebar(props) {
   let variantChange = "0.2s linear";
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState(null);
+  const [activeMenu, setActiveMenu] = React.useState("menu");
   const toggleMenu = (menu) => {
     setActiveMenu(prev => prev === menu ? null : menu);
   };
@@ -75,6 +75,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={CocoGame} />
               <SidebarButtonLink value={AToZGame} />
               <SidebarButtonLink value={AlphaTreeGame} />
+              <SidebarButtonLink value={Coin} />
             </Collapse>
           </Box>
         )
@@ -230,6 +231,7 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={CloudSpread} />
                 <SidebarButtonLink value={AlphaTreeGame} />
                 <SidebarButtonLink value={AToZGame} />
+                <SidebarButtonLink value={Coin} />
               </Stack>
             </Collapse>
           </Box>

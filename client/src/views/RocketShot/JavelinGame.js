@@ -112,8 +112,8 @@ export default function JavelinGame({ onWin, mode }) {
                 typeof game.scene.getScene === "function"
                     ? game.scene.getScene("GameScene")
                     : game.scene.keys?.["GameScene"];
-            if (!scene || typeof scene.fire !== "function") return false;
-            return scene.fire() === true;
+            if (!scene || typeof scene.kickReactFire !== "function") return false;
+            return scene.kickReactFire() === true;
         };
 
         // Win callback: only wire when parent passes onWin (RocketShot sets window.onJavelinWin in useEffect).
