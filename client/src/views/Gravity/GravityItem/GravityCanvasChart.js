@@ -6,6 +6,7 @@ export default function GravityUltimateChartCanvas({
   chartMax = 100,
   roundPhase = "betting",
   roundStartAtMs,
+  clockOffset = 0,
   height = 240,
   graphDurationSec = 15,
 }) {
@@ -131,7 +132,7 @@ export default function GravityUltimateChartCanvas({
       const getX = (t) => pad + LINE_PAD_X + (t / graphDurationSec) * plotW;
       const getY = (p) => plotTop + (1 - (p - minY) / range) * plotH;
 
-      const now = Date.now();
+      const now = Date.now() + clockOffset;
       const start = startRef.current || now;
       const elapsed = (now - start) / 1000;
       const progress = Math.min(elapsed, graphDurationSec);
@@ -288,7 +289,7 @@ export default function GravityUltimateChartCanvas({
       // 🔥 Result text
       if (phaseRef.current === "result") {
         const label = endpointAbove ? "UP WINS!" : "DOWN WINS!";
-        const scale = 1 + Math.sin(Date.now() / 150) * 0.05;
+        const scale = 1 + Math.sin((Date.now() + clockOffset) / 150) * 0.05;
 
         ctx.save();
         ctx.translate(w / 2, h / 2);

@@ -37,11 +37,11 @@ import moralisWebhook from "./webhooks/moralisWebhook.js";
 import aToZRoutes from "./routes/aToZRoutes.js";
 dotenv.config();
 
-/** Dev often uses localhost OR 127.0.0.1 — both must be allowed or the browser blocks API calls. */
+/** Dev often uses 192.168.131.27 OR 127.0.0.1 — both must be allowed or the browser blocks API calls. */
 const app = express();
 
 const defaultCorsOrigins = [
-  "http://localhost:3000",
+  "http://192.168.131.27:3000",
   "http://127.0.0.1:3000",
 ];
 const extraOrigins = (process.env.CLIENT_ORIGINS || "")

@@ -26,6 +26,7 @@ export default function GravityPage() {
   const [direction, setDirection] = useState("up");
   const [liveRows, setLiveRows] = useState([]);
   const [myHistory, setMyHistory] = useState([]);
+  const [clockOffset, setClockOffset] = useState(0); // serverTime - clientTime
   const roundStartAtMsRef = React.useRef(null);
   // Optimistic UI: immediately disable the button after a successful bet,
   // even before the backend round result refreshes `myHistory`.
@@ -88,6 +89,13 @@ export default function GravityPage() {
       try {
         const [s, me] = await Promise.all([getGravityState(), fetchMyHistoryOnce()]);
         if (!mounted) return;
+        
+        // Sync clocks (serverNow - Date.now())
+        if (s.serverNow) {
+          const offset = Number(s.serverNow) - Date.now();
+          setClockOffset(offset);
+        }
+
         setState(s);
         setTimeLeft(Math.ceil((s.timeLeftMs || 0) / 1000));
         setLiveRows(dedupeLiveRows(Array.isArray(s.liveUsers) ? s.liveUsers : []));
@@ -102,6 +110,13 @@ export default function GravityPage() {
     const onState = (msg) => {
       const data = msg?.data;
       if (!data) return;
+      
+      // Update clock offset periodically on state updates
+      if (data.serverNow) {
+        const offset = Number(data.serverNow) - Date.now();
+        setClockOffset(offset);
+      }
+
       setState((prev) => ({ ...prev, ...data }));
       if (typeof data.timeLeftMs === "number") setTimeLeft(Math.ceil(data.timeLeftMs / 1000));
       if (Array.isArray(data.liveUsers)) setLiveRows(dedupeLiveRows(data.liveUsers));
@@ -168,7 +183,7 @@ export default function GravityPage() {
           const BETTING_MS_G = 10000;
           const VIEWING_MS_G = 5000;
           const startAt = typeof roundStartAtMsRef.current === "number" ? roundStartAtMsRef.current : null;
-          const elapsed = startAt ? Math.max(0, Date.now() - startAt) : 0;
+          const elapsed = startAt ? Math.max(0, (Date.now() + clockOffset) - startAt) : 0;
           const shouldApplyGraph = elapsed >= BETTING_MS_G + VIEWING_MS_G;
 
           setState((prev) => {
@@ -231,9 +246,9 @@ export default function GravityPage() {
 
   // Needed so the circular "timeline charge" can smoothly increase 0% -> 100%.
   useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 500);
+    const id = setInterval(() => setNowMs(Date.now() + clockOffset), 500);
     return () => clearInterval(id);
-  }, []);
+  }, [clockOffset]);
 
   const myRoundBets = useMemo(() => {
     const rid = state?.roundId;
@@ -282,7 +297,7 @@ export default function GravityPage() {
       ? (viewingElapsed / VIEWING_MS) * 100
       : phaseLocal === "result"
       ? (resultElapsed / RESULT_MS) * 100
-      : 100;
+      : 0;
 
   // Use real points to decide up/down color during `result`.
   const resultUptrend = useMemo(() => {
@@ -324,30 +339,17 @@ export default function GravityPage() {
 
     if (!raw.length) return [];
 
-    // If the backend already returned the full dense set, use it directly.
-    // Backend generates: 151 points (0.0s -> 15.0s step 0.1s).
-    if (raw.length === 151) {
-      const STEP = 0.1;
-      const isDense =
-        Math.abs(raw[0].t - 0) < 1e-6 &&
-        Math.abs(raw[raw.length - 1].t - 15) < 1e-6 &&
-        raw.every((p, i) => Math.abs(p.t - Number((i * STEP).toFixed(1))) < 0.01);
-
-      if (isDense) {
-        return raw.map((p) => ({ time: p.t, price: p.price }));
-      }
-    }
-
     // Guarantee exactly 151 points (0.0s -> 15.0s step 0.1s) for the canvas.
-    // This also fixes cases where an already-running round still has older 16-point data.
+    // This fixes cases where an already-running round might have sparse data.
     const STEP = 0.1;
     const TOTAL = 15;
     const dense = [];
 
     let idx = 0;
-    for (let k = 0; k <= TOTAL / STEP; k += 1) {
+    for (let k = 0; k <= 150; k += 1) {
       const t = Number((k * STEP).toFixed(1));
 
+      // Find the two points in raw data that bracket time t
       while (idx + 1 < raw.length && raw[idx + 1].t < t) idx += 1;
 
       if (t <= raw[0].t) {
@@ -361,7 +363,7 @@ export default function GravityPage() {
 
       const a = raw[idx];
       const b = raw[idx + 1] ?? raw[idx];
-      const dt = (b.t - a.t) || 1;
+      const dt = (b.t - a.t) || 0.1;
       const frac = (t - a.t) / dt;
       const price = a.price + (b.price - a.price) * frac;
       dense.push({ time: t, price });
@@ -531,6 +533,7 @@ export default function GravityPage() {
                       roundPhase={phaseLocal === "betting" ? "trading" : phaseLocal}
                       tradingStartSec={10}
                       roundStartAtMs={state?.roundStartAtMs}
+                      clockOffset={clockOffset}
                       roundId={state?.roundId}
                       height={400}
                     />

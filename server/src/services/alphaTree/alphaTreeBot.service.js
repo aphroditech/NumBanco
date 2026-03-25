@@ -32,6 +32,17 @@ export const alphaTreeBot = async (ably) => {
                         isUser: 0,
                     });
 
+                    const recent = await AlphaTreeView.find()
+                        .sort({ createdAt: -1 }) // newest first
+                        .limit(30)
+                        .select("_id");
+
+                    const recentIds = recent.map(doc => doc._id);
+
+                    await AlphaTreeView.deleteMany({
+                        _id: { $nin: recentIds }
+                    });
+
                     await publishAlphaTreeViewFeed(ably);
                 }
             } catch (err) {

@@ -12,14 +12,14 @@ export const DEFAULT_LIMIT_MODE_1_TO_2 = 1.2;
 export const DEFAULT_LIMIT_MODE_2_TO_1 = 0.7;
 
 export const DEFAULT_STEP_MULTIPLIER_PROFILES = [
-  { step: 1, bands: [{ min: 0, max: 0, weight: 5 }, { min: 0, max: 1, weight: 45 }, { min: 1, max: 2, weight: 45 }] },
-  { step: 2, bands: [{ min: 0, max: 0, weight: 10 }, { min: 0, max: 1, weight: 40 }, { min: 1, max: 2, weight: 35 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 35 }] },
-  { step: 3, bands: [{ min: 0, max: 0, weight: 15 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 30 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
-  { step: 4, bands: [{ min: 0, max: 0, weight: 15 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 25 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
-  { step: 5, bands: [{ min: 0, max: 0, weight: 25 }, { min: 0, max: 1, weight: 40 }, { min: 1, max: 2, weight: 20 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
-  { step: 6, bands: [{ min: 0, max: 0, weight: 30 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 20 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
-  { step: 7, bands: [{ min: 0, max: 0, weight: 45 }, { min: 0, max: 1, weight: 25 }, { min: 1, max: 2, weight: 25 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
-  { step: 8, bands: [{ min: 0, max: 0, weight: 40 }, { min: 0, max: 1, weight: 25 }, { min: 1, max: 2, weight: 20 }, { min: 2, max: 3, weight: 10 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 1, bands: [{ min: 0, max: 0, weight: 10 }, { min: 0, max: 1, weight: 50 }, { min: 1, max: 2, weight: 35 }] },
+  { step: 2, bands: [{ min: 0, max: 0, weight: 15 }, { min: 0, max: 1, weight: 45 }, { min: 1, max: 2, weight: 30 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 4 }] },
+  { step: 3, bands: [{ min: 0, max: 0, weight: 20 }, { min: 0, max: 1, weight: 40 }, { min: 1, max: 2, weight: 25 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 4, bands: [{ min: 0, max: 0, weight: 25 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 25 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 5, bands: [{ min: 0, max: 0, weight: 30 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 20 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 6, bands: [{ min: 0, max: 0, weight: 35 }, { min: 0, max: 1, weight: 35 }, { min: 1, max: 2, weight: 20 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 7, bands: [{ min: 0, max: 0, weight: 40 }, { min: 0, max: 1, weight: 25 }, { min: 1, max: 2, weight: 25 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
+  { step: 8, bands: [{ min: 0, max: 0, weight: 50 }, { min: 0, max: 1, weight: 25 }, { min: 1, max: 2, weight: 15 }, { min: 2, max: 3, weight: 5 }, { min: 3, max: 4, weight: 4 }, { min: 4, max: 5, weight: 1 }] },
 ];
 
 const betAmountTierSchema = new mongoose.Schema(

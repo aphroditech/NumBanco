@@ -21,7 +21,11 @@ import { initAToZSetting } from './initAtoZSettings.js';
 import { initCloudSpreadSetting } from './initCloudSpreadSetting.js';
 import { initGravityBot } from './initGravityBot.js';
 import { initializeMinesSettings } from './minesSettings.js';
+import { initializeAlphaTreeSettings } from './initAlphaTreeSettings.js';
+import { initializeCocoRates } from './initCocoRates.js';
 import { initCoinSettings } from './initCoinSettings.js';
+
+
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
 
@@ -42,6 +46,8 @@ export const initializeDatabase = async () => {
     await initCloudSpreadSetting();
     await initGravityBot();
     await initializeMinesSettings();
+    await initializeAlphaTreeSettings();
+    await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();
     await initializeCardGamePercentages();

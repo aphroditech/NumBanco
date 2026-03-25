@@ -28,6 +28,8 @@ const HIGH_STRETCH_NORMAL = 1;
 const STEP10_MULT_EASY = 1.02;
 const STEP10_MULT_HARD = 0.98;
 const EPS = 1e-10;
+/** If cumulative multiplier exceeds this before a pick (steps 2–10), the next result is forced to bust (0). */
+const MAX_CUMULATIVE_BEFORE_FORCED_BUST = 10;
 /** Mid band draws in the open interval (MID_BAND_LO, MID_BAND_HI), not (0, 1). */
 const MID_BAND_LO = 0.1;
 const MID_BAND_HI = 1;
@@ -403,6 +405,41 @@ export const pickLetter = async (req, res) => {
         }
 
         const stepIndex = state.step;
+
+        const cum = Number(state.cumulativeMultiplier);
+        if (Number.isFinite(cum) && cum > MAX_CUMULATIVE_BEFORE_FORCED_BUST) {
+            if (stepIndex === 10) {
+                return finishAlphaTreeBust(req, res, user, userId, state, {
+                    step: 10,
+                    value: 0,
+                    band: "zero",
+                    letter: "Z",
+                    letterResults: { Z: 0 },
+                });
+            }
+            const mode = normalizeAlphaTreeMode(user.alphaTreeMode);
+            const others = allowed.filter((L) => L !== letter);
+            const [o1, o2] = others;
+            const midOnFirst = Math.random() < 0.5;
+            const bandMap = {
+                [letter]: "zero",
+                [o1]: midOnFirst ? "mid" : "high",
+                [o2]: midOnFirst ? "high" : "mid",
+            };
+            const letterResults = {};
+            for (const L of allowed) {
+                letterResults[L] =
+                    Math.round(drawForBand(stepIndex, bandMap[L], mode) * 1e8) / 1e8;
+            }
+            const r = letterResults[letter];
+            return finishAlphaTreeBust(req, res, user, userId, state, {
+                step: stepIndex,
+                value: r,
+                band: "zero",
+                letter,
+                letterResults,
+            });
+        }
 
         // Step 10: only Z — legacy fixed mult, or random bands when `zButtonHighRate` is configured
         if (stepIndex === 10) {

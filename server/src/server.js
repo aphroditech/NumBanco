@@ -77,20 +77,20 @@ connectDB()
             // startPartnerDepositCron(ably);
             // startWithdrawApprovalCron(ably);
             // getUserStatusChannel(ably);
-            cardGameBot(ably);
-            pumpingBot(ably);
-            jokerCrashBot(ably);
+            // cardGameBot(ably);
+            // pumpingBot(ably);
+            // jokerCrashBot(ably);
             // rubicBot(ably);
             // miningBot(ably);
             // minesBot(ably);
             // rocketBot(ably);
             // aToZBot(ably);
             // fishingBot(ably);
-            // startGravityGameLoop(ably);
-            // setCloudSpreadAbly(ably);
-            // cloudSpreadBot().catch((err) => {
-            //     console.error("[cloud-spread] bot failed to start:", err);
-            // });
+            startGravityGameLoop(ably);
+            setCloudSpreadAbly(ably);
+            cloudSpreadBot().catch((err) => {
+                console.error("[cloud-spread] bot failed to start:", err);
+            });
             // cocoBot(ably);
             // alphaTreeBot(ably);
             // doveBot(ably);

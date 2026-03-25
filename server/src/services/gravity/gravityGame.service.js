@@ -437,6 +437,7 @@ export async function getGravityStateSnapshot() {
     phase,
     timeLeftMs,
     roundStartAtMs: currentRound.startAt?.getTime?.() ?? Date.now(),
+    serverNow: Date.now(),
     startValue: currentRound.startValue,
     endValue: currentRound.endValue ?? points[points.length - 1]?.value ?? currentRound.startValue,
     result: currentRound.result || null,
