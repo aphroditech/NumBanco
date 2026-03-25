@@ -154,12 +154,12 @@ function checkValid(history, settings, betAmt) {
         : filtered?.slice(-totalNumber);
 
     const wins = lastN?.filter(h => h.isWin === true)?.length || 0;
-    // console.log("wins", wins, "canWinNumber", canWinNumber);
     return canWinNumber >= wins;
     
 }
 
 function generateResult(userNumber, condition, aToZSetting, isValid) {
+    console.log("userNumber", userNumber, "condition", condition, "isValid", isValid);
 
     const MULTIPLIERS = {
         THREE_ORDERED: aToZSetting.THREE_ORDERED.multiplier,
@@ -299,7 +299,17 @@ function generateResult(userNumber, condition, aToZSetting, isValid) {
         attempts++;
 
         if (attempts > MAX_ATTEMPTS) {
-            throw new Error("Failed to generate a non-overlapping result after many attempts");
+            result = [
+                randExcept(user),
+                randExcept(user),
+                randExcept(user)
+            ];
+            const resultMultiplier = MULTIPLIERS["NONE"];
+            return {
+                result: result.join(''),
+                multiplier: resultMultiplier,
+                valid: isValid
+            };
         }
 
     } while (detect(user, result) !== condition);
