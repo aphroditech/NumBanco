@@ -13,7 +13,11 @@ export function useAblyJokerCrashUpdates() {
         const channel = ablyClient.channels.get("jokerCrashGame");
 
         const handleMessage = (message) => {
-            setJokerCrashView(message.data.updatedData);
+            const raw = message?.data?.updatedData;
+            const next = Array.isArray(raw) ? raw : raw?.data;
+            if (Array.isArray(next)) {
+                setJokerCrashView(next);
+            }
         };
 
         channel.subscribe("jokerCrashUpdate", handleMessage);

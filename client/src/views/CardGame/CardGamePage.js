@@ -104,6 +104,8 @@ import { cardGameBet } from 'action/CardGameActions';
 
 const MIN_AMOUNT = 0.1;
 const FLIP_MS = 800;
+/** Auto-bet: two chained half-rotations (0→180→360) so new ranks apply only while default backs face the user. */
+const AUTO_BET_SPIN_MS = 1400;
 const ARROW_OVERLAY_HOLD_MS = 2600;
 const ARROW_OVERLAY_FADE_MS = 700;
 
@@ -146,9 +148,15 @@ export default function CardGamePage() {
 
     const [innerRotate, setInnerRotate] = useState(0);
     const [flipTransitionEnabled, setFlipTransitionEnabled] = useState(true);
+    const [flipDurationMs, setFlipDurationMs] = useState(FLIP_MS);
     const [isFlipping, setIsFlipping] = useState(false);
     const [isAutoBetActive, setIsAutoBetActive] = useState(false);
     const flipEndHandledRef = useRef(false);
+    /** 180 = manual or auto first half; 360 = auto second half. */
+    const flipTargetDegRef = useRef(180);
+    /** Auto spin: `to180` then `to360` so we never swap front textures while the user still sees the front face. */
+    const autoSpinPhaseRef = useRef(null);
+    const pendingAutoFacesRef = useRef(null);
 
     const isAutoBetActiveRef = useRef(isAutoBetActive);
     const isFlippingRef = useRef(isFlipping);
@@ -243,8 +251,9 @@ export default function CardGamePage() {
         setIsAutoBetActive(false);
     };
 
-    const handleBet = async () => {
+    const handleBet = async (data) => {
         if (isFlipping) return;
+        const useAutoFullSpin = isAutoBetActiveRef.current;
         setBet(true);
         const res = await cardGameBet(
             { amount: amountRef.current, operator: operatorRef.current },
@@ -253,27 +262,50 @@ export default function CardGamePage() {
         );
 
         if (res) {
-            console.log(res);
             setArrow(res.arrow);
             setArrowTick((t) => t + 1);
-            setWin(res.win);
+            console.log("data", data);
+            if(!data.auto) setWin(res.win);
+            else setTimeout(() => setWin(res.win), 1000);
+
             setIsFlipping(true);
             setFlipTransitionEnabled(true);
-            // Only the hidden backs change before the flip; fronts stay visible until 180°.
-            setLeftColBack(cardAssetFor(randomSuitKey(), res.left));
-            setRightColBack(cardAssetFor(randomSuitKey(), res.right));
-            requestAnimationFrame(() => {
-                setInnerRotate(180);
-            });
-            
-            setTimeout(() => {
+
+            const leftFace = cardAssetFor(randomSuitKey(), res.left);
+            const rightFace = cardAssetFor(randomSuitKey(), res.right);
+
+            if (useAutoFullSpin) {
+                const halfMs = Math.max(350, Math.round(AUTO_BET_SPIN_MS / 2));
+                pendingAutoFacesRef.current = { leftSrc: leftFace, rightSrc: rightFace };
+                autoSpinPhaseRef.current = 'to180';
+                flipTargetDegRef.current = 180;
+                setFlipDurationMs(halfMs);
+                // Keep current fronts through 0→180; only backs are default — new faces apply at 180° (backs visible).
                 setLeftColBack(leftCard);
                 setRightColBack(rightCard);
                 requestAnimationFrame(() => {
                     setInnerRotate(180);
                 });
                 setBet(false);
-            }, 1000);
+            } else {
+                flipTargetDegRef.current = 180;
+                setFlipDurationMs(FLIP_MS);
+                // Manual: hidden backs become result faces; classic 180° flip + second pass after delay.
+                setLeftColBack(leftFace);
+                setRightColBack(rightFace);
+                requestAnimationFrame(() => {
+                    setInnerRotate(180);
+                });
+
+                setTimeout(() => {
+                    setLeftColBack(leftCard);
+                    setRightColBack(rightCard);
+                    requestAnimationFrame(() => {
+                        setInnerRotate(180);
+                    });
+                    setBet(false);
+                }, 1000);
+            }
             return res;
         } else {
             toast.error("Bet failed");
@@ -298,7 +330,7 @@ export default function CardGamePage() {
                     }
                     if (!isAutoBetActiveRef.current) break;
 
-                    const res = await handleBet();
+                    const res = await handleBet( { auto: true } );
                     // If server call fails, stop the auto loop to avoid spam.
                     if (!res) {
                         setIsAutoBetActive(false);
@@ -320,9 +352,51 @@ export default function CardGamePage() {
 
     const handleFlipTransitionEnd = (e) => {
         if (e.propertyName !== 'transform') return;
-        if (innerRotateRef.current !== 180) return;
+        const targetDeg = flipTargetDegRef.current;
+        if (innerRotateRef.current !== targetDeg) return;
         if (flipEndHandledRef.current) return;
         flipEndHandledRef.current = true;
+
+        // Auto-bet: end of 0→180 — user sees default backs; swap in result faces invisibly, then 180→360.
+        if (autoSpinPhaseRef.current === 'to180' && targetDeg === 180) {
+            const pending = pendingAutoFacesRef.current;
+            if (pending) {
+                setLeftColFront(pending.leftSrc);
+                setRightColFront(pending.rightSrc);
+            }
+            setLeftColBack(leftCard);
+            setRightColBack(rightCard);
+            autoSpinPhaseRef.current = 'to360';
+            flipTargetDegRef.current = 360;
+            const halfMs = Math.max(350, Math.round(AUTO_BET_SPIN_MS / 2));
+            setFlipDurationMs(halfMs);
+            setFlipTransitionEnabled(false);
+            requestAnimationFrame(() => {
+                setFlipTransitionEnabled(true);
+                flipEndHandledRef.current = false;
+                requestAnimationFrame(() => {
+                    setInnerRotate(360);
+                });
+            });
+            return;
+        }
+
+        if (targetDeg === 360) {
+            autoSpinPhaseRef.current = null;
+            pendingAutoFacesRef.current = null;
+            setFlipTransitionEnabled(false);
+            setInnerRotate(0);
+            flipTargetDegRef.current = 180;
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setFlipDurationMs(FLIP_MS);
+                    setFlipTransitionEnabled(true);
+                    setIsFlipping(false);
+                    flipEndHandledRef.current = false;
+                });
+            });
+            return;
+        }
 
         const { leftF, leftB, rightF, rightB } = cardFacesRef.current;
 
@@ -704,7 +778,7 @@ export default function CardGamePage() {
                                                 parseFloat(amount) < MIN_AMOUNT ||
                                                 balance < parseFloat(amount || '0')
                                             }
-                                            onClick={handleBet}
+                                            onClick={() => handleBet({ auto: false })}
                                             label="BET"
                                         />
                                         <ClickButton
@@ -850,7 +924,7 @@ export default function CardGamePage() {
                                             sx={{
                                                 transformStyle: 'preserve-3d',
                                                 transition: flipTransitionEnabled
-                                                    ? `transform ${FLIP_MS}ms ease`
+                                                    ? `transform ${flipDurationMs}ms ease`
                                                     : 'none',
                                                 transform: `rotateY(${innerRotate}deg)`,
                                             }}
@@ -865,6 +939,7 @@ export default function CardGamePage() {
                                                 sx={{
                                                     backfaceVisibility: 'hidden',
                                                     WebkitBackfaceVisibility: 'hidden',
+                                                    transform: 'translateZ(1px)',
                                                 }}
                                             >
                                                 <Box
@@ -882,7 +957,7 @@ export default function CardGamePage() {
                                                 alignItems="center"
                                                 justifyContent="center"
                                                 sx={{
-                                                    transform: 'rotateY(180deg)',
+                                                    transform: 'rotateY(180deg) translateZ(1px)',
                                                     backfaceVisibility: 'hidden',
                                                     WebkitBackfaceVisibility: 'hidden',
                                                 }}
@@ -928,7 +1003,7 @@ export default function CardGamePage() {
                                             sx={{
                                                 transformStyle: 'preserve-3d',
                                                 transition: flipTransitionEnabled
-                                                    ? `transform ${FLIP_MS}ms ease`
+                                                    ? `transform ${flipDurationMs}ms ease`
                                                     : 'none',
                                                 transform: `rotateY(${innerRotate}deg)`,
                                             }}
@@ -943,6 +1018,7 @@ export default function CardGamePage() {
                                                 sx={{
                                                     backfaceVisibility: 'hidden',
                                                     WebkitBackfaceVisibility: 'hidden',
+                                                    transform: 'translateZ(1px)',
                                                 }}
                                             >
                                                 <Box
@@ -960,7 +1036,7 @@ export default function CardGamePage() {
                                                 alignItems="center"
                                                 justifyContent="center"
                                                 sx={{
-                                                    transform: 'rotateY(180deg)',
+                                                    transform: 'rotateY(180deg) translateZ(1px)',
                                                     backfaceVisibility: 'hidden',
                                                     WebkitBackfaceVisibility: 'hidden',
                                                 }}

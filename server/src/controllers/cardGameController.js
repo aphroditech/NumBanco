@@ -406,4 +406,4 @@ function generate(p, symbol) {
     }
   
     return { A, B };
-  }
+}
