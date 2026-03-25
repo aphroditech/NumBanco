@@ -9,7 +9,9 @@ function WinFireworksEffect({
     duration = 1200,
     zIndex = 9999,
     /** Optional line under the main amount (e.g. total multiplier). */
-    subtitle
+    subtitle,
+    /** Optional viewport-space anchor rect: effect centers within this box. */
+    anchorRect
 }) {
     if (!isVisible) return null;
     if (typeof document === "undefined") return null;
@@ -102,14 +104,13 @@ function WinFireworksEffect({
             inset: 0,
             zIndex,
             pointerEvents: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
         }}>
             <div style={{
-                position: "relative",
-                width: fwWidth,
-                height: fwHeight,
+                position: "absolute",
+                left: anchorRect?.left ?? 0,
+                top: anchorRect?.top ?? 0,
+                width: anchorRect?.width ?? "100vw",
+                height: anchorRect?.height ?? "100vh",
                 "--effect-duration": `${duration}ms`
             }}>
                 <div className="win-glow" />

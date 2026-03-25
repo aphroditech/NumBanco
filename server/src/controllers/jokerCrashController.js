@@ -1,6 +1,5 @@
 import User from "../models/User.js";
 import JokerCrashView from "../models/JokerCrashView.js";
-import { sendUserResponse } from "../utils/responses.js";
 import JokerCrashLimit from "../models/JokerCrashLimit.js";
 import JokerCrashCard from "../models/JokerCrashCard.js";
 import JokerCrashPercentage from "../models/JokerCrashPercentage.js";
@@ -9,6 +8,9 @@ import JokerCrashIncrease from "../models/JokerCrashIncrease.js";
 // Prevent concurrent `pullStay` updates for the same user.
 // VersionError happens when two requests update the same user doc at nearly the same time.
 const jokerCrashPullStayLocks = new Map();
+const jokerCrashPercentageCache = new Map();
+const jokerCrashCardCache = new Map();
+const jokerCrashIncreaseCache = new Map();
 
 const jokerCrashUserProjection = {
     "wallets.eth.privateKey": 0,
@@ -28,6 +30,59 @@ const jokerCrashUserProjection = {
 
 const getJokerCrashUser = async (userId) => {
     return User.findOne({ userId }, jokerCrashUserProjection);
+};
+
+const trimRecent = (arr, max = 30) => {
+    if (!Array.isArray(arr)) return arr;
+    if (arr.length <= max) return arr;
+    return arr.slice(-max);
+};
+
+const compactJokerCrashHistoryForResponse = (history, { maxRounds = 8, maxInfo = 8 } = {}) => {
+    if (!Array.isArray(history)) return [];
+    return history.slice(-maxRounds).map((item) => ({
+        ...item,
+        info: trimRecent(item?.info, maxInfo),
+    }));
+};
+
+const buildJokerCrashCompactUser = (user) => {
+    const raw = typeof user?.toObject === "function" ? user.toObject() : user;
+    if (!raw || typeof raw !== "object") return raw;
+
+    const jokerCrashHistory = Array.isArray(raw.jokerCrashHistory)
+        ? raw.jokerCrashHistory
+              .map((item) => {
+                  if (item?.active === false) return item;
+                  return {
+                      ...item,
+                      info: trimRecent(item?.info, 15),
+                  };
+              })
+              .slice(-20)
+        : [];
+
+    return {
+        userId: raw.userId,
+        balance: raw.balance,
+        totalBet: raw.totalBet,
+        refreshBet: raw.refreshBet,
+        lotterybet: raw.lotterybet,
+        jokerCrashMode: raw.jokerCrashMode,
+        avatar: raw.avatar,
+        altas: raw.altas,
+        membership: raw.membership,
+        notification: trimRecent(raw.notification, 20),
+        jokerCrashHistory: compactJokerCrashHistoryForResponse(jokerCrashHistory),
+    };
+};
+
+const sendJokerCrashUserResponse = (res, message, user, extra = {}) => {
+    return res.json({
+        message,
+        ...extra,
+        user: buildJokerCrashCompactUser(user),
+    });
 };
 
 const getActiveJokerCrashHistoryItem = (user) => {
@@ -88,35 +143,50 @@ export const bet = async (req, res) => {
         return res.status(400).json({ error: "Invalid jokerCrash bet amount" });
     }
 
-    const user = await getJokerCrashUser(req.user.userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const userId = req.user.userId;
+    const snapshot = await User.findOne(
+        { userId },
+        {
+            userId: 1,
+            balance: 1,
+            totalBet: 1,
+            refreshBet: 1,
+            lotterybet: 1,
+            jokerCrashMode: 1,
+            avatar: 1,
+            altas: 1,
+            membership: 1,
+            notification: { $slice: -20 },
+            jokerCrashHistory: { $slice: -20 },
+        }
+    ).lean();
+    if (!snapshot) return res.status(404).json({ error: "User not found" });
 
-    if(amount > user.balance) {
-        return sendUserResponse(res, "You don't have enough balance to bet", user, {status: "error"});
-    }
-
-    user.balance -= amount;
-
-    user.totalBet = addToThousand(user.totalBet, amount);
-    user.refreshBet = addToThousand(user.refreshBet, amount);
-    user.lotterybet = addToThousand(user.lotterybet, amount);
-
-    const pending = user.jokerCrashHistory?.filter((item) => item.active === false) ?? [];
-    if (pending.length > 0) {
-        return res.status(409).json({ error: "JokerCrash bet already in progress" });
+    if (amount > toNumberOrZero(snapshot.balance)) {
+        return res.json({
+            message: "You don't have enough balance to bet",
+            status: "error",
+            user: {
+                userId: snapshot.userId,
+                balance: snapshot.balance,
+                totalBet: snapshot.totalBet,
+                refreshBet: snapshot.refreshBet,
+                lotterybet: snapshot.lotterybet,
+                jokerCrashMode: snapshot.jokerCrashMode,
+                avatar: snapshot.avatar,
+                altas: snapshot.altas,
+                membership: snapshot.membership,
+                notification: snapshot.notification ?? [],
+                jokerCrashHistory: snapshot.jokerCrashHistory ?? [],
+            },
+        });
     }
 
     const lastHistory =
-        user.jokerCrashHistory?.length > 0
-            ? user.jokerCrashHistory[user.jokerCrashHistory.length - 1]
+        Array.isArray(snapshot.jokerCrashHistory) && snapshot.jokerCrashHistory.length > 0
+            ? snapshot.jokerCrashHistory[0]
             : { totalBet: 0, totalWin: 0, jokerCrashBalance: 0 };
-        
-    user.totalhistory.push({
-        amount: -amount,
-        date: new Date(),
-        type: "jokerCrash",
-    });
-
+    const now = new Date();
     const betEntry = {
         bet: amount,
         win: 0,
@@ -132,12 +202,56 @@ export const bet = async (req, res) => {
             multi: 1,
             status: 1,
         }],
-        createAt: new Date(),
+        createAt: now,
     };
 
-    user.jokerCrashHistory.push(betEntry);
-    await user.save({ optimisticConcurrency: false });
-    return sendUserResponse(res, "", user, {status: "success"});
+    const updateResult = await User.updateOne(
+        {
+            userId,
+            balance: { $gte: amount },
+            "jokerCrashHistory.active": { $ne: false },
+        },
+        {
+            $inc: {
+                balance: -amount,
+                totalBet: amount,
+                refreshBet: amount,
+                lotterybet: amount,
+            },
+            $push: {
+                totalhistory: {
+                    amount: -amount,
+                    date: now,
+                    type: "jokerCrash",
+                },
+                jokerCrashHistory: betEntry,
+            },
+        }
+    );
+
+    if (!updateResult?.matchedCount) {
+        return res.status(409).json({ error: "JokerCrash bet already in progress" });
+    }
+
+    const updatedUser = {
+        userId: snapshot.userId,
+        balance: toNumberOrZero(snapshot.balance) - amount,
+        totalBet: addToThousand(snapshot.totalBet, amount),
+        refreshBet: addToThousand(snapshot.refreshBet, amount),
+        lotterybet: addToThousand(snapshot.lotterybet, amount),
+        jokerCrashMode: snapshot.jokerCrashMode,
+        avatar: snapshot.avatar,
+        altas: snapshot.altas,
+        membership: snapshot.membership,
+        notification: snapshot.notification ?? [],
+        jokerCrashHistory: [...(snapshot.jokerCrashHistory ?? []), betEntry].slice(-20),
+    };
+
+    return res.json({
+        message: "",
+        status: "success",
+        user: updatedUser,
+    });
 };
 
 export const operator = async (req, res) => {
@@ -145,44 +259,90 @@ export const operator = async (req, res) => {
         const { userId } = req.user;
         const { operator } = req.body;
 
-        const user = await getJokerCrashUser(userId);
-        if (!user) return res.status(404).json({ error: "User not found" });
+        const snapshot = await User.findOne(
+            { userId, "jokerCrashHistory.active": false },
+            {
+                userId: 1,
+                balance: 1,
+                totalBet: 1,
+                refreshBet: 1,
+                lotterybet: 1,
+                jokerCrashMode: 1,
+                avatar: 1,
+                altas: 1,
+                membership: 1,
+                notification: { $slice: -20 },
+                jokerCrashHistory: { $slice: -20 },
+            }
+        ).lean();
+        if (!snapshot) return res.status(404).json({ error: "User not found" });
 
-        const historyItem = getActiveJokerCrashHistoryItem(user);
-        if (!historyItem) {
+        const historyIndex = Array.isArray(snapshot.jokerCrashHistory)
+            ? snapshot.jokerCrashHistory.findIndex((item) => item?.active === false)
+            : -1;
+        if (historyIndex < 0) {
             return res.status(400).json({ error: "No active jokerCrash bet to pull" });
         }
+        const historyItem = snapshot.jokerCrashHistory[historyIndex];
 
         const lastInfo = historyItem.info?.length ? historyItem.info[historyItem.info.length - 1] : null;
 
-        const nextStep = historyItem.step + 1;
-        const card = await calculateJokerCrashCard(req.user.jokerCrashMode, lastInfo.card, operator);
+        const nextStep = toNumberOrZero(historyItem.step) + 1;
+        const card = await calculateJokerCrashCard(snapshot.jokerCrashMode, lastInfo.card, operator);
 
-        const {multi, status, imulti} = await calculateJokerCrashMulti(operator, card, lastInfo, req.user.jokerCrashMode);
-
-        historyItem.multi = multi;
-
-        updateHistory(historyItem, nextStep, card, multi, status, operator, imulti);
+        const {multi, status, imulti} = await calculateJokerCrashMulti(operator, card, lastInfo, snapshot.jokerCrashMode);
+        const updatedHistoryItem = {
+            ...historyItem,
+            multi,
+            step: nextStep,
+            info: [
+                ...(historyItem.info ?? []),
+                {
+                    step: nextStep,
+                    card,
+                    multi,
+                    status,
+                    operator,
+                    imulti,
+                },
+            ],
+        };
 
         var bang = 1;
         if (multi <= 0) {
             bang = -1;
-            bangJokerCrash(historyItem);
-
-            historyItem.jokerCrashBalance = historyItem.totalWin - historyItem.totalBet;
-
-            await createJokerCrashViewEntry({
-                userId: user.userId,
-                bet: historyItem.bet,
-                win: historyItem.win,
-                step: historyItem.step,
-                multi: historyItem.multi,
-                status: "bang",
-            });
-            
-            applyJokerCrashMode(user, historyItem.totalBet, historyItem.jokerCrashBalance);
-            scheduleCreditAndBroadcast(req.app);
+            updatedHistoryItem.active = true;
+            updatedHistoryItem.jokerCrashBalance =
+                toNumberOrZero(updatedHistoryItem.totalWin) - toNumberOrZero(updatedHistoryItem.totalBet);
         }
+
+        const updateResult = await User.updateOne(
+            { userId, "jokerCrashHistory.active": false },
+            {
+                $set: { "jokerCrashHistory.$": updatedHistoryItem },
+            }
+        );
+        if (!updateResult?.matchedCount) {
+            return res.status(409).json({ error: "No active jokerCrash bet to pull" });
+        }
+
+        const responseUser = {
+            userId: snapshot.userId,
+            balance: snapshot.balance,
+            totalBet: snapshot.totalBet,
+            refreshBet: snapshot.refreshBet,
+            lotterybet: snapshot.lotterybet,
+            jokerCrashMode: snapshot.jokerCrashMode,
+            avatar: snapshot.avatar,
+            altas: snapshot.altas,
+            membership: snapshot.membership,
+            notification: snapshot.notification ?? [],
+            jokerCrashHistory: compactJokerCrashHistoryForResponse(
+                (snapshot.jokerCrashHistory ?? []).map((item, idx) =>
+                    idx === historyIndex ? updatedHistoryItem : item
+                )
+            ),
+        };
 
         const data = {
             card: card,
@@ -190,8 +350,38 @@ export const operator = async (req, res) => {
             imulti: imulti,
             bang: bang,
         }
-        await user.save({ optimisticConcurrency: false });
-        return sendUserResponse(res, "", user, {data});
+        const response = res.json({
+            message: "",
+            data,
+            user: responseUser,
+        });
+
+        if (bang === -1) {
+            Promise.resolve()
+                .then(() =>
+                    createJokerCrashViewEntry({
+                        userId,
+                        bet: updatedHistoryItem.bet,
+                        win: updatedHistoryItem.win,
+                        step: updatedHistoryItem.step,
+                        multi: updatedHistoryItem.multi,
+                        status: "bang",
+                    })
+                )
+                .then(() =>
+                    applyJokerCrashModeByUserId(
+                        userId,
+                        updatedHistoryItem.totalBet,
+                        updatedHistoryItem.jokerCrashBalance
+                    )
+                )
+                .then(() => scheduleCreditAndBroadcast(req.app))
+                .catch((err) => {
+                    console.error("jokerCrashOperator side-effect error:", err);
+                });
+        }
+
+        return response;
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: "Server error" });
@@ -203,51 +393,113 @@ export const operator = async (req, res) => {
 
 export const jokerCrashCashOut = async (req, res) => {
     try {
-        const user = await getJokerCrashUser(req.user.userId);
-        if (!user) return res.status(404).json({ error: "User not found" });
+        const userId = req.user.userId;
+        const snapshot = await User.findOne(
+            { userId, "jokerCrashHistory.active": false },
+            {
+                userId: 1,
+                balance: 1,
+                totalBet: 1,
+                refreshBet: 1,
+                lotterybet: 1,
+                jokerCrashMode: 1,
+                avatar: 1,
+                altas: 1,
+                membership: 1,
+                notification: { $slice: -20 },
+                jokerCrashHistory: { $slice: -20 },
+            }
+        ).lean();
+        if (!snapshot) return res.status(404).json({ error: "User not found" });
 
-        const historyItem = getActiveJokerCrashHistoryItem(user);
-        if (!historyItem) {
+        const historyIndex = Array.isArray(snapshot.jokerCrashHistory)
+            ? snapshot.jokerCrashHistory.findIndex((item) => item?.active === false)
+            : -1;
+        if (historyIndex < 0) {
             return res.status(400).json({ error: "No active jokerCrash bet to cash out" });
         }
+        const historyItem = snapshot.jokerCrashHistory[historyIndex];
 
         const lastHistory =
-            user.jokerCrashHistory?.length > 1
-                ? user.jokerCrashHistory[user.jokerCrashHistory.length - 2]
+            historyIndex > 0
+                ? snapshot.jokerCrashHistory[historyIndex - 1]
                 : { totalBet: 0, totalWin: 0, jokerCrashBalance: 0 };
 
         const numAmount = toNumberOrZero(historyItem.bet);
         const numMulti = toNumberOrZero(historyItem.multi);
         const winAmount = numAmount * numMulti;
 
-        historyItem.active = true;
-        historyItem.win = winAmount;
-        historyItem.totalBet = toNumberOrZero(lastHistory.totalBet) + numAmount;
-        historyItem.totalWin = toNumberOrZero(lastHistory.totalWin) + winAmount;
-        historyItem.jokerCrashBalance = historyItem.totalWin - historyItem.totalBet;
-
-        user.balance += winAmount;
-
-        applyJokerCrashMode(user, historyItem.totalBet, historyItem.jokerCrashBalance);
-
-        await user.save({ optimisticConcurrency: false });
-
-        await createJokerCrashViewEntry({
-            userId: user.userId,
-            bet: numAmount,
+        const updatedHistoryItem = {
+            ...historyItem,
+            active: true,
             win: winAmount,
-            step: historyItem.step,
-            multi: numMulti,
-            status: "cashout",
-        });
+            totalBet: toNumberOrZero(lastHistory.totalBet) + numAmount,
+            totalWin: toNumberOrZero(lastHistory.totalWin) + winAmount,
+        };
+        updatedHistoryItem.jokerCrashBalance =
+            toNumberOrZero(updatedHistoryItem.totalWin) - toNumberOrZero(updatedHistoryItem.totalBet);
+
+        const updateResult = await User.updateOne(
+            { userId, "jokerCrashHistory.active": false },
+            {
+                $inc: { balance: winAmount },
+                $set: { "jokerCrashHistory.$": updatedHistoryItem },
+            }
+        );
+        if (!updateResult?.matchedCount) {
+            return res.status(409).json({ error: "No active jokerCrash bet to cash out" });
+        }
 
         const data = {
             win: winAmount,
         }
 
-        scheduleCreditAndBroadcast(req.app);
+        const responseUser = {
+            userId: snapshot.userId,
+            balance: toNumberOrZero(snapshot.balance) + winAmount,
+            totalBet: snapshot.totalBet,
+            refreshBet: snapshot.refreshBet,
+            lotterybet: snapshot.lotterybet,
+            jokerCrashMode: snapshot.jokerCrashMode,
+            avatar: snapshot.avatar,
+            altas: snapshot.altas,
+            membership: snapshot.membership,
+            notification: snapshot.notification ?? [],
+            jokerCrashHistory: (snapshot.jokerCrashHistory ?? []).map((item, idx) =>
+                idx === historyIndex ? updatedHistoryItem : item
+            ),
+        };
 
-        return sendUserResponse(res, "", user, {data});
+        const response = res.json({
+            message: "",
+            data,
+            user: responseUser,
+        });
+
+        Promise.resolve()
+            .then(() =>
+                applyJokerCrashModeByUserId(
+                    userId,
+                    updatedHistoryItem.totalBet,
+                    updatedHistoryItem.jokerCrashBalance
+                )
+            )
+            .then(() =>
+                createJokerCrashViewEntry({
+                    userId,
+                    bet: numAmount,
+                    win: winAmount,
+                    step: updatedHistoryItem.step,
+                    multi: numMulti,
+                    status: "cashout",
+                })
+            )
+            .then(() => scheduleCreditAndBroadcast(req.app))
+            .catch((err) => {
+                console.error("jokerCrashCashOut side-effect error:", err);
+            });
+
+        return response;
     } catch (error) {
         console.error("jokerCrashCashOut error:", error);
 
@@ -259,7 +511,7 @@ export const jokerCrashCashOut = async (req, res) => {
 
 export const getJokerCrashView = async (req, res) => {
     try {
-        const views = await JokerCrashView.find().sort({ createdAt: -1 }).limit(12);
+        const views = await JokerCrashView.find().sort({ createdAt: -1 }).limit(12).lean();
         const data = await enrichJokerCrashViewsWithUser(views);
         return res.status(200).json({ data });
     } catch (error) {
@@ -301,40 +553,34 @@ async function scheduleCreditAndBroadcast(app) {
 }
 
 async function enrichJokerCrashViewsWithUser(jokerCrashViews) {
-    return Promise.all(
-        jokerCrashViews.map(async (item) => {
-            const user = await User.findOne(
-                { userId: item.userId },
-                {
-                    "wallets.eth.privateKey": 0,
-                    "wallets.bsc.privateKey": 0,
-                    "wallets.tron.privateKey": 0,
-                    country: 0,
-                    pumpingMode: 0,
-                    fishingMode: 0,
-                    jokerCrashMode: 0,
-                    rubicMode: 0,
-                    partnerId: 0,
-                    partnerActivity: 0,
-                    lastClickDate: 0,
-                    canWithdraw: 0,
-                });
-            const obj = item.toObject();
-            delete obj.isUser;
-            delete obj.totalBet;
-            delete obj.totalWin;
-            delete obj.pumpingBalance;
-            if (user) {
-                return {
-                    ...obj,
-                    avatar: user.avatar,
-                    altas: user.altas,
-                    membership: user.membership,
-                };
-            }
-            return obj;
-        })
-    );
+    if (!Array.isArray(jokerCrashViews) || jokerCrashViews.length === 0) return [];
+
+    const userIds = [...new Set(jokerCrashViews.map((item) => item.userId).filter(Boolean))];
+    const users = await User.find(
+        { userId: { $in: userIds } },
+        { userId: 1, avatar: 1, altas: 1, membership: 1 }
+    ).lean();
+
+    const userMap = new Map(users.map((u) => [u.userId, u]));
+
+    return jokerCrashViews.map((item) => {
+        const obj = { ...item };
+        delete obj.isUser;
+        delete obj.totalBet;
+        delete obj.totalWin;
+        delete obj.pumpingBalance;
+
+        const user = userMap.get(item.userId);
+        if (user) {
+            return {
+                ...obj,
+                avatar: user.avatar,
+                altas: user.altas,
+                membership: user.membership,
+            };
+        }
+        return obj;
+    });
 }
 
 async function applyJokerCrashMode(user, totalBet, jokerCrashBalance) {
@@ -350,14 +596,30 @@ async function applyJokerCrashMode(user, totalBet, jokerCrashBalance) {
     }
 }
 
+async function applyJokerCrashModeByUserId(userId, totalBet, jokerCrashBalance) {
+    const limit =
+        (await JokerCrashLimit.findOne({
+            from: { $lte: totalBet },
+            to: { $gte: totalBet },
+        })) || {};
+
+    if (limit.limitHard != null && jokerCrashBalance > limit.limitHard) {
+        await User.updateOne({ userId }, { $set: { jokerCrashMode: 2 } });
+    } else if (limit.limitNormal != null && jokerCrashBalance < limit.limitNormal) {
+        await User.updateOne({ userId }, { $set: { jokerCrashMode: 1 } });
+    }
+}
+
 const calculateJokerCrashMulti = async (operator, card, lastInfo, mode) => {
     const prevCard = Number(lastInfo?.card ?? 1);
     const prevMulti = Number(lastInfo?.multi ?? 1);
 
     const increase = Math.abs(card - prevCard );
 
-    const cardData = await JokerCrashCard.findOne({ card: prevCard });
-    const increaseData = await JokerCrashIncrease.findOne({ increase: increase });
+    const [cardData, increaseData] = await Promise.all([
+        getJokerCrashCardConfig(prevCard),
+        getJokerCrashIncreaseConfig(increase),
+    ]);
     let isWin = false;
     if (operator === '=') {
         isWin = card === prevCard;
@@ -376,13 +638,13 @@ const calculateJokerCrashMulti = async (operator, card, lastInfo, mode) => {
         var cardMulti = 1;
         var increaseMulti = 1;
 
-        if(Number(mode) === 0) increaseMulti = increaseData.easy;
-        if(Number(mode) === 1) increaseMulti = increaseData.normal;
-        if(Number(mode) === 2) increaseMulti = increaseData.hard;
+        if(Number(mode) === 0) increaseMulti = toNumberOrZero(increaseData?.easy) || 1;
+        if(Number(mode) === 1) increaseMulti = toNumberOrZero(increaseData?.normal) || 1;
+        if(Number(mode) === 2) increaseMulti = toNumberOrZero(increaseData?.hard) || 1;
 
-        if(operator === '=') cardMulti = cardData.equal;
-        if(operator === '<') cardMulti = cardData.lesser;
-        if(operator === '>') cardMulti = cardData.greater;
+        if(operator === '=') cardMulti = toNumberOrZero(cardData?.equal) || 1;
+        if(operator === '<') cardMulti = toNumberOrZero(cardData?.lesser) || 1;
+        if(operator === '>') cardMulti = toNumberOrZero(cardData?.greater) || 1;
 
         imulti = increaseMulti * cardMulti;
         multi += increaseMulti * cardMulti;
@@ -397,15 +659,15 @@ const calculateJokerCrashMulti = async (operator, card, lastInfo, mode) => {
 }
 
 const calculateJokerCrashCard = async (mode, lastCard, operator) => {
-    const jokerCrashPercentage = await JokerCrashPercentage.findOne({card: lastCard});
+    const jokerCrashPercentage = await getJokerCrashPercentageConfig(lastCard);
 
     var percentages = 0;
     if(operator === '=') {
-        percentages = jokerCrashPercentage.equal;
+        percentages = toNumberOrZero(jokerCrashPercentage?.equal);
     } else if(operator === '<') {
-        percentages = jokerCrashPercentage.lesser;
+        percentages = toNumberOrZero(jokerCrashPercentage?.lesser);
     } else if(operator === '>') {
-        percentages = jokerCrashPercentage.greater;
+        percentages = toNumberOrZero(jokerCrashPercentage?.greater);
     }
     
     const random = Math.floor(Math.random() * 100) + 1;
@@ -427,4 +689,28 @@ const calculateJokerCrashCard = async (mode, lastCard, operator) => {
             return Math.floor(Math.random() * (lastCard - 1)) + 1;
         }
     }
+}
+
+async function getJokerCrashPercentageConfig(card) {
+    const key = Number(card);
+    if (jokerCrashPercentageCache.has(key)) return jokerCrashPercentageCache.get(key);
+    const data = await JokerCrashPercentage.findOne({ card: key }).lean();
+    if (data) jokerCrashPercentageCache.set(key, data);
+    return data;
+}
+
+async function getJokerCrashCardConfig(card) {
+    const key = Number(card);
+    if (jokerCrashCardCache.has(key)) return jokerCrashCardCache.get(key);
+    const data = await JokerCrashCard.findOne({ card: key }).lean();
+    if (data) jokerCrashCardCache.set(key, data);
+    return data;
+}
+
+async function getJokerCrashIncreaseConfig(increase) {
+    const key = Number(increase);
+    if (jokerCrashIncreaseCache.has(key)) return jokerCrashIncreaseCache.get(key);
+    const data = await JokerCrashIncrease.findOne({ increase: key }).lean();
+    if (data) jokerCrashIncreaseCache.set(key, data);
+    return data;
 }
