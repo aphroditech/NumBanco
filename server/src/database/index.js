@@ -23,6 +23,8 @@ import { initGravityBot } from './initGravityBot.js';
 import { initializeMinesSettings } from './minesSettings.js';
 import { initializeAlphaTreeSettings } from './initAlphaTreeSettings.js';
 import { initializeCocoRates } from './initCocoRates.js';
+import { initCoinSettings } from './initCoinSettings.js';
+
 
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
@@ -37,6 +39,7 @@ export const initializeDatabase = async () => {
     await initializePumpingMultis();
     await initializeSetting();
     await initDoveSetting();
+    await initCoinSettings();
     await initMiningSetting();
     await initRocketSetting();
     await initAToZSetting();

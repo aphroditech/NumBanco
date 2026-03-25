@@ -20,23 +20,28 @@ export const initAToZSetting = async () => {
                 },
                 TWO_ORDERED: {
                     multiplier: 15,
-                    probability: 0.01
+                    probability: 0.01,
+                    limits: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
                 },
                 TWO_UNORDERED: {
                     multiplier: 7.2,
-                    probability: 0.04
+                    probability: 0.04,
+                    limits: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
                 },
                 ONE_ORDERED: {
                     multiplier: 2.4,
-                    probability: 0.18
+                    probability: 0.18,
+                    limits: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
                 },
                 ONE_UNORDERED: {
                     multiplier: 1.2,
-                    probability: 0.32
+                    probability: 0.32,
+                    limits: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
                 },
                 NONE: {
-                    multiplier: 0.1,
-                    probability: 0.45
+                    multiplier: 0,
+                    probability: 0.45,
+                    limits: [{min: 0.1, max:20, totalNumber: 10, canWinNumber: 1}]
                 }
             });
             await defaultAToZSetting.save();
