@@ -187,6 +187,7 @@ function SignIn({ setIsAuth }) {
                             onClick={onClick}
                             mt="28px"
                             isLoading={isLoading}
+                            disabled={isLoading}
                         />
 
                         <Text

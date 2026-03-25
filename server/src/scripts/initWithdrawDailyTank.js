@@ -8,7 +8,7 @@ dotenv.config();
 const initWithdrawDailyTank = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://192.168.131.27:27017/num2bet');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/num2bet');
     console.log('Connected to MongoDB');
 
     // Get yesterday's date

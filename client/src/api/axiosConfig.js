@@ -1,7 +1,7 @@
 import axios from "axios";
 
-/** Use REACT_APP_API_URL in client/.env (e.g. http://192.168.131.27:5000/api or your LAN IP). */
-const API = "http://192.168.131.27:5000/api";
+/** Use REACT_APP_API_URL in client/.env (e.g. http://localhost:5000/api or your LAN IP). */
+const API = "http://localhost:5000/api";
 
 const axiosInstance = axios.create({
     baseURL: API,

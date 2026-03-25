@@ -323,6 +323,7 @@ function SignUp({ setIsAuth }) {
                                 mt="28px"
                                 onClick={onClick}
                                 isLoading={isLoading}
+                                disabled={isLoading}
                             />
                         </FormControl>
 
