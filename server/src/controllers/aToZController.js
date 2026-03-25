@@ -4,17 +4,41 @@ import AToZHistory from "../models/digitsSlot/AToZHistory.js";
 import AToZResult from "../models/digitsSlot/AToZResult.js";
 import CalendarDigit from "../models/digitsSlot/CalendarDigit.js";
 
+let aToZSettingsCache = null;
+let aToZSettingsCacheAt = 0;
+const ATOZ_SETTINGS_CACHE_MS = 5000;
+
+async function getAToZSettingsCached() {
+    const now = Date.now();
+    if (aToZSettingsCache && now - aToZSettingsCacheAt < ATOZ_SETTINGS_CACHE_MS) {
+        return aToZSettingsCache;
+    }
+    const settings = await AToZSetting.findOne().lean();
+    aToZSettingsCache = settings;
+    aToZSettingsCacheAt = now;
+    return settings;
+}
+
 export const bet = async (req, res) => {
     try {
         const { betAmount, number } = req.body;
+        const normalizedBetAmount = Number(betAmount);
+        if (!Number.isFinite(normalizedBetAmount) || normalizedBetAmount <= 0) {
+            return res.status(400).json({ message: "Invalid bet amount" });
+        }
 
-        const user = await User.findById(req.user._id);
-        const aToZSetting = await AToZSetting.findOne();
+        const [user, aToZSetting] = await Promise.all([
+            User.findById(req.user._id)
+                .select("balance aToZAmount aToZWinAmount")
+                .lean(),
+            getAToZSettingsCached(),
+        ]);
+
         if (!user) return res.status(404).json({ message: "User not found" });
         if (!aToZSetting) {
             return res.status(500).json({ message: "AToZ settings not configured" });
         }
-        if (betAmount > user.balance) {
+        if (normalizedBetAmount > user.balance) {
             return res.status(400).json({ message: "You don't have enough balance" });
         }
 
@@ -23,28 +47,34 @@ export const bet = async (req, res) => {
         const outcomeKey = getOutcomeKey(pickStr, aToZSetting, user.aToZAmount, user.aToZWinAmount);
         const { result, multiplier } = generateResult(pickStr, outcomeKey, aToZSetting);
 
-        const winAmount = betAmount * multiplier;
+        const winAmount = normalizedBetAmount * multiplier;
 
-        user.balance -= betAmount;
-        user.aToZAmount += betAmount;
-        user.refreshBet += betAmount;
-        user.lotterybet += betAmount;
-        user.totalBet = (user.totalBet || 0) + betAmount;
-        user.totalhistory.push({
-            amount: -betAmount,
-            date: new Date(),
-            type: "Digits",
-        });
-        await user.save({ optimisticConcurrency: false });
-
-        console.log("outcomeKey", outcomeKey, "result", result);
+        await User.updateOne(
+            { _id: req.user._id },
+            {
+                $inc: {
+                    balance: -normalizedBetAmount,
+                    aToZAmount: normalizedBetAmount,
+                    refreshBet: normalizedBetAmount,
+                    lotterybet: normalizedBetAmount,
+                    totalBet: normalizedBetAmount,
+                },
+                $push: {
+                    totalhistory: {
+                        amount: -normalizedBetAmount,
+                        date: new Date(),
+                        type: "Digits",
+                    },
+                },
+            }
+        );
 
         return res.json({
             result,
             multiplier,
             isWin: multiplier > 0,
             winAmount,
-            balance: -betAmount,
+            balance: -normalizedBetAmount,
         });
     } catch (error) {
         console.error(error);

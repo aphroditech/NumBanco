@@ -32,7 +32,7 @@ export const cocoBot = async (ably) => {
                     const channel = ably.channels.get("cocoGame");
                     const cocoViewUpdate = await CocoView.find()
                         .sort({ createdAt: -1 })
-                        .limit(18);
+                        .limit(22);
 
                     const updatedData = await Promise.all(
                         cocoViewUpdate.map(async (item) => {

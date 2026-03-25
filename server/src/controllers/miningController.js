@@ -5,13 +5,41 @@ import MiningResult from "../models/jackal/MiningResult.js";
 
 import CalendarMining from "../models/jackal/CalendarMining.js";
 
+let miningSettingsCache = null;
+let miningSettingsCacheAt = 0;
+const MINING_SETTINGS_CACHE_MS = 5000;
+
+async function getMiningSettingsCached() {
+    const now = Date.now();
+    if (miningSettingsCache && now - miningSettingsCacheAt < MINING_SETTINGS_CACHE_MS) {
+        return miningSettingsCache;
+    }
+    const settings = await MiningSettings.findOne().lean();
+    miningSettingsCache = settings;
+    miningSettingsCacheAt = now;
+    return settings;
+}
+
 
 export const checkCanWin = async (req, res) => {
     try {
-        const settings = await MiningSettings.findOne();
-        const user = await User.findById(req.user._id);
-
         const { betAmt, turn } = req.body;
+        const betAmount = Number(betAmt);
+        const turnNum = Number(turn);
+
+        if (!Number.isFinite(betAmount) || betAmount <= 0) {
+            return res.status(400).json({ error: "Invalid bet amount" });
+        }
+        if (!Number.isInteger(turnNum) || turnNum < 1) {
+            return res.status(400).json({ error: "Invalid turn" });
+        }
+
+        const [settings, user] = await Promise.all([
+            getMiningSettingsCached(),
+            User.findById(req.user._id)
+                .select("balance totalBet refreshBet lotterybet miningAmount miningMode miningWinAmount")
+                .lean(),
+        ]);
 
         if (!settings) {
             return res.status(404).json({ error: "Mining settings not found" });
@@ -19,24 +47,35 @@ export const checkCanWin = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-
-        user.balance -= betAmt;
-        user.totalBet += betAmt;
-        user.refreshBet += betAmt;
-        user.lotterybet += betAmt;
-        user.miningAmount += betAmt;
-
-        if (user.miningMode === 0 && user.miningWinAmount > settings.limitNormalToHard * user.miningAmount) {
-            user.miningMode = 1;
-        } else if (user.miningMode === 1 && user.miningWinAmount < settings.limitHardToNormal * user.miningAmount) {
-            user.miningMode = 0;
+        if (betAmount > user.balance) {
+            return res.status(400).json({ error: "You don't have enough balance" });
         }
 
-        await user.save();
+        let nextMode = user.miningMode;
+        const nextMiningAmount = (user.miningAmount || 0) + betAmount;
+        if (user.miningMode === 0 && (user.miningWinAmount || 0) > settings.limitNormalToHard * nextMiningAmount) {
+            nextMode = 1;
+        } else if (user.miningMode === 1 && (user.miningWinAmount || 0) < settings.limitHardToNormal * nextMiningAmount) {
+            nextMode = 0;
+        }
 
-        const M1uXj3sZpU = await isWinLimitReached( user._id, betAmt, turn);
+        await User.updateOne(
+            { _id: req.user._id },
+            {
+                $set: { miningMode: nextMode },
+                $inc: {
+                    balance: -betAmount,
+                    totalBet: betAmount,
+                    refreshBet: betAmount,
+                    lotterybet: betAmount,
+                    miningAmount: betAmount,
+                },
+            }
+        );
 
-        return res.json({ balance: -betAmt, M1uXj3sZpU });
+        const M1uXj3sZpU = await isWinLimitReached(req.user._id, betAmount, turnNum, settings);
+
+        return res.json({ balance: -betAmount, M1uXj3sZpU });
     }
     catch (error) {
         console.error("Error in checkCanWin:", error);
@@ -44,9 +83,10 @@ export const checkCanWin = async (req, res) => {
     }
 }
 
-async function isWinLimitReached(user, betAmt, turn) {
-    const miningHistory = await MiningHistory.findOne({ user: user });
-    const settings = await MiningSettings.findOne({});
+async function isWinLimitReached(user, betAmt, turn, settings) {
+    const miningHistory = await MiningHistory.findOne({ user })
+        .select("history.betAmount history.isWin")
+        .lean();
 
     const turns = "Turns" + turn;
 

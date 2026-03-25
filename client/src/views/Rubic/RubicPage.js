@@ -134,7 +134,7 @@ export default function RubicPage() {
 
     const handleBet = async () => {
         if (isRolling) return; // Prevent multiple clicks during roll
-
+        setIsRolling(true);
         const data = {
             amount: parseFloat(amount),
             target: parseInt(target),
@@ -153,7 +153,7 @@ export default function RubicPage() {
 
         // Reset final value
         setFinalValue(null);
-        setIsRolling(true);
+        
         setAnimationSpeed(0.15); // Start with fast animation
 
         // Dice values that win for (targetNum, operator); others lose

@@ -163,7 +163,7 @@ export default function Lottery() {
                         console.error("Error calling getClickData after spin:", err);
                     }
                 }
-            }, 1200);
+            }, 3500);
             console.log(timeoutGetClickData);
             timeoutRefs.current.push(timeoutGetClickData);
 

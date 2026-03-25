@@ -12,6 +12,7 @@ export function useAblyMinesResult() {
     let cancelled = false;
     (async () => {
       const data = await getMinesResults();
+	console.log("da", data);
       if (!cancelled && Array.isArray(data)) {
         setMinesResults(data.slice(0, MAX_ROWS));
       }
