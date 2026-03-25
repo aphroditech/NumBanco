@@ -35,7 +35,13 @@ const buildCardGameCompactUser = (user) => {
 const calculateMultiplier = async (operator, arrow) => {
     const setting = await getCardGameSetting();
     if (operator === arrow) {
-        return operator === ">" ? setting.cardGameGreaterMultipler : operator === "<" ? setting.cardGameLesserMultipler : setting.cardGameEqualMultipler;
+        const rawMultiplier =
+            operator === ">"
+                ? setting.cardGameGreaterMultipler
+                : operator === "<"
+                    ? setting.cardGameLesserMultipler
+                    : setting.cardGameEqualMultipler;
+        return toNumberOrZero(rawMultiplier);
     }
     return 0;
 }
@@ -86,7 +92,8 @@ export const bet = async (req, res) => {
         }
 
         const { left, right, arrow } = await generateCardGameNumbers(operator, user.cardGameMode);
-        const multi = await calculateMultiplier(operator, arrow);
+        const multi = toNumberOrZero(await calculateMultiplier(operator, arrow));
+        const numWin = toNumberOrZero(multi * numAmount);
         
         const lastHistory =
         user.cardGameHistory?.length > 0
@@ -98,18 +105,18 @@ export const bet = async (req, res) => {
             arrow: arrow,
             left: left,
             right: right,
-            win: multi * numAmount,
+            win: numWin,
             totalBet: toNumberOrZero(lastHistory.totalBet) + numAmount,
-            totalWin: toNumberOrZero(lastHistory.totalWin) + multi * numAmount,
-            cardGameBalance: toNumberOrZero(lastHistory.cardGameBalance) + multi * numAmount - numAmount,
+            totalWin: toNumberOrZero(lastHistory.totalWin) + numWin,
+            cardGameBalance: toNumberOrZero(lastHistory.cardGameBalance) + numWin - numAmount,
             createAt: new Date(),
         };
-        const nextBalance = toNumberOrZero(user.balance) + multi * numAmount - numAmount;
+        const nextBalance = toNumberOrZero(user.balance) + numWin - numAmount;
         const updateResult = await User.updateOne(
             { userId, balance: { $gte: numAmount } },
             {
                 $inc: {
-                    balance: multi * numAmount - numAmount,
+                    balance: numWin - numAmount,
                     totalBet: numAmount,
                     refreshBet: numAmount,
                     lotterybet: numAmount,
@@ -126,7 +133,7 @@ export const bet = async (req, res) => {
             left: left,
             right: right,
             arrow: arrow,
-            win: multi * numAmount,
+            win: numWin,
         }
         
         const response = res.json({
@@ -148,7 +155,7 @@ export const bet = async (req, res) => {
                 createCardGameViewEntry({
                     userId,
                     bet: numAmount,
-                    win: multi * numAmount,
+                    win: numWin,
                     arrow: arrow,
                     left: left,
                     right: right,
