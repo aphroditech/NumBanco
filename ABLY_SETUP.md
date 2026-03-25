@@ -43,7 +43,7 @@
 ### Test Server Connection:
 
 1. Start your server
-2. Visit: `http://localhost/api/test/ably-test`
+2. Visit: `http://192.168.131.27/api/test/ably-test`
 3. You should see:
    ```json
    {
@@ -56,7 +56,7 @@
 
 ### Test Publishing:
 
-1. Send POST request to: `http://localhost/api/test/ably-test-publish`
+1. Send POST request to: `http://192.168.131.27/api/test/ably-test-publish`
 2. Check your client console - you should see the test message received
 
 ### Check Console Logs:

@@ -61,7 +61,7 @@ connectDB()
         cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
     };
 
-    /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
+    /** 0.0.0.0 avoids some Windows / IPv6 192.168.131.27 mismatch issues vs binding to default. */
     http.createServer(app).listen(PORT, () => {
         console.log(`🚀 HTTP Server listening on ${PORT} port.`);
     });
@@ -82,15 +82,15 @@ connectDB()
         // jokerCrashBot(ably);
         // rubicBot(ably);
         // miningBot(ably);
-        minesBot(ably);
+        // minesBot(ably);
         // rocketBot(ably);
         // aToZBot(ably);
         // fishingBot(ably);
         startGravityGameLoop(ably);
-        // setCloudSpreadAbly(ably);
-        // cloudSpreadBot().catch((err) => {
-        //     console.error("[cloud-spread] bot failed to start:", err);
-        // });
+        setCloudSpreadAbly(ably);
+        cloudSpreadBot().catch((err) => {
+            console.error("[cloud-spread] bot failed to start:", err);
+        });
         // cocoBot(ably);
         // alphaTreeBot(ably);
         // doveBot(ably);

@@ -7,7 +7,7 @@ dotenv.config();
 const initAmount = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/num2bet');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://192.168.131.27:27017/num2bet');
     console.log('Connected to MongoDB');
 
     // Check if Amount document already exists
