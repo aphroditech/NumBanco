@@ -19,44 +19,36 @@ export default function CloudSpreadLiveFeed({ rows = [], title = "Live", maxRows
     <Box
       w="100%"
       maxW="100%"
-      /** xl: match left column height + inner scroll. Responsive: natural height, no scrollbar. */
-      h={{ xl: "100%" }}
+      /** match left column height + inner scroll. Responsive: natural height, no scrollbar. */
+      h="100%"
       minH={0}
-      flex={{ xl: 1 }}
+      flex={1}
       bg="#2b2b2b"
       borderRadius="14px"
       border="1px solid rgba(255,255,255,0.1)"
-      boxShadow="0 8px 24px rgba(0,0,0,0.35)"
+      boxShadow="none"
       overflow="hidden"
       display="flex"
       flexDirection="column"
+      p="12px"
+      pt="16px"
     >
-      <Text
-        px="14px"
-        pt="12px"
-        pb="8px"
-        fontSize="sm"
-        fontWeight="800"
-        color="rgba(255,255,255,0.92)"
-        letterSpacing="0.02em"
-        flexShrink={0}
-      >
-        {title}
-      </Text>
+      <Flex align="center" justify="space-between" mb="6px" px="10px">
+        <Text fontSize="sm" fontWeight="800" color="rgba(255,255,255,0.92)" letterSpacing="0.02em">
+          {title}
+        </Text>
+      </Flex>
       <Flex
-        px="12px"
-        pb="8px"
+        px="10px"
+        pb="4px"
         borderBottom="1px solid rgba(255,255,255,0.12)"
         fontSize="10px"
         fontWeight="800"
-        color="rgba(255,255,255,0.95)"
+        color="rgba(255,255,255,0.9)"
         textTransform="uppercase"
         letterSpacing="0.06em"
-        flexShrink={0}
       >
-        <Text flex="1.15" pl="2px">
-          User
-        </Text>
+        <Text flex="1.15">USER</Text>
         <Text flex="0.85" textAlign="center">
           Bet($)
         </Text>
@@ -65,21 +57,19 @@ export default function CloudSpreadLiveFeed({ rows = [], title = "Live", maxRows
         </Text>
       </Flex>
       <Box
-        flex={{ xl: 1 }}
-        minH={0}
-        overflowY={{ base: "visible", xl: "auto" }}
-        overflowX="hidden"
-        px="10px"
-        pb="10px"
-        sx={{
-          "&::-webkit-scrollbar": { width: "4px" },
-          "&::-webkit-scrollbar-track": { background: "transparent" },
-          "&::-webkit-scrollbar-thumb": {
-            background: "rgba(255,255,255,0.15)",
-            borderRadius: "8px",
-          },
-        }}
-      >
+          flex="1"
+          minH="0"
+          overflowX="hidden"
+          width="100%"
+          overflowY="auto"
+          px="10px"
+          pb="6px"
+         sx={{
+           "&::-webkit-scrollbar": { display: "none" },
+           "msOverflowStyle": "none",
+           "scrollbarWidth": "none",
+         }}
+       >
         {list.length === 0 ? (
           <Text color="rgba(255,255,255,0.38)" fontSize="sm" py="10" textAlign="center" fontWeight="600">
             No recent plays
@@ -110,7 +100,7 @@ export default function CloudSpreadLiveFeed({ rows = [], title = "Live", maxRows
                   <Avatar size="xs" src={r.avatar || undefined} name={r.userName || "?"} boxSize="22px" />
                   <Tooltip label={fullName} placement="top" hasArrow>
                     <Text noOfLines={1} minW={0} cursor="default">
-                      {truncateName(r.userName)}
+                      {fullName}
                     </Text>
                   </Tooltip>
                 </HStack>

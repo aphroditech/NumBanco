@@ -62,7 +62,7 @@ function DoveHistory() {
 
     return (
         <Box mt="24px" w="100%">
-            <Card pt="20px" pb="20px" minH="400px" px="22px">
+            <Card pt="20px" pb="20px" minH="400px" px="22px" boxShadow="none" border="1px solid rgba(255,255,255,0.1)">
                 <CardHeader>
                     <Text fontSize="lg" color="#fff" fontWeight="bold" mb="16px" display="flex" alignItems="center" justifyContent="center" whiteSpace="nowrap">
                         <RestoreRoundedIcon style={{ fontSize: "30px", color: "#00D4FF", marginRight: "8px" }} />

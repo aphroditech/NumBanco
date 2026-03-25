@@ -294,13 +294,14 @@ export default function CloudSpreadPage() {
         maxW="100%"
         alignItems="stretch"
       >
-        <GridItem area="board" minW={0} maxW="100%">
+        <GridItem area="board" minW={0} maxW="100%" display="flex" flexDirection="column">
           <Card
+            h="100%"
             p={{ base: "14px", md: "18px" }}
             maxW="100%"
             border={S.panelBorder}
             borderRadius={S.radius}
-            boxShadow="0 8px 32px rgba(0,0,0,0.45)"
+            boxShadow="none"
           >
             <CardBody flexDirection="column" alignItems="stretch">
               <VStack align="start" spacing="3" mb="12px">
@@ -573,11 +574,11 @@ export default function CloudSpreadPage() {
           {isLiveFeedLoading ? (
             <Card
               p="14px"
-              h={{ xl: "100%" }}
+              h="100%"
               minH={{ base: "180px", xl: "0" }}
               border={S.panelBorder}
               borderRadius="14px"
-              boxShadow="0 8px 24px rgba(0,0,0,0.35)"
+              boxShadow="none"
               bg="#2b2b2b"
               display="flex"
               alignItems="center"

@@ -42,11 +42,6 @@
         const [isLoading, setIsLoading] = useState(true);
         const history = useHistory();
 
-        const getRowId = (row) => {
-            if (!row) return "";
-            return row._id || row.id || `${row.userName || "user"}-${row.betAmount || 0}-${row.winAmount || 0}`;
-        };
-
         useEffect(() => {
             let isMounted = true;
             getUserRubicHistory(history)
@@ -65,50 +60,90 @@
             return () => { isMounted = false; };
         }, []);
 
-        
+        const maxRows = 12;
+        const rowsToRender = (Array.isArray(rubicResults) ? rubicResults : []).slice(0, maxRows);
+
         return (
-            <GridItem area="empty" minH="250px">
+            <GridItem area="empty" minH="250px" display="flex" h="100%">
                 {isLoading && <Loading />}
-                <Card p="24px" pt="30px" overflowX="hidden" height="450px" w="100%">
-                    <Box overflowX="hidden" width="100%" overflowY="auto" sx={{
-                        "&::-webkit-scrollbar": { width: "6px" },
-                        "&::-webkit-scrollbar-track": { background: "transparent" },
-                        "&::-webkit-scrollbar-thumb": { background: "#555b5e", borderRadius: "8px" },
-                    }}>
+                <Box
+                    w="100%"
+                    maxW="100%"
+                    h="450px"
+                    minH={0}
+                    flex={1}
+                    bg="#2b2b2b"
+                    borderRadius="14px"
+                    border="1px solid rgba(255,255,255,0.1)"
+                    boxShadow="none"
+                    overflow="hidden"
+                    display="flex"
+                    flexDirection="column"
+                    p="16px"
+                    pt="20px"
+                >
+                    <Text
+                        px="12px"
+                        pb="8px"
+                        fontSize="sm"
+                        fontWeight="800"
+                        color="rgba(255,255,255,0.92)"
+                        letterSpacing="0.02em"
+                        flexShrink={0}
+                    >
+                        Live Results
+                    </Text>
+                    <Box
+                        overflowX="hidden"
+                        width="100%"
+                        overflowY="auto"
+                        flex="1"
+                        minH="0"
+                        sx={{
+                            "&::-webkit-scrollbar": { display: "none" },
+                            "msOverflowStyle": "none",
+                            "scrollbarWidth": "none",
+                        }}
+                    >
                         <Table variant="unstyled" color="#fff" width="100%" sx={{ tableLayout: "fixed" }}>
                             <Thead>
-                                <Tr style={{ textAlignLast: "center" }}>
-                                    <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                                <Tr borderBottom="1px solid rgba(255,255,255,0.12)">
+                                    <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" whiteSpace="nowrap" w="42%" textTransform="uppercase" letterSpacing="0.06em">
                                         User
                                     </Th>
-                                    <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                                    <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" textAlign="center" whiteSpace="nowrap" w="28%" textTransform="uppercase" letterSpacing="0.06em">
                                         Result
                                     </Th>
-                                    <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                                    <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" textAlign="right" whiteSpace="nowrap" w="30%" textTransform="uppercase" letterSpacing="0.06em">
                                         Win
                                     </Th>
                                 </Tr>
                             </Thead>
                             <Tbody> 
-                                {rubicResults.length > 0 ? (
-                                    rubicResults.map((row, index) => {
-                                        const winColor = row.isWin ? "#6DC64B" : "#E74C3C";
+                                {rowsToRender.length > 0 ? (
+                                    rowsToRender.map((row, index) => {
+                                        const isWin = row.winAmount > 0;
+                                        const rowColor = isWin ? "#68d391" : "#f56565";
+                                        const name = row.userName || "";
+                                        const displayName = name || "—";
 
                                         return (
                                             <Tr
                                                 key={index}
+                                                borderBottom="1px solid rgba(255,255,255,0.06)"
+                                                _last={{ borderBottom: "none" }}
                                             >
                                                 <Td
-                                                    textAlign="center"
+                                                    textAlign="left"
                                                     px="0px"
-                                                    py="4px"
-                                                    h="16px"
+                                                    py="6px"
+                                                    h="auto"
                                                     border="none"
                                                     overflow="hidden"
                                                     textOverflow="ellipsis"
                                                     whiteSpace="nowrap"
                                                 >
-                                                    <Flex justify="space-between" align="center">
+                                                    <Flex align="center">
                                                         <HStack spacing="8px">
                                                             {row.avatar ? (
                                                                 <Box
@@ -118,43 +153,38 @@
                                                                     backgroundImage={`url(${row.avatar})`}
                                                                     backgroundSize="cover"
                                                                     backgroundPosition="center"
+                                                                    flexShrink={0}
                                                                 />
                                                             ) : (
-                                                                <Box
-                                                                    w="24px"
-                                                                    h="24px"
-                                                                    borderRadius="50%"
-                                                                    bg="rgba(231, 76, 60, 0.3)"
-                                                                />
+                                                                <Box w="22px" h="22px" borderRadius="50%" bg="rgba(0, 212, 255, 0.2)" flexShrink={0} />
                                                             )}
-                                                            <Tooltip label={row.userName || ""} placement="top" hasArrow>
-                                                                <Text color={row.isWin ? "#6DC64B" : "#E74C3C"} fontSize="xs"  >
-                                                                    {row.userName.length > 7 ? row.userName.slice(0, 5) + "..." : row.userName}
+                                                            <Tooltip label={name} placement="top" hasArrow>
+                                                                <Text color={rowColor} fontSize="13px" fontWeight="700">
+                                                                    {displayName}
                                                                 </Text>
                                                             </Tooltip>
                                                         </HStack>
-
                                                     </Flex>
                                                 </Td>
                                                 <Td
-                                                    textAlign="left"
-                                                    py="4px"
-                                                    h="16px"
+                                                    textAlign="center"
+                                                    py="6px"
+                                                    h="auto"
                                                     border="none"
                                                     overflow="visible"
                                                 >
-                                                    <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
+                                                    <Text fontSize="13px" color={rowColor} fontWeight="700" textAlign="center" whiteSpace="nowrap" sx={{ fontVariantNumeric: "tabular-nums" }}>
                                                         {row.multiplier}x
                                                     </Text>
                                                 </Td>
                                                 <Td
-                                                    textAlign="left"
-                                                    py="4px"
-                                                    h="16px"
+                                                    textAlign="right"
+                                                    py="6px"
+                                                    h="auto"
                                                     border="none"
                                                     overflow="visible"
                                                 >
-                                                    <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
+                                                    <Text fontSize="13px" color={rowColor} fontWeight="700" textAlign="right" whiteSpace="nowrap" sx={{ fontVariantNumeric: "tabular-nums" }}>
                                                         ${truncateToTwo(row.winAmount)}
                                                     </Text>
                                                 </Td>
@@ -173,7 +203,7 @@
                             </Tbody>
                         </Table>
                     </Box>
-                </Card>
+                </Box>
             </GridItem>
         );
     }

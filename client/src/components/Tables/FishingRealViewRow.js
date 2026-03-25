@@ -62,22 +62,23 @@ if (typeof document !== 'undefined') {
 
 function FishingRealViewRow(props) {
   const { altas, avatar, bet, win } = props;
-  const winColor = win > 0 ? "#6DC64B" : "#E74C3C";
-  const displayName = altas?.length > 7 ? altas.slice(0, 5) + "..." : (altas || "");
+  const isWin = win > 0;
+  const rowColor = isWin ? "#68d391" : "#f56565";
+  const displayName = altas || "—";
 
   return (
-    <Tr className={props.isNew ? "realtime-new" : undefined}>
+    <Tr className={props.isNew ? "realtime-new" : undefined} borderBottom="1px solid rgba(255,255,255,0.06)" _last={{ borderBottom: "none" }}>
       <Td
-        textAlign="center"
+        textAlign="left"
         px="0px"
-        py="4px"
-        h="16px"
+        py="6px"
+        h="auto"
         border="none"
         overflow="hidden"
         textOverflow="ellipsis"
         whiteSpace="nowrap"
       >
-        <Flex justify="space-between" align="center">
+        <Flex align="center">
           <HStack spacing="8px">
             {avatar ? (
               <Box
@@ -87,12 +88,13 @@ function FishingRealViewRow(props) {
                 backgroundImage={`url(${avatar})`}
                 backgroundSize="cover"
                 backgroundPosition="center"
+                flexShrink={0}
               />
             ) : (
-              <Box w="24px" h="24px" borderRadius="50%" bg="rgba(231, 76, 60, 0.3)" />
+              <Box w="22px" h="22px" borderRadius="50%" bg="rgba(0, 212, 255, 0.2)" flexShrink={0} />
             )}
             <Tooltip label={altas || ""} placement="top" hasArrow>
-              <Text color={winColor} fontSize="xs">
+              <Text color={rowColor} fontSize="13px" fontWeight="700">
                 {displayName}
               </Text>
             </Tooltip>
@@ -100,24 +102,24 @@ function FishingRealViewRow(props) {
         </Flex>
       </Td>
       <Td
-        textAlign="left"
-        py="4px"
-        h="16px"
+        textAlign="center"
+        py="6px"
+        h="auto"
         border="none"
         overflow="visible"
       >
-        <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
+        <Text fontSize="13px" color={rowColor} fontWeight="700" textAlign="center" whiteSpace="nowrap" sx={{ fontVariantNumeric: "tabular-nums" }}>
           {bet}
         </Text>
       </Td>
       <Td
-        textAlign="left"
-        py="4px"
-        h="16px"
+        textAlign="right"
+        py="6px"
+        h="auto"
         border="none"
         overflow="visible"
       >
-        <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
+        <Text fontSize="13px" color={rowColor} fontWeight="700" textAlign="right" whiteSpace="nowrap" sx={{ fontVariantNumeric: "tabular-nums" }}>
           {truncateToTwo(win)}
         </Text>
       </Td>

@@ -5,7 +5,7 @@
    ```
    docker-compose up --build
    ```
-3. Frontend will be at http://192.168.131.27:5173 and API at http://192.168.131.27
+3. Frontend will be at http://localhost:5173 and API at http://localhost
 
 # Quick start (without Docker)
 
@@ -14,7 +14,7 @@
   cd server
   npm install
   cp .env.example .env
-  # set MONGO_URI mongodb://192.168.131.27:27017/Num2Bet
+  # set MONGO_URI mongodb://localhost:27017/Num2Bet
   npm run dev
   ```
 

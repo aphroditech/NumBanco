@@ -9,7 +9,7 @@ function CopyBadge({ address, onCopy }) {
         if (!address) return;
 
         try {
-            // ✅ Modern clipboard API (HTTPS / 192.168.131.27 only)
+            // ✅ Modern clipboard API (HTTPS / localhost only)
             if (navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(address);
             }
