@@ -544,7 +544,7 @@ const bangJokerCrash = (historyItem) => {
 async function scheduleCreditAndBroadcast(app) {
     const ably = app?.locals?.ably;
     if (ably) {
-        const views = await JokerCrashView.find().sort({ createdAt: -1 }).limit(12);
+        const views = await JokerCrashView.find().sort({ createdAt: -1 }).limit(12).lean();
         const data = await enrichJokerCrashViewsWithUser(views);
         ably.channels.get("jokerCrashGame").publish("jokerCrashUpdate", { updatedData: data }).catch((err) => {
             console.error("❌ [jokerCrashController] Ably publish error:", err);

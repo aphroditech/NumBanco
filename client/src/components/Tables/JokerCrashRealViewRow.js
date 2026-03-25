@@ -42,8 +42,13 @@ const neonStyles = `
       opacity: 1;
     }
   }
+  tr.realtime-new {
+    isolation: isolate;
+  }
   tr.realtime-new td {
     animation: row-slide-in 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+    position: relative;
+    z-index: 1;
   }
 `;
 
@@ -62,7 +67,11 @@ if (typeof document !== 'undefined') {
 
 function JokerCrashRealViewRow(props) {
   const { altas, avatar, bet, win } = props;
-  const winColor = win > 0 ? "#6DC64B" : "#E74C3C";
+  const betNum = Number(bet);
+  const winNum = Number(win);
+  const hasBet = Number.isFinite(betNum);
+  const hasWin = Number.isFinite(winNum);
+  const winColor = hasWin && winNum > 0 ? "#6DC64B" : "#E74C3C";
   const displayName = altas?.length > 7 ? altas.slice(0, 5) + "..." : (altas || "");
 
   return (
@@ -107,7 +116,7 @@ function JokerCrashRealViewRow(props) {
         overflow="visible"
       >
         <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-          {bet}
+          {hasBet ? betNum : "—"}
         </Text>
       </Td>
       <Td
@@ -118,7 +127,7 @@ function JokerCrashRealViewRow(props) {
         overflow="visible"
       >
         <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
-          {truncateToTwo(win)}
+          {hasWin ? truncateToTwo(winNum) : "—"}
         </Text>
       </Td>
     </Tr>
