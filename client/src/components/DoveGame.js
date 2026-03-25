@@ -1151,7 +1151,7 @@ function DoveGame() {
 
         if (!(await waitForReady())) return
 
-        toast.info(`Dove started. Bet $${betAmount.toFixed(2)}.`)
+        toast.info(`Lucky Hop started. Bet $${betAmount.toFixed(2)}.`)
 
         const { a, b } = multiplierParamsRef.current
         const multiplier = getMultiplier(1, a, b)
