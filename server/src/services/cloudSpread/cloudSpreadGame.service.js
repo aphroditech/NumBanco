@@ -1,5 +1,6 @@
 import CloudSpreadRound from "../../models/CloudSpreadRound.js";
 import CloudSpreadHistory from "../../models/CloudSpreadHistory.js";
+import CloudSpreadPlayRecord from "../../models/CloudSpreadPlayRecord.js";
 import CloudSpreadSettings from "../../models/CloudSpreadSettings.js";
 import User from "../../models/User.js";
 
@@ -530,6 +531,21 @@ async function settleRound(userId) {
       isCashOutSummary: true,
     });
     await publishCloudSpreadLiveRow(historyDoc);
+
+    try {
+      await CloudSpreadPlayRecord.create({
+        roundId: s.currentRound.roundId,
+        userId: user.userId,
+        userName: user.altas || "",
+        avatar: user.avatar || "",
+        betAmount: roundStakeForHistory,
+        winAmount: totalWin,
+        crashStep: Number(s.currentRound.crashStep || 1),
+        multProduct: round2(multProduct),
+      });
+    } catch (err) {
+      console.warn("[cloudSpread] CloudSpreadPlayRecord create failed:", err?.message || err);
+    }
 
     // Avoid validating unrelated legacy subdocs (e.g. old minesHistory rows)
     // when Cloud Spread updates only cloud-related user fields.

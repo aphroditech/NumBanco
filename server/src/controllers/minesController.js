@@ -578,7 +578,7 @@ export const cashOut = async (req, res) => {
       userSelector,
       {
         $inc: { balance: winAmount, totalEarn: winAmount, minesWinAmount: winAmount },
-        $push: { totalhistory: { amount: winAmount, date: new Date(), type: "Win mines" } },
+        $push: { totalhistory: { amount: winAmount, date: new Date(), type: "mines" } },
       }
     );
 

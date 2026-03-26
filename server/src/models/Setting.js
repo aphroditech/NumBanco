@@ -85,6 +85,10 @@ const settingSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    diceWinMultipler: {
+        type: Number,
+        required: true
+    }
 }, { timestamps: true });
 
 export default mongoose.model('Setting', settingSchema);

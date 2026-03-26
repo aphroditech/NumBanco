@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import {
@@ -42,91 +42,53 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import { toast } from 'react-toastify';
 import { onlineUser, offlineUser } from 'action/BetActions';
+import WinFireworksEffect from 'components/Effects/WinFireworksEffect';
+import BangBurstEffect from 'components/Effects/BangBurstEffect';
 
-import leftCard from 'assets/img/CardGame/left.svg';
-import rightCard from 'assets/img/CardGame/right.svg';
-import spades1 from 'assets/img/CardGame/spades/(1).svg';
-import spades2 from 'assets/img/CardGame/spades/(2).svg';
-import spades3 from 'assets/img/CardGame/spades/(3).svg';
-import spades4 from 'assets/img/CardGame/spades/(4).svg';
-import spades5 from 'assets/img/CardGame/spades/(5).svg';
-import spades6 from 'assets/img/CardGame/spades/(6).svg';
-import spades7 from 'assets/img/CardGame/spades/(7).svg';
-import spades8 from 'assets/img/CardGame/spades/(8).svg';
-import spades9 from 'assets/img/CardGame/spades/(9).svg';
-import spades10 from 'assets/img/CardGame/spades/(10).svg';
-import spades11 from 'assets/img/CardGame/spades/(11).svg';
-import spades12 from 'assets/img/CardGame/spades/(12).svg';
-import spades13 from 'assets/img/CardGame/spades/(13).svg';
-import hearts1 from 'assets/img/CardGame/hearts/(1).svg';
-import hearts2 from 'assets/img/CardGame/hearts/(2).svg';
-import hearts3 from 'assets/img/CardGame/hearts/(3).svg';
-import hearts4 from 'assets/img/CardGame/hearts/(4).svg';
-import hearts5 from 'assets/img/CardGame/hearts/(5).svg';
-import hearts6 from 'assets/img/CardGame/hearts/(6).svg';
-import hearts7 from 'assets/img/CardGame/hearts/(7).svg';
-import hearts8 from 'assets/img/CardGame/hearts/(8).svg';
-import hearts9 from 'assets/img/CardGame/hearts/(9).svg';
-import hearts10 from 'assets/img/CardGame/hearts/(10).svg';
-import hearts11 from 'assets/img/CardGame/hearts/(11).svg';
-import hearts12 from 'assets/img/CardGame/hearts/(12).svg';
-import hearts13 from 'assets/img/CardGame/hearts/(13).svg';
-import clubs1 from 'assets/img/CardGame/clubs/(1).svg';
-import clubs2 from 'assets/img/CardGame/clubs/(2).svg';
-import clubs3 from 'assets/img/CardGame/clubs/(3).svg';
-import clubs4 from 'assets/img/CardGame/clubs/(4).svg';
-import clubs5 from 'assets/img/CardGame/clubs/(5).svg';
-import clubs6 from 'assets/img/CardGame/clubs/(6).svg';
-import clubs7 from 'assets/img/CardGame/clubs/(7).svg';
-import clubs8 from 'assets/img/CardGame/clubs/(8).svg';
-import clubs9 from 'assets/img/CardGame/clubs/(9).svg';
-import clubs10 from 'assets/img/CardGame/clubs/(10).svg';
-import clubs11 from 'assets/img/CardGame/clubs/(11).svg';
-import clubs12 from 'assets/img/CardGame/clubs/(12).svg';
-import clubs13 from 'assets/img/CardGame/clubs/(13).svg';
-import diamonds1 from 'assets/img/CardGame/diamonds/(1).svg';
-import diamonds2 from 'assets/img/CardGame/diamonds/(2).svg';
-import diamonds3 from 'assets/img/CardGame/diamonds/(3).svg';
-import diamonds4 from 'assets/img/CardGame/diamonds/(4).svg';
-import diamonds5 from 'assets/img/CardGame/diamonds/(5).svg';
-import diamonds6 from 'assets/img/CardGame/diamonds/(6).svg';
-import diamonds7 from 'assets/img/CardGame/diamonds/(7).svg';
-import diamonds8 from 'assets/img/CardGame/diamonds/(8).svg';
-import diamonds9 from 'assets/img/CardGame/diamonds/(9).svg';
-import diamonds10 from 'assets/img/CardGame/diamonds/(10).svg';
-import diamonds11 from 'assets/img/CardGame/diamonds/(11).svg';
-import diamonds12 from 'assets/img/CardGame/diamonds/(12).svg';
-import diamonds13 from 'assets/img/CardGame/diamonds/(13).svg';
+const leftCard = '/CardGame/left.svg';
+const rightCard = '/CardGame/right.svg';
+
 import { jokerCrashBet, jokerCrashCashOut, jokerCrashOperator } from 'action/JokerCrashActions';
 
 const MIN_AMOUNT = 0.1;
 const FLIP_MS = 800;
+const ARROW_OVERLAY_HOLD_MS = 2600;
+const ARROW_OVERLAY_FADE_MS = 700;
+const WIN_FIREWORKS_MS = 2200;
+const BANG_EFFECT_MS = 1000;
 
-const SUIT_KEYS = ['spades'];
-
-const CARDS_BY_SUIT = {
-    spades: [spades1, spades2, spades3, spades4, spades5, spades6, spades7, spades8, spades9, spades10, spades11, spades12, spades13],
-    hearts: [hearts1, hearts2, hearts3, hearts4, hearts5, hearts6, hearts7, hearts8, hearts9, hearts10, hearts11, hearts12, hearts13],
-    clubs: [clubs1, clubs2, clubs3, clubs4, clubs5, clubs6, clubs7, clubs8, clubs9, clubs10, clubs11, clubs12, clubs13],
-    diamonds: [diamonds1, diamonds2, diamonds3, diamonds4, diamonds5, diamonds6, diamonds7, diamonds8, diamonds9, diamonds10, diamonds11, diamonds12, diamonds13],
-};
-
-/** Server `card` values are ranks 1–13 (Ace–King). */
-function normalizeCardRank(rank, fallback = 1) {
-    const n = Number(rank);
-    if (!Number.isFinite(n)) return fallback;
-    return Math.min(13, Math.max(1, Math.round(n)));
+/** Same helpers as CardGamePage (arrow row for &lt;, =, &gt;). */
+function cardOutcomeArrowParts(arrow) {
+    const raw = String(arrow ?? '').trim().toLowerCase();
+    if (raw === '<' || raw === 'lt' || raw === 'less') return { main: '<', left: '◀', right: '' };
+    if (raw === '>' || raw === 'gt' || raw === 'greater') return { main: '>', left: '', right: '▶' };
+    if (raw === '=' || raw === 'eq' || raw === 'equal') return { main: '=', left: '◀', right: '▶' };
+    return { main: String(arrow ?? '').trim() || '?', left: '', right: '' };
 }
 
-function cardAssetFor(suitKey, rank) {
-    const r = normalizeCardRank(rank, 1);
-    const row = CARDS_BY_SUIT[suitKey];
-    if (!row) return leftCard;
-    return row[r - 1];
-}
-
-function randomSuitKey() {
-    return SUIT_KEYS[Math.floor(Math.random() * SUIT_KEYS.length)];
+function CardOutcomeArrowRow({ arrow, imulti }) {
+    console.log("arrow", arrow, imulti);
+    const { main } = cardOutcomeArrowParts(arrow);
+    const isWin = Number(imulti) > 0;
+    const glow = isWin
+        ? '0 0 32px rgba(72, 187, 120, 0.75), 0 0 60px rgba(56, 161, 105, 0.35)'
+        : '0 0 32px rgba(245, 101, 101, 0.8), 0 0 60px rgba(229, 62, 62, 0.4)';
+    const color = isWin ? 'green.400' : 'red.400';
+    return (
+        <HStack spacing={{ base: 2, sm: 3 }} align="center" justify="center" lineHeight="1">
+            <Text
+                as="span"
+                fontSize={{ base: '7xl', sm: '8xl', md: '9xl' }}
+                fontWeight="800"
+                lineHeight="1"
+                fontFamily="heading"
+                color={color}
+                sx={{ textShadow: glow }}
+            >
+                {main}
+            </Text>
+        </HStack>
+    );
 }
 
 export default function JokerCrashPage() {
@@ -141,21 +103,110 @@ export default function JokerCrashPage() {
     const [operator, setOperator] = useState('=');
     const [bet, setBet] = useState(false);
     const [joker, setJoker] = useState(50);
-    const [win, setWin] = useState(null);
-    const [bang, setBang] = useState(false);
+    /** Outcome overlay + fireworks (same semantics as CardGamePage `win`). */
+    const [win, setWin] = useState(0);
+    const [arrow, setArrow] = useState(null);
+    const [arrowOverlayOpacity, setArrowOverlayOpacity] = useState(0);
+    const [arrowTick, setArrowTick] = useState(0);
     const [imulti, setImulti] = useState('1.00');
     const [step, setStep] = useState(0);
     const [multi, setMulti] = useState(1);
     const [info, setInfo] = useState([]);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
-    // Animated "Win (amount)" overlay after cash out.
-    const [isPumpingWin, setIsPumpingWin] = useState(false);
-    const pumpingTimeoutRef = useRef(null);
+    const pendingOutcomeRef = useRef(null);
+    const winFxTimeoutRef = useRef(null);
+    const bangFxTimeoutRef = useRef(null);
+    const [winFx, setWinFx] = useState({
+        visible: false,
+        totalEarn: '0',
+        anchorRect: null,
+    });
+    const [bangFx, setBangFx] = useState({ visible: false, anchorRect: null });
 
-    // Animated "×multi" overlay after each operator response (same pulse as Win/Bang).
-    const [isPumpingMulti, setIsPumpingMulti] = useState(false);
-    const pumpingMultiTimeoutRef = useRef(null);
+    const clearWinBangTimers = useCallback(() => {
+        if (winFxTimeoutRef.current != null) {
+            clearTimeout(winFxTimeoutRef.current);
+            winFxTimeoutRef.current = null;
+        }
+        if (bangFxTimeoutRef.current != null) {
+            clearTimeout(bangFxTimeoutRef.current);
+            bangFxTimeoutRef.current = null;
+        }
+    }, []);
+
+    const flushPendingOutcomeAfterReveal = useCallback(() => {
+        const p = pendingOutcomeRef.current;
+        pendingOutcomeRef.current = null;
+        if (!p) return;
+
+        const run = () => {
+            // Cash-out: only full-screen win fireworks — no "=" / arrow + "WIN" on the card.
+            if (p.showArrowOverlay === false) {
+                setArrow(null);
+                setWin(0);
+            } else {
+                setArrow(p.arrow);
+                setArrowTick((t) => t + 1);
+                setWin(p.win);
+            }
+
+            clearWinBangTimers();
+            const winAmount = Number(p.win);
+            // Full-screen FX: win fireworks **only** on cash-out (`playWinFireworks`). Bang burst on bust.
+            // Arrow / operator steps: card overlay only (no WinFireworksEffect).
+            if (
+                p.playWinFireworks &&
+                Number.isFinite(winAmount) &&
+                winAmount > 0
+            ) {
+                setWinFx({
+                    visible: true,
+                    totalEarn: winAmount.toFixed(2),
+                    anchorRect: null,
+                });
+                winFxTimeoutRef.current = setTimeout(() => {
+                    winFxTimeoutRef.current = null;
+                    setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+                }, WIN_FIREWORKS_MS);
+            } else if (p.playBangFx) {
+                setBangFx({ visible: true, anchorRect: null });
+                bangFxTimeoutRef.current = setTimeout(() => {
+                    bangFxTimeoutRef.current = null;
+                    setBangFx({ visible: false, anchorRect: null });
+                }, BANG_EFFECT_MS);
+            }
+        };
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(run);
+        });
+    }, [clearWinBangTimers]);
+
+    useEffect(() => () => clearWinBangTimers(), [clearWinBangTimers]);
+
+    useEffect(() => {
+        if (arrow == null) {
+            setArrowOverlayOpacity(0);
+            return undefined;
+        }
+        setArrowOverlayOpacity(0);
+        const fadeIn = requestAnimationFrame(() => {
+            requestAnimationFrame(() => setArrowOverlayOpacity(1));
+        });
+        const fadeOut = setTimeout(() => {
+            setArrowOverlayOpacity(0);
+        }, ARROW_OVERLAY_HOLD_MS);
+        const clear = setTimeout(() => {
+            setArrow(null);
+            setWin(0);
+        }, ARROW_OVERLAY_HOLD_MS + ARROW_OVERLAY_FADE_MS);
+        return () => {
+            cancelAnimationFrame(fadeIn);
+            clearTimeout(fadeOut);
+            clearTimeout(clear);
+        };
+    }, [arrow, arrowTick]);
 
     // Show joker thumbnails only when there are enough info cards to look meaningful.
     // If there are multiple operator steps, render a small "fan" row above the main card.
@@ -189,6 +240,14 @@ export default function JokerCrashPage() {
     const [flipTransitionEnabled, setFlipTransitionEnabled] = useState(true);
     const [isFlipping, setIsFlipping] = useState(false);
     const flipEndHandledRef = useRef(false);
+    /** Expected `innerRotate` when the active transition ends (180 = half turn, 360 = full). */
+    const flipTargetDegRef = useRef(180);
+    /**
+     * Operator (arrow) path: two chained 180° turns on one card — first shows deck back, second reveals face.
+     * null = legacy single 180° flip (bet / bang / cash-out).
+     */
+    const flipPhaseRef = useRef(null);
+    const pendingNewFaceRef = useRef(null);
 
     const [cardFront, setCardFront] = useState(leftCard);
     const [cardBack, setCardBack] = useState(rightCard);
@@ -225,16 +284,23 @@ export default function JokerCrashPage() {
 
         if (res) {
             console.log("res", res);
-            setIsPumpingWin(false);
-            setIsPumpingMulti(false);
-            if (pumpingMultiTimeoutRef.current) clearTimeout(pumpingMultiTimeoutRef.current);
-            setWin(null);
+            clearWinBangTimers();
+            setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+            setBangFx({ visible: false, anchorRect: null });
+            setArrow(null);
+            setWin(0);
+            pendingOutcomeRef.current = null;
             setBet(true);
             setIsFlipping(true);
             setFlipTransitionEnabled(true);
-            requestAnimationFrame(() => {
-                setInnerRotate(180);
-            });
+            setCardBack('/CardGame/spades/(1).svg')
+            setTimeout(() => {
+                flipPhaseRef.current = null;
+                flipTargetDegRef.current = 180;
+                requestAnimationFrame(() => {
+                    setInnerRotate(180);
+                });
+            }, 1000);
         } else {
             setBet(false);
         }
@@ -242,7 +308,6 @@ export default function JokerCrashPage() {
 
     const handleOperator = async (operator) => {
         if (isFlipping) return;
-        setIsPumpingWin(false);
         const res = await jokerCrashOperator({ operator: operator }, dispatch, history);
         if (!res) return;
 
@@ -253,19 +318,24 @@ export default function JokerCrashPage() {
         setImulti(nextImulti);
 
         if (res.bang === -1) {
-            setIsPumpingMulti(false);
-            if (pumpingMultiTimeoutRef.current) clearTimeout(pumpingMultiTimeoutRef.current);
             setBet(false);
-            setBang(true);
-            // Trigger the same pumping overlay used for Win.
+            clearWinBangTimers();
+            setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+            setBangFx({ visible: false, anchorRect: null });
+            setArrow(null);
             setWin(0);
-            setIsPumpingWin(true);
-            setCardBack(cardAssetFor(randomSuitKey(), res.card));
+            pendingOutcomeRef.current = {
+                arrow: operator,
+                win: 0,
+                playWinFireworks: false,
+                playBangFx: true,
+            };
+            flipPhaseRef.current = null;
+            flipTargetDegRef.current = 180;
+            setCardBack('/CardGame/spades/(' + res.card + ').svg');
             requestAnimationFrame(() => {
                 setInnerRotate(180);
             });
-            if (pumpingTimeoutRef.current) clearTimeout(pumpingTimeoutRef.current);
-            pumpingTimeoutRef.current = setTimeout(() => setIsPumpingWin(false), 1100);
 
             setTimeout(() => {
                 setBet(false);
@@ -274,6 +344,8 @@ export default function JokerCrashPage() {
                 // After the transition ends we swap faces, so `leftCard` becomes the new `cardFront`.
                 setFlipTransitionEnabled(true);
                 setIsFlipping(true);
+                flipPhaseRef.current = null;
+                flipTargetDegRef.current = 180;
                 setInfo([]);
                 setCardBack(leftCard);
                 requestAnimationFrame(() => {
@@ -281,21 +353,32 @@ export default function JokerCrashPage() {
                 });
                 setStep(0);
                 setMulti(1);
-                setWin(amount);
             }, 2100);
             return;
         }
 
-        setIsPumpingMulti(true);
-        if (pumpingMultiTimeoutRef.current) clearTimeout(pumpingMultiTimeoutRef.current);
-        pumpingMultiTimeoutRef.current = setTimeout(() => setIsPumpingMulti(false), 1100);
-
         if (res) {
+            clearWinBangTimers();
+            setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+            setBangFx({ visible: false, anchorRect: null });
+            setArrow(null);
+            setWin(0);
+            const stake = parseFloat(amount || '0');
+            pendingOutcomeRef.current = {
+                arrow: operator,
+                win: (Number.isFinite(stake) ? stake : 0) * Number(res.multi),
+                playWinFireworks: false,
+                playBangFx: false,
+            };
             setBet(true);
             setIsFlipping(true);
             setFlipTransitionEnabled(true);
-            // Only the hidden back updates before the flip; front stays visible until 180° (same as CardGame).
-            setCardBack(cardAssetFor(randomSuitKey(), res.card));
+            // Two half-rotations: 0→180 shows deck back; 180→360 reveals the new face (single physical card).
+            pendingNewFaceRef.current = '/CardGame/spades/(' + res.card + ').svg';
+
+            flipPhaseRef.current = 'to180';
+            flipTargetDegRef.current = 180;
+            setCardBack(leftCard);
             requestAnimationFrame(() => {
                 setInnerRotate(180);
             });
@@ -311,19 +394,21 @@ export default function JokerCrashPage() {
             const betNum = parseFloat(amount || '0');
             const cashoutWin = (Number.isFinite(betNum) ? betNum : 0) * Number(multi || 0);
 
-            setIsPumpingMulti(false);
-            if (pumpingMultiTimeoutRef.current) clearTimeout(pumpingMultiTimeoutRef.current);
-
-            setWin(cashoutWin);
-            setIsPumpingWin(true);
-            if (pumpingTimeoutRef.current) clearTimeout(pumpingTimeoutRef.current);
-            pumpingTimeoutRef.current = setTimeout(() => setIsPumpingWin(false), 1100);
-
+            pendingOutcomeRef.current = {
+                arrow: '=',
+                win: cashoutWin,
+                playWinFireworks: true,
+                playBangFx: false,
+                showArrowOverlay: false,
+            };
+            flushPendingOutcomeAfterReveal();
 
             setTimeout(() => {
                 setBet(false);
                 setFlipTransitionEnabled(true);
                 setIsFlipping(true);
+                flipPhaseRef.current = null;
+                flipTargetDegRef.current = 180;
                 setInfo([]);
                 setCardBack(leftCard);
                 requestAnimationFrame(() => {
@@ -331,29 +416,69 @@ export default function JokerCrashPage() {
                 });
                 setStep(0);
                 setMulti(1);
-                setWin(amount);
             }, 1500);
         }
     };
 
     const handleFlipTransitionEnd = (e) => {
         if (e.propertyName !== 'transform') return;
-        if (innerRotateRef.current !== 180) return;
+        const targetDeg = flipTargetDegRef.current;
+        if (innerRotateRef.current !== targetDeg) return;
         if (flipEndHandledRef.current) return;
         flipEndHandledRef.current = true;
 
-        const { front, back } = cardFacesRef.current;
+        const phase = flipPhaseRef.current;
 
+        if (phase === 'to180' && targetDeg === 180) {
+            const nextFace = pendingNewFaceRef.current;
+            if (nextFace) {
+                setCardFront(nextFace);
+            }
+            setCardBack(leftCard);
+            flipPhaseRef.current = 'to360';
+            flipTargetDegRef.current = 360;
+            setFlipTransitionEnabled(false);
+            requestAnimationFrame(() => {
+                setFlipTransitionEnabled(true);
+                flipEndHandledRef.current = false;
+                requestAnimationFrame(() => {
+                    setInnerRotate(360);
+                });
+            });
+            return;
+        }
+
+        if (phase === 'to360' && targetDeg === 360) {
+            flipPhaseRef.current = null;
+            pendingNewFaceRef.current = null;
+            flipTargetDegRef.current = 180;
+            setFlipTransitionEnabled(false);
+            setInnerRotate(0);
+            setCardBack(rightCard);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setFlipTransitionEnabled(true);
+                    setIsFlipping(false);
+                    flipEndHandledRef.current = false;
+                    flushPendingOutcomeAfterReveal();
+                });
+            });
+            return;
+        }
+
+        // Legacy: one 180° flip, then swap faces and reset to 0° (bet / bang / cash-out).
+        const { front, back } = cardFacesRef.current;
         setFlipTransitionEnabled(false);
         setCardFront(back);
         setCardBack(front);
-
+        flipTargetDegRef.current = 180;
         requestAnimationFrame(() => {
             setInnerRotate(0);
             requestAnimationFrame(() => {
                 setFlipTransitionEnabled(true);
                 setIsFlipping(false);
                 flipEndHandledRef.current = false;
+                flushPendingOutcomeAfterReveal();
             });
         });
     };
@@ -416,7 +541,7 @@ export default function JokerCrashPage() {
         if (!pending?.info?.length) return;
 
         const last = pending.info[pending.info.length - 1];
-        const faceSrc = cardAssetFor(randomSuitKey(), last?.card);
+        const faceSrc = '/CardGame/spades/(' + last?.card + ').svg';
         setCardFront(faceSrc);
         setCardBack(rightCard);
         setInnerRotate(0);
@@ -812,7 +937,6 @@ export default function JokerCrashPage() {
                                             transition="all 250ms ease"
                                         >
                                             {jokerPanelCards.map((item, idx) => {
-                                                const suitKey = SUIT_KEYS[idx % SUIT_KEYS.length];
                                                 const translateXPx =
                                                     idx * thumbFanStepPx -
                                                     thumbGroupCenterOffsetPx -
@@ -849,7 +973,7 @@ export default function JokerCrashPage() {
                                                         >
                                                             <Box
                                                                 as="img"
-                                                                src={cardAssetFor(suitKey, item?.card)}
+                                                                src={'/CardGame/spades/(' + item?.card + ').svg'}
                                                                 alt=""
                                                                 w="100%"
                                                                 h="100%"
@@ -918,79 +1042,51 @@ export default function JokerCrashPage() {
                                         position="relative"
                                         transition="all 250ms ease"
                                     >
-                                        {((isPumpingWin && win != null) || isPumpingMulti) && (
+                                        {arrow != null && (
                                             <Box
                                                 position="absolute"
                                                 top="50%"
                                                 left="50%"
-                                                transform="translate(-50%, -50%)"
                                                 zIndex={60}
                                                 pointerEvents="none"
-                                                sx={{
-                                                    '@keyframes cardArrowPulse': {
-                                                        '0%, 100%': { transform: 'scale(1)' },
-                                                        '50%': { transform: 'scale(1.06)' },
-                                                    },
-                                                }}
+                                                sx={{ transform: 'translate(-50%, -50%)' }}
                                             >
-                                                <VStack spacing={1} align="center" lineHeight="1">
-                                                    {isPumpingMulti && (
+                                                <Box
+                                                    opacity={arrowOverlayOpacity}
+                                                    transition={`opacity ${ARROW_OVERLAY_FADE_MS}ms ease`}
+                                                    sx={{
+                                                        animation:
+                                                            arrowOverlayOpacity > 0.5
+                                                                ? 'cardArrowPulse 1s ease-in-out infinite'
+                                                                : 'none',
+                                                        '@keyframes cardArrowPulse': {
+                                                            '0%, 100%': { transform: 'scale(1)' },
+                                                            '50%': { transform: 'scale(1.06)' },
+                                                        },
+                                                    }}
+                                                >
+                                                    <VStack spacing={{ base: 1, sm: 2 }} align="center" lineHeight="1">
+                                                        <CardOutcomeArrowRow arrow={arrow} imulti={imulti} />
                                                         <Text
                                                             as="span"
-                                                            fontSize="5xl"
+                                                            fontSize={{ base: '4xl', sm: '5xl', md: '6xl' }}
                                                             fontWeight="800"
-                                                            color={Number(imulti) > 0 ? 'green.400' : 'red.400'}
+                                                            letterSpacing="0.08em"
+                                                            lineHeight="1.1"
+                                                            fontFamily="heading"
+                                                            textTransform="uppercase"
+                                                            color={Number(imulti) > 0 ? 'green.300' : 'red.300'}
                                                             sx={{
                                                                 textShadow:
                                                                     Number(imulti) > 0
-                                                                        ? '0 0 32px rgba(72, 187, 120, 0.75), 0 0 60px rgba(56, 161, 105, 0.35)'
-                                                                        : '0 0 32px rgba(245, 101, 101, 0.8), 0 0 60px rgba(229, 62, 62, 0.4)',
-                                                                animation: isPumpingMulti
-                                                                    ? 'cardArrowPulse 1s ease-in-out infinite'
-                                                                    : 'none',
+                                                                        ? '0 0 24px rgba(104, 211, 145, 0.7), 0 0 48px rgba(56, 161, 105, 0.3)'
+                                                                        : '0 0 24px rgba(252, 165, 165, 0.75), 0 0 48px rgba(229, 62, 62, 0.35)',
                                                             }}
                                                         >
-                                                            {imulti}
+                                                            {Number(imulti) > 0 ? 'Win' : 'Bang'}
                                                         </Text>
-                                                    )}
-                                                    {isPumpingWin && win != null && (
-                                                        <VStack spacing={0} align="center" lineHeight="1">
-                                                            <Text
-                                                                as="span"
-                                                                fontSize="7xl"
-                                                                fontWeight="800"
-                                                                color={Number(win) > 0 ? 'green.400' : 'red.400'}
-                                                                sx={{
-                                                                    textShadow:
-                                                                        Number(win) > 0
-                                                                            ? '0 0 32px rgba(72, 187, 120, 0.75), 0 0 60px rgba(56, 161, 105, 0.35)'
-                                                                            : '0 0 32px rgba(245, 101, 101, 0.8), 0 0 60px rgba(229, 62, 62, 0.4)',
-                                                                    animation: isPumpingWin
-                                                                        ? 'cardArrowPulse 1s ease-in-out infinite'
-                                                                        : 'none',
-                                                                }}
-                                                            >
-                                                                {Number(win) > 0 ? 'Win' : 'Bang'}
-                                                            </Text>
-                                                            {!bang && (
-                                                                <Text
-                                                                    as="span"
-                                                                    fontSize="4xl"
-                                                                    fontWeight="800"
-                                                                    color={Number(win) > 0 ? 'green.300' : 'red.300'}
-                                                                    sx={{
-                                                                        textShadow:
-                                                                            Number(win) > 0
-                                                                                ? '0 0 24px rgba(104, 211, 145, 0.7), 0 0 48px rgba(56, 161, 105, 0.3)'
-                                                                                : '0 0 24px rgba(252, 165, 165, 0.75), 0 0 48px rgba(229, 62, 62, 0.35)',
-                                                                    }}
-                                                                >
-                                                                    {Math.abs(Number(win)).toFixed(2)} $
-                                                                </Text>
-                                                            )}
-                                                        </VStack>
-                                                    )}
-                                                </VStack>
+                                                    </VStack>
+                                                </Box>
                                             </Box>
                                         )}
                                         <Box
@@ -1108,6 +1204,21 @@ export default function JokerCrashPage() {
                     <RealView />
                 </GridItem>
             </Grid>
+
+            <WinFireworksEffect
+                isVisible={winFx.visible}
+                totalEarn={winFx.totalEarn}
+                duration={WIN_FIREWORKS_MS}
+                zIndex={10000}
+                anchorRect={winFx.anchorRect ?? undefined}
+            />
+            <BangBurstEffect
+                isVisible={bangFx.visible}
+                duration={BANG_EFFECT_MS}
+                zIndex={9999}
+                anchorRect={bangFx.anchorRect ?? undefined}
+            />
+
             <History />
 
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="md" isCentered>

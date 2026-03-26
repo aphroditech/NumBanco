@@ -71,7 +71,7 @@ export default function CloudSpreadBetHistory({ results = [] }) {
 
   return (
     <Box mt="24px" w="100%">
-      <Card pt="20px" pb="20px" minH="400px" px="22px">
+      <Card pt="20px" pb="20px" minH="400px" px="22px" boxShadow="none">
         <CardHeader>
           <Text fontSize="lg" fontWeight="bold" color="#00D4FF" mb="16px" textAlign="center" whiteSpace="nowrap">
             Round history

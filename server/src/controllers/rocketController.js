@@ -83,7 +83,8 @@ export const bet = async (req, res) => {
                     totalhistory: {
                         amount: -betAmount,
                         date: new Date(),
-                        type: "Rocket Shot",
+                        type: "Lose",
+                        game: "Rocket",
                     },
                 },
             }
@@ -168,7 +169,8 @@ export const shotResult = async (req, res) => {
                         totalhistory: {
                             amount: winAmount,
                             date: new Date(),
-                            type: "Win Rocket",
+                            type: "Win",
+                            game: "Rocket Shot",
                         }
                     }
                 }

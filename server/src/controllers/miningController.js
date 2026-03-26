@@ -70,6 +70,14 @@ export const checkCanWin = async (req, res) => {
                     lotterybet: betAmount,
                     miningAmount: betAmount,
                 },
+                $push: {
+                    totalhistory: {
+                        amount: -betAmount,
+                        date: new Date(),
+                        type: "Lose",
+                        game: "Jackal",
+                    },
+                },
             }
         );
 
@@ -91,7 +99,7 @@ async function isWinLimitReached(user, betAmt, turn, settings) {
     const turns = "Turns" + turn;
 
     const tempNumbers = settings[turns]?.find(
-        r => betAmt >= r.min && betAmt < r.max
+        r => betAmt >= r.min && betAmt <= r.max
     );
 
     if (!tempNumbers) return false;
@@ -99,7 +107,7 @@ async function isWinLimitReached(user, betAmt, turn, settings) {
     const { min, max, totalNumber, canWinNumber } = tempNumbers;
 
     const filtered = miningHistory?.history?.filter(
-        h => h.betAmount >= min && h.betAmount < max
+        h => h.betAmount >= min && h.betAmount <= max
     );
 
     const recentCount = filtered?.length ? filtered.length % totalNumber : 0;
@@ -133,7 +141,8 @@ export const resultGameMining = async (req, res) => {
             user.totalhistory?.push({
                 amount: profit,
                 date: new Date(),
-                type: "Mining"
+                type: "Win",
+                game: "Jackal",
             });
             await user.save();
         }
@@ -222,7 +231,7 @@ export const getMiningHistory = async (req, res) => {
 
 export const getMiningResult = async (req, res) => {
     try {
-        const results = await MiningResult.find({}).sort({ date: -1 }).limit(12);
+        const results = await MiningResult.find({}).sort({ date: -1 }).limit(10);
         return res.status(200).json(results);
     }
     catch (error) {

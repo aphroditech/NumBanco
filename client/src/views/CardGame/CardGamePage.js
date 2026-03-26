@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -43,91 +43,81 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import StyleIcon from '@mui/icons-material/Style';
 import { toast } from 'react-toastify';
 import { onlineUser, offlineUser } from 'action/BetActions';
+import WinFireworksEffect from 'components/Effects/WinFireworksEffect';
+import BangBurstEffect from 'components/Effects/BangBurstEffect';
 
-
-import leftCard from 'assets/img/CardGame/left.svg';
-import rightCard from 'assets/img/CardGame/right.svg';
-import spades1 from 'assets/img/CardGame/spades/(1).svg';
-import spades2 from 'assets/img/CardGame/spades/(2).svg';
-import spades3 from 'assets/img/CardGame/spades/(3).svg';
-import spades4 from 'assets/img/CardGame/spades/(4).svg';
-import spades5 from 'assets/img/CardGame/spades/(5).svg';
-import spades6 from 'assets/img/CardGame/spades/(6).svg';
-import spades7 from 'assets/img/CardGame/spades/(7).svg';
-import spades8 from 'assets/img/CardGame/spades/(8).svg';
-import spades9 from 'assets/img/CardGame/spades/(9).svg';
-import spades10 from 'assets/img/CardGame/spades/(10).svg';
-import spades11 from 'assets/img/CardGame/spades/(11).svg';
-import spades12 from 'assets/img/CardGame/spades/(12).svg';
-import spades13 from 'assets/img/CardGame/spades/(13).svg';
-import hearts1 from 'assets/img/CardGame/hearts/(1).svg';
-import hearts2 from 'assets/img/CardGame/hearts/(2).svg';
-import hearts3 from 'assets/img/CardGame/hearts/(3).svg';
-import hearts4 from 'assets/img/CardGame/hearts/(4).svg';
-import hearts5 from 'assets/img/CardGame/hearts/(5).svg';
-import hearts6 from 'assets/img/CardGame/hearts/(6).svg';
-import hearts7 from 'assets/img/CardGame/hearts/(7).svg';
-import hearts8 from 'assets/img/CardGame/hearts/(8).svg';
-import hearts9 from 'assets/img/CardGame/hearts/(9).svg';
-import hearts10 from 'assets/img/CardGame/hearts/(10).svg';
-import hearts11 from 'assets/img/CardGame/hearts/(11).svg';
-import hearts12 from 'assets/img/CardGame/hearts/(12).svg';
-import hearts13 from 'assets/img/CardGame/hearts/(13).svg';
-import clubs1 from 'assets/img/CardGame/clubs/(1).svg';
-import clubs2 from 'assets/img/CardGame/clubs/(2).svg';
-import clubs3 from 'assets/img/CardGame/clubs/(3).svg';
-import clubs4 from 'assets/img/CardGame/clubs/(4).svg';
-import clubs5 from 'assets/img/CardGame/clubs/(5).svg';
-import clubs6 from 'assets/img/CardGame/clubs/(6).svg';
-import clubs7 from 'assets/img/CardGame/clubs/(7).svg';
-import clubs8 from 'assets/img/CardGame/clubs/(8).svg';
-import clubs9 from 'assets/img/CardGame/clubs/(9).svg';
-import clubs10 from 'assets/img/CardGame/clubs/(10).svg';
-import clubs11 from 'assets/img/CardGame/clubs/(11).svg';
-import clubs12 from 'assets/img/CardGame/clubs/(12).svg';
-import clubs13 from 'assets/img/CardGame/clubs/(13).svg';
-import diamonds1 from 'assets/img/CardGame/diamonds/(1).svg';
-import diamonds2 from 'assets/img/CardGame/diamonds/(2).svg';
-import diamonds3 from 'assets/img/CardGame/diamonds/(3).svg';
-import diamonds4 from 'assets/img/CardGame/diamonds/(4).svg';
-import diamonds5 from 'assets/img/CardGame/diamonds/(5).svg';
-import diamonds6 from 'assets/img/CardGame/diamonds/(6).svg';
-import diamonds7 from 'assets/img/CardGame/diamonds/(7).svg';
-import diamonds8 from 'assets/img/CardGame/diamonds/(8).svg';
-import diamonds9 from 'assets/img/CardGame/diamonds/(9).svg';
-import diamonds10 from 'assets/img/CardGame/diamonds/(10).svg';
-import diamonds11 from 'assets/img/CardGame/diamonds/(11).svg';
-import diamonds12 from 'assets/img/CardGame/diamonds/(12).svg';
-import diamonds13 from 'assets/img/CardGame/diamonds/(13).svg';
-
-
+const leftCard = '/CardGame/left.svg';
+const rightCard = '/CardGame/right.svg';
 import { cardGameBet } from 'action/CardGameActions';
 
 const MIN_AMOUNT = 0.1;
 const FLIP_MS = 800;
-/** Auto-bet: two chained half-rotations (0→180→360) so new ranks apply only while default backs face the user. */
+
 const AUTO_BET_SPIN_MS = 1400;
 const ARROW_OVERLAY_HOLD_MS = 2600;
 const ARROW_OVERLAY_FADE_MS = 700;
+const WIN_FIREWORKS_MS = 2200;
+const BANG_EFFECT_MS = 1000;
 
-/** Server sends rank only: left 1–13, right 1–5. Suit is chosen client-side for display. */
-const SUIT_KEYS = ['spades', 'hearts', 'clubs', 'diamonds'];
-
-const CARDS_BY_SUIT = {
-    spades: [spades1, spades2, spades3, spades4, spades5, spades6, spades7, spades8, spades9, spades10, spades11, spades12, spades13],
-    hearts: [hearts1, hearts2, hearts3, hearts4, hearts5, hearts6, hearts7, hearts8, hearts9, hearts10, hearts11, hearts12, hearts13],
-    clubs: [clubs1, clubs2, clubs3, clubs4, clubs5, clubs6, clubs7, clubs8, clubs9, clubs10, clubs11, clubs12, clubs13],
-    diamonds: [diamonds1, diamonds2, diamonds3, diamonds4, diamonds5, diamonds6, diamonds7, diamonds8, diamonds9, diamonds10, diamonds11, diamonds12, diamonds13],
-};
-
-function cardAssetFor(suitKey, rank) {
-    const row = CARDS_BY_SUIT[suitKey];
-    if (!row || rank < 1 || rank > row.length) return leftCard;
-    return row[rank - 1];
+/** Normalize API arrow to a display token and optional wing glyphs (◀ ▶). */
+function cardOutcomeArrowParts(arrow) {
+    const raw = String(arrow ?? '').trim().toLowerCase();
+    if (raw === '<' || raw === 'lt' || raw === 'less') return { main: '<', left: '◀', right: '' };
+    if (raw === '>' || raw === 'gt' || raw === 'greater') return { main: '>', left: '', right: '▶' };
+    if (raw === '=' || raw === 'eq' || raw === 'equal') return { main: '=', left: '◀', right: '▶' };
+    return { main: String(arrow ?? '').trim() || '?', left: '', right: '' };
 }
 
-function randomSuitKey() {
-    return SUIT_KEYS[Math.floor(Math.random() * SUIT_KEYS.length)];
+function CardOutcomeArrowRow({ arrow, win }) {
+    const { main, left, right } = cardOutcomeArrowParts(arrow);
+    const isWin = Number(win) > 0;
+    const glow = isWin
+        ? '0 0 32px rgba(72, 187, 120, 0.75), 0 0 60px rgba(56, 161, 105, 0.35)'
+        : '0 0 32px rgba(245, 101, 101, 0.8), 0 0 60px rgba(229, 62, 62, 0.4)';
+    const color = isWin ? 'green.400' : 'red.400';
+    return (
+        <HStack spacing={{ base: 2, sm: 3 }} align="center" justify="center" lineHeight="1">
+            {/* {left ? (
+                <Text
+                    as="span"
+                    fontSize={{ base: '5xl', sm: '6xl', md: '7xl' }}
+                    fontWeight="800"
+                    fontFamily="heading"
+                    color={color}
+                    opacity={0.9}
+                    aria-hidden
+                    sx={{ textShadow: glow }}
+                >
+                    {left}
+                </Text>
+            ) : null} */}
+            <Text
+                as="span"
+                fontSize={{ base: '7xl', sm: '8xl', md: '9xl' }}
+                fontWeight="800"
+                lineHeight="1"
+                fontFamily="heading"
+                color={color}
+                sx={{ textShadow: glow }}
+            >
+                {main}
+            </Text>
+            {/* {right ? (
+                <Text
+                    as="span"
+                    fontSize={{ base: '5xl', sm: '6xl', md: '7xl' }}
+                    fontWeight="800"
+                    fontFamily="heading"
+                    color={color}
+                    opacity={0.9}
+                    aria-hidden
+                    sx={{ textShadow: glow }}
+                >
+                    {right}
+                </Text>
+            ) : null} */}
+        </HStack>
+    );
 }
 
 export default function CardGamePage() {
@@ -166,8 +156,71 @@ export default function CardGamePage() {
     const operatorRef = useRef(operator);
     const autoBetLoopRunningRef = useRef(false);
     const autoBetLoopTimeoutRef = useRef(null);
+    /** Filled when a bet succeeds; shown only after the card flip fully reveals. */
+    const pendingOutcomeRef = useRef(null);
+    const cardFxAnchorRef = useRef(null);
+    const winFxTimeoutRef = useRef(null);
+    const bangFxTimeoutRef = useRef(null);
+
+    const [winFx, setWinFx] = useState({
+        visible: false,
+        totalEarn: '0',
+        anchorRect: null,
+    });
+    const [bangFx, setBangFx] = useState({ visible: false, anchorRect: null });
 
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const clearWinBangTimers = useCallback(() => {
+        if (winFxTimeoutRef.current != null) {
+            clearTimeout(winFxTimeoutRef.current);
+            winFxTimeoutRef.current = null;
+        }
+        if (bangFxTimeoutRef.current != null) {
+            clearTimeout(bangFxTimeoutRef.current);
+            bangFxTimeoutRef.current = null;
+        }
+    }, []);
+
+    const flushPendingOutcomeAfterReveal = useCallback(() => {
+        const p = pendingOutcomeRef.current;
+        pendingOutcomeRef.current = null;
+        if (!p) return;
+
+        const run = () => {
+            setArrow(p.arrow);
+            setArrowTick((t) => t + 1);
+            setWin(p.win);
+
+            const el = cardFxAnchorRef.current;
+            const anchorRect = el?.getBoundingClientRect?.() ?? null;
+            clearWinBangTimers();
+            const winAmount = Number(p.win);
+            if (Number.isFinite(winAmount) && winAmount > 0) {
+                setWinFx({
+                    visible: true,
+                    totalEarn: winAmount.toFixed(2),
+                    anchorRect,
+                });
+                winFxTimeoutRef.current = setTimeout(() => {
+                    winFxTimeoutRef.current = null;
+                    setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+                }, WIN_FIREWORKS_MS);
+            } else {
+                setBangFx({ visible: true, anchorRect });
+                bangFxTimeoutRef.current = setTimeout(() => {
+                    bangFxTimeoutRef.current = null;
+                    setBangFx({ visible: false, anchorRect: null });
+                }, BANG_EFFECT_MS);
+            }
+        };
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(run);
+        });
+    }, [clearWinBangTimers]);
+
+    useEffect(() => () => clearWinBangTimers(), [clearWinBangTimers]);
 
     const [leftColFront, setLeftColFront] = useState(leftCard);
     const [leftColBack, setLeftColBack] = useState(rightCard);
@@ -271,17 +324,23 @@ export default function CardGamePage() {
         );
 
         if (res) {
-            setArrow(res.arrow);
-            setArrowTick((t) => t + 1);
-            console.log("data", data);
-            if(!data.auto) setWin(res.win);
-            else setTimeout(() => setWin(res.win), 1000);
+            clearWinBangTimers();
+            setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+            setBangFx({ visible: false, anchorRect: null });
+            setArrow(null);
+            setWin(0);
+            pendingOutcomeRef.current = {
+                arrow: res.arrow,
+                win: res.win,
+            };
+
+            const leftFace = '/CardGame/spades/(' + res.left + ').svg';
+            const rightFace = '/CardGame/spades/(' + res.right + ').svg';
 
             setIsFlipping(true);
             setFlipTransitionEnabled(true);
-
-            const leftFace = cardAssetFor(randomSuitKey(), res.left);
-            const rightFace = cardAssetFor(randomSuitKey(), res.right);
+            setLeftColBack(leftFace);
+            setRightColBack(rightFace);
 
             if (useAutoFullSpin) {
                 const halfMs = Math.max(350, Math.round(AUTO_BET_SPIN_MS / 2));
@@ -300,23 +359,25 @@ export default function CardGamePage() {
                 flipTargetDegRef.current = 180;
                 setFlipDurationMs(FLIP_MS);
                 // Manual: hidden backs become result faces; classic 180° flip + second pass after delay.
-                setLeftColBack(leftFace);
-                setRightColBack(rightFace);
-                requestAnimationFrame(() => {
-                    setInnerRotate(180);
-                });
+
 
                 setTimeout(() => {
-                    setLeftColBack(leftCard);
-                    setRightColBack(rightCard);
                     requestAnimationFrame(() => {
                         setInnerRotate(180);
+                        setTimeout(() => {
+                            setLeftColBack(leftCard);
+                            setRightColBack(rightCard);
+                            requestAnimationFrame(() => {
+                                setInnerRotate(180);
+                            });
+                            setBet(false);
+                        }, 1000);
                     });
-                    setBet(false);
                 }, 1000);
             }
             return res;
         } else {
+            pendingOutcomeRef.current = null;
             toast.error("Bet failed");
             setBet(false);
             return null;
@@ -402,6 +463,7 @@ export default function CardGamePage() {
                     setFlipTransitionEnabled(true);
                     setIsFlipping(false);
                     flipEndHandledRef.current = false;
+                    flushPendingOutcomeAfterReveal();
                 });
             });
             return;
@@ -422,6 +484,7 @@ export default function CardGamePage() {
                 setFlipTransitionEnabled(true);
                 setIsFlipping(false);
                 flipEndHandledRef.current = false;
+                flushPendingOutcomeAfterReveal();
             });
         });
     };
@@ -766,7 +829,7 @@ export default function CardGamePage() {
                                 </FormControl>
 
                                 <FormControl w="100%" maxW={{ base: "100%", sm: "300px" }} mt="5">
-                                    <Grid templateColumns="1fr 1fr" gap="8px">
+                                    <Grid templateColumns="1fr" gap="8px">
                                         <ClickButton
                                             w="100%"
                                             h="46px"
@@ -790,7 +853,7 @@ export default function CardGamePage() {
                                             onClick={() => handleBet({ auto: false })}
                                             label="BET"
                                         />
-                                        <ClickButton
+                                        {/* <ClickButton
                                             w="100%"
                                             h="46px"
                                             fontSize={{ base: 'md', sm: 'md' }}
@@ -818,7 +881,7 @@ export default function CardGamePage() {
                                                 }
                                             }
                                             label={isAutoBetActive ? "STOP" : "Auto BET"}
-                                        />
+                                        /> */}
                                     </Grid>
                                 </FormControl>
                             </VStack>
@@ -828,6 +891,7 @@ export default function CardGamePage() {
                 <GridItem area="game" minH={'450px'}>
                     <Card pt="22px" pb="22px" px="22px" minH="100%" alignItems="center" w="100%" position="relative">
                         <Box
+                            ref={cardFxAnchorRef}
                             w="100%"
                             h={{ base: 'auto', sm: '406px' }}
                             minH={{ base: '360px', sm: '406px' }}
@@ -859,22 +923,7 @@ export default function CardGamePage() {
                                         }}
                                     >
                                         <VStack spacing={{ base: 1, sm: 2 }} align="center" lineHeight="1">
-                                            <Text
-                                                as="span"
-                                                fontSize={{ base: '7xl', sm: '8xl', md: '9xl' }}
-                                                fontWeight="800"
-                                                lineHeight="1"
-                                                fontFamily="heading"
-                                                color={Number(win) > 0 ? 'green.400' : 'red.400'}
-                                                sx={{
-                                                    textShadow:
-                                                        Number(win) > 0
-                                                            ? '0 0 32px rgba(72, 187, 120, 0.75), 0 0 60px rgba(56, 161, 105, 0.35)'
-                                                            : '0 0 32px rgba(245, 101, 101, 0.8), 0 0 60px rgba(229, 62, 62, 0.4)',
-                                                }}
-                                            >
-                                                {arrow}
-                                            </Text>
+                                            <CardOutcomeArrowRow arrow={arrow} win={win} />
                                             <Text
                                                 as="span"
                                                 fontSize={{ base: '4xl', sm: '5xl', md: '6xl' }}
@@ -917,7 +966,7 @@ export default function CardGamePage() {
                                         color="rgba(255,255,255,0.75)"
                                         letterSpacing="0.06em"
                                     >
-                                        A — K
+                                        A ~ K
                                     </Text>
                                     <Box
                                         alignSelf="center"
@@ -996,7 +1045,7 @@ export default function CardGamePage() {
                                         color="rgba(255,255,255,0.75)"
                                         letterSpacing="0.06em"
                                     >
-                                        A — 5
+                                        A ~ 5
                                     </Text>
                                     <Box
                                         alignSelf="center"
@@ -1069,6 +1118,21 @@ export default function CardGamePage() {
                     <RealView />
                 </GridItem>
             </Grid>
+
+            <WinFireworksEffect
+                isVisible={winFx.visible}
+                totalEarn={winFx.totalEarn}
+                duration={WIN_FIREWORKS_MS}
+                zIndex={10000}
+                anchorRect={winFx.anchorRect ?? undefined}
+            />
+            <BangBurstEffect
+                isVisible={bangFx.visible}
+                duration={BANG_EFFECT_MS}
+                zIndex={9999}
+                anchorRect={bangFx.anchorRect ?? undefined}
+            />
+
             <History />
 
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="md" isCentered>

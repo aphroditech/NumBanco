@@ -34,7 +34,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 
 import { aToZBet, aToZSpinComplete } from '../../action/AtoZActions';
 
-import backgroundImage from 'assets/img/Digits/background.png'
+const backgroundImage = '/img/Digits/background.png'
 
 import RealTimeHistory from './AToZItems/RealTimeHistory';
 import UserBetHistory from './AToZItems/UserBetHistory';
@@ -951,7 +951,9 @@ export default function AToZPage() {
                 </GridItem>
 
                 {/* History Area */}
-                <RealTimeHistory />
+                <GridItem area="side" display="flex">
+                    <RealTimeHistory />
+                </GridItem>
             </Grid>
             <UserBetHistory />
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size='3xl' minW="1000px" isCentered>

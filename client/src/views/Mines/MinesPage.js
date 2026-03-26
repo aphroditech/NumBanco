@@ -460,11 +460,12 @@ export default function MinesPage() {
                             overflow="visible"
                             position="relative"
                             flex="1"
-                            minH={{ base: "420px", md: "0" }}
-                            h="100%"
+                            minH={{ base: "420px", md: "500px" }}
+                            h="500px"
                             bg="#2a2a2a"
-                            border="1px solid rgba(255,255,255,0.06)"
+                            border="1px solid rgba(255,255,255,0.1)"
                             borderRadius="16px"
+                            boxShadow="none"
                         >
                             <CardBody overflow="visible" display="flex" alignItems="center" justifyContent="center" position="relative" minH="100%">
                                 <Box position="absolute" top="-23px" right="-20px" zIndex={2}>
@@ -815,10 +816,11 @@ export default function MinesPage() {
                             overflow="visible"
                             position="relative"
                             flex="1"
-                            h="100%"
+                            h="500px"
                             bg="#2a2a2a"
-                            border="1px solid rgba(255,255,255,0.06)"
+                            border="1px solid rgba(255,255,255,0.1)"
                             borderRadius="16px"
+                            boxShadow="none"
                             animation={screenShake ? "mines-screen-shake 0.45s ease-out" : undefined}
                         >
                             <style>{`

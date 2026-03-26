@@ -10,7 +10,10 @@ const mergeCardGameUser = (res, dispatch) => {
 export const cardGameBet = async (data, dispatch, history) => {
     try {
         const res = await axiosInstance.post('/cardGame/bet', data);
-        mergeCardGameUser(res, dispatch);
+
+        setTimeout(() => {
+            mergeCardGameUser(res, dispatch);
+        }, 1000);
         return res.data.data;
     } catch (err) {
         console.error(err);

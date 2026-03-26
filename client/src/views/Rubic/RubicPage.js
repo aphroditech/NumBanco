@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
     Box,
@@ -56,6 +56,8 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
+import DiceCanvas3D from './RubicItem/DiceCanvas3D';
+
 // Actions
 import { handleRubicBet, removeUserBalance } from 'action/RubicActions';
 import { useHistory } from 'react-router-dom';
@@ -70,9 +72,13 @@ import Last10Result from './RubicItem/Last10Result';
 import UserHistory from './RubicItem/UserHistory';
 import RubicBalanceGraph from './RubicItem/RubicBalanceGraph';
 import { onlineUser, offlineUser } from "action/BetActions";
+import { motion, AnimatePresence } from 'framer-motion';
 
+const MotionBox = motion(Box);
+const MotionText = motion(Text);
 
-const MIN_AMOUNT = 0.1;
+const MIN_AMOUNT = 0.5;
+const MAX_AMOUNT = 20.00;
 
 // Key cap style for keyboard shortcuts display
 const KeyCap = ({ children, minW }) => (
@@ -113,27 +119,49 @@ export default function RubicPage() {
     // const membership = Number(user?.membership ?? 0);
     // membership 0: 0.1 to 1; membership 1: 0.1 to 1000; membership 2: 0.1 to balance
     // const maxAmountByTier = membership === 0 ? 1 : membership === 1 ? 1000 : balance;
-    const maxAmount = Math.max(MIN_AMOUNT, Math.min(balance));
+    const maxAmount = balance > MAX_AMOUNT ? MAX_AMOUNT : balance;
     const dispatch = useDispatch();
     const history = useHistory();
     const [target, setTarget] = useState('3');
-    const [amount, setAmount] = useState('0.1');
+    const [amount, setAmount] = useState('0.50');
     const [operator, setOperator] = useState('=');
-    const [diceValue, setDiceValue] = useState(1); // Start with a default value
     const [isRolling, setIsRolling] = useState(false);
-    const [finalValue, setFinalValue] = useState(null);
-    const [animationSpeed, setAnimationSpeed] = useState(0.15); // Animation duration in seconds
     const rollIntervalRef = useRef(null);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const { isOpen: isGraphOpen, onOpen: onGraphOpen, onClose: onGraphClose } = useDisclosure();
     const results = useSelector((state) => state.user.userInfo?.rubicHistory);
-    const [showTopFaceEffect, setShowTopFaceEffect] = useState(false);
     const [winningProbability, setWinningProbability] = useState(0);
+    const [isWin, setIsWin] = useState(false);
+    /** Post-roll UI: win / lose highlight (clears before next bet and after a short delay). */
+    const [rubicOutcomeFx, setRubicOutcomeFx] = useState(null);
+    const [rubicOutcomeFxKey, setRubicOutcomeFxKey] = useState(0);
+    const [rubicWinAmountDisplay, setRubicWinAmountDisplay] = useState(0);
+    const diceRef = useRef(null);
 
-    const [isWin, setIsWin] = useState(null);
+    useEffect(() => {
+        if (!rubicOutcomeFx) return;
+        const t = window.setTimeout(() => setRubicOutcomeFx(null), 2600);
+        return () => window.clearTimeout(t);
+    }, [rubicOutcomeFxKey, rubicOutcomeFx]);
+
+    const rubicSparkSpecs = useMemo(() => {
+        let s = rubicOutcomeFxKey * 9973 + 1;
+        const rnd = () => {
+            s = (s * 1103515245 + 12345) & 0x7fffffff;
+            return s / 0x7fffffff;
+        };
+        return Array.from({ length: 10 }, (_, i) => ({
+            id: i,
+            x: 12 + rnd() * 76,
+            delay: rnd() * 0.08,
+            dur: 0.55 + rnd() * 0.35,
+            rot: rnd() * 360,
+        }));
+    }, [rubicOutcomeFxKey]);
 
     const handleBet = async () => {
         if (isRolling) return; // Prevent multiple clicks during roll
+        setRubicOutcomeFx(null);
         setIsRolling(true);
         const data = {
             amount: parseFloat(amount),
@@ -150,11 +178,6 @@ export default function RubicPage() {
             console.error(err);
             return;
         }
-
-        // Reset final value
-        setFinalValue(null);
-        
-        setAnimationSpeed(0.15); // Start with fast animation
 
         // Dice values that win for (targetNum, operator); others lose
         const targetNum = parseInt(target, 10);
@@ -183,62 +206,7 @@ export default function RubicPage() {
                     ? pickRandom(losingValues)
                     : Math.floor(Math.random() * 6) + 1;
 
-        // Change dice value rapidly during roll with gradual slowdown (total ~2s)
-        let rollCount = 0;
-        const maxRolls = 20; // Number of value changes during 2 seconds
-        const startInterval = 50; // Start interval in ms
-        const endInterval = 155; // End interval in ms (slower toward end)
-
-        const updateRoll = () => {
-            rollCount++;
-
-            // Calculate current interval (gradually increasing = slowing down)
-            const progress = rollCount / maxRolls;
-            const currentInterval = startInterval + (endInterval - startInterval) * progress;
-
-            // Update animation speed (slowing down)
-            const currentSpeed = 0.15 + (0.5 - 0.15) * progress; // From 0.15s to 0.5s
-            setAnimationSpeed(currentSpeed);
-
-            // Show random values during roll
-            setDiceValue(Math.floor(Math.random() * 6) + 1);
-
-            if (rollCount < maxRolls) {
-                rollIntervalRef.current = setTimeout(updateRoll, currentInterval);
-            } else {
-                // Final slowdown phase
-                setAnimationSpeed(0.8); // Very slow for final stop
-                setTimeout(async () => {
-                    setDiceValue(randomValue);
-                    setFinalValue(randomValue);
-
-                    const data = {
-                        betAmount: parseFloat(amount),
-                        target: parseInt(target),
-                        operation: operator,
-                        result: parseInt(randomValue)
-                    }
-
-                    // console.log(typeof(amount),amount);
-                    const winData = await handleRubicBet(data, history, dispatch);
-                    setIsWin(winData?.isWin ?? null);
-
-                    // Smooth stop
-                    setTimeout(() => {
-                        setIsRolling(false);
-                        setShowTopFaceEffect(true); // Trigger awesome effect
-                        setAnimationSpeed(0.15); // Reset for next roll
-
-                        // Remove effect after animation completes
-                        setTimeout(() => {
-                            setShowTopFaceEffect(false);
-                        }, 2000); // Effect duration: 2 seconds
-                    }, 150);
-                }, 200);
-            }
-        };
-
-        rollIntervalRef.current = setTimeout(updateRoll, startInterval);
+        diceRef.current?.roll(randomValue);
     };
 
     // Cleanup interval on unmount
@@ -367,264 +335,28 @@ export default function RubicPage() {
         };
         return payouts[targetNum]?.[operator] || { winRate: 0, multiplier: 0, error: true };
     };
+    
+    const onRollComplete = useCallback(async (pair) => {
+        const data = {
+            betAmount: parseFloat(amount),
+            target: parseInt(target),
+            operation: operator,
+            result: parseInt(pair)
+        }
+        setIsRolling(false);
 
-    // 3D Dice component
-    const DiceFace = ({ value, isRolling = false, showTopFaceEffect = false, isWin = null }) => {
-        const dotPositions = {
-            1: ['center'],
-            2: ['top-left', 'bottom-right'],
-            3: ['top-left', 'center', 'bottom-right'],
-            4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
-            5: ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'],
-            6: ['top-left', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-right']
-        };
+        const winData = await handleRubicBet(data, history, dispatch);
+        if (winData != null) {
+            setIsWin(Boolean(winData.isWin));
+            setRubicOutcomeFx(winData.isWin ? 'win' : 'lose');
+            setRubicWinAmountDisplay(Number(winData.winAmount) || 0);
+            setRubicOutcomeFxKey((k) => k + 1);
+        }
+    }, [amount, target, operator, history, dispatch]);
 
-        // Dice opposite faces (sum to 7)
-        const oppositeFace = 7 - value;
-
-        // For isometric view: top shows value, front-left shows adjacent, front-right shows adjacent
-        // Standard dice: 1-6, 2-5, 3-4 are opposites
-        // Adjacent faces logic
-        const getAdjacentFaces = (val) => {
-            const opposites = { 1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 1 };
-            const adjacents = {
-                1: [2, 3, 4, 5],
-                2: [1, 3, 4, 6],
-                3: [1, 2, 5, 6],
-                4: [1, 2, 5, 6],
-                5: [1, 3, 4, 6],
-                6: [2, 3, 4, 5]
-            };
-            return adjacents[val] || [2, 3];
-        };
-
-        const adjacents = getAdjacentFaces(value);
-        const frontLeftValue = adjacents[0] || 2;
-        const frontRightValue = adjacents[1] || 3;
-
-        const renderFace = (faceValue, transform, isTop = false, isLeft = false) => {
-            const positions = dotPositions[faceValue] || [];
-            // Different gradients for top (brightest), left (medium), right (darkest)
-            // More polished, glossy appearance with smoother transitions
-            let bgGradient;
-            if (isTop) {
-                bgGradient = "linear-gradient(135deg, #ffffff 0%, #fefefe 15%, #fcfcfc 40%, #fafafa 70%, #f8f8f8 100%)";
-            } else if (isLeft) {
-                bgGradient = "linear-gradient(135deg, #f8f8f8 0%, #f5f5f5 20%, #f0f0f0 50%, #e8e8e8 80%, #e0e0e0 100%)";
-            } else {
-                bgGradient = "linear-gradient(135deg, #f0f0f0 0%, #e8e8e8 25%, #e0e0e0 60%, #d8d8d8 85%, #d0d0d0 100%)";
-            }
-
-            return (
-                <Box
-                    position="absolute"
-                    w="180px"
-                    h="180px"
-                    bg={bgGradient}
-                    borderRadius="28px"
-                    border="none"
-                    className={
-                        isTop && showTopFaceEffect
-                            ? isWin === true
-                                ? 'top-face-glow-win'
-                                : isWin === false
-                                    ? 'top-face-glow-lose'
-                                    : 'top-face-glow'
-                            : ''
-                    }
-                    style={{
-                        transform: transform,
-                        transformStyle: 'preserve-3d',
-                        backfaceVisibility: 'hidden',
-                        boxShadow: isTop
-                            ? "inset 2px 2px 8px rgba(255, 255, 255, 0.98), inset -2px -2px 8px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)"
-                            : isLeft
-                                ? "inset 2px 2px 6px rgba(255, 255, 255, 0.85), inset -2px -2px 6px rgba(0, 0, 0, 0.08), 0 3px 10px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12)"
-                                : "inset 1px 1px 5px rgba(255, 255, 255, 0.7), inset -2px -2px 8px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15)"
-                    }}
-                >
-                    {positions.map((pos, idx) => {
-                        const styles = {
-                            'center': { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
-                            'top-left': { top: '20%', left: '20%' },
-                            'top-right': { top: '20%', right: '20%' },
-                            'middle-left': { top: '50%', left: '20%', transform: 'translateY(-50%)' },
-                            'middle-right': { top: '50%', right: '20%', transform: 'translateY(-50%)' },
-                            'bottom-left': { bottom: '20%', left: '20%' },
-                            'bottom-right': { bottom: '20%', right: '20%' }
-                        };
-                        return (
-                            <Box
-                                key={idx}
-                                position="absolute"
-                                w="28px"
-                                h="28px"
-                                borderRadius="50%"
-                                style={{
-                                    background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, rgba(0, 0, 0, 0.98) 35%, #000000 100%)',
-                                    boxShadow: "inset 0 4px 8px rgba(0, 0, 0, 0.9), inset 0 -2px 4px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.5)",
-                                    border: 'none'
-                                }}
-                                {...styles[pos]}
-                            >
-                                {/* White highlight on pip */}
-                                <Box
-                                    position="absolute"
-                                    top="28%"
-                                    left="28%"
-                                    w="7px"
-                                    h="7px"
-                                    borderRadius="50%"
-                                    bg="rgba(255, 255, 255, 0.7)"
-                                    style={{
-                                        boxShadow: "0 0 3px rgba(255, 255, 255, 0.8)"
-                                    }}
-                                />
-                            </Box>
-                        );
-                    })}
-                </Box>
-            );
-        };
-
-        return (
-            <Box
-                w="300px"
-                h="300px"
-                marginTop="30px"
-                position="relative"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                style={{
-                    perspective: '1000px',
-                    perspectiveOrigin: 'center center'
-                }}
-            >
-                {/* Shadow under dice */}
-                <Box
-                    position="absolute"
-                    w="210px"
-                    h="90px"
-                    bg="rgba(0, 0, 0, 0.25)"
-                    borderRadius="50%"
-                    bottom="40px"
-                    left="50%"
-                    style={{
-                        transform: 'translateX(-50%)',
-                        filter: 'blur(20px)'
-                    }}
-                />
-                <Box
-                    position="relative"
-                    w="180px"
-                    h="180px"
-                    style={{
-                        transform: 'rotateX(-20deg) rotateY(35deg)',
-                        transformStyle: 'preserve-3d',
-                        transition: isRolling ? 'none' : 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                        animation: isRolling ? `diceRoll ${animationSpeed}s linear infinite` : 'none'
-                    }}
-                >
-                    {/* Top face (shows the value) - brightest */}
-                    {renderFace(value, 'rotateX(90deg) translateZ(90px)', true, false)}
-
-                    {/* Front-left face - medium brightness */}
-                    {renderFace(frontLeftValue, 'rotateY(-90deg) translateZ(90px)', false, true)}
-
-                    {/* Front-right face - darkest */}
-                    {renderFace(frontRightValue, 'translateZ(90px)', false, false)}
-
-                    {/* Back faces (not visible but needed for 3D effect) */}
-                    {renderFace(oppositeFace, 'rotateX(-90deg) translateZ(90px)', false, false)}
-                    {renderFace(getAdjacentFaces(value)[2] || 4, 'rotateY(90deg) translateZ(90px)', false, false)}
-                    {renderFace(getAdjacentFaces(value)[3] || 5, 'rotateY(180deg) translateZ(90px)', false, false)}
-                </Box>
-            </Box>
-        );
-    };
 
     return (
         <Box px={{ base: '16px', md: '24px' }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
-            <style>
-                {`
-                    @keyframes diceRoll {
-                        0% { 
-                            transform: rotateX(-20deg) rotateY(35deg) rotateZ(0deg) rotateX(0deg) rotateY(0deg); 
-                        }
-                        25% { 
-                            transform: rotateX(-20deg) rotateY(35deg) rotateZ(90deg) rotateX(90deg) rotateY(45deg); 
-                        }
-                        50% { 
-                            transform: rotateX(-20deg) rotateY(35deg) rotateZ(180deg) rotateX(180deg) rotateY(90deg); 
-                        }
-                        75% { 
-                            transform: rotateX(-20deg) rotateY(35deg) rotateZ(270deg) rotateX(270deg) rotateY(135deg); 
-                        }
-                        100% { 
-                            transform: rotateX(-20deg) rotateY(35deg) rotateZ(360deg) rotateX(360deg) rotateY(180deg); 
-                        }
-                    }
-                    
-                    @keyframes topFaceGlow {
-                        0% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0px rgba(0, 212, 255, 0), 0 0 0px rgba(0, 212, 255, 0), 0 0 0px rgba(0, 212, 255, 0);
-                            filter: brightness(1) saturate(1);
-                        }
-                        50% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 40px rgba(0, 212, 255, 1), 0 0 80px rgba(0, 212, 255, 0.8), 0 0 120px rgba(0, 212, 255, 0.6);
-                            filter: brightness(1.2) saturate(1.3);
-                        }
-                        100% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 20px rgba(0, 212, 255, 0.4), 0 0 40px rgba(0, 212, 255, 0.2), 0 0 60px rgba(0, 212, 255, 0.1);
-                            filter: brightness(1) saturate(1);
-                        }
-                    }
-                    
-                    @keyframes topFaceGlowWin {
-                        0% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0px rgba(0, 212, 255, 0), 0 0 0px rgba(109, 198, 75, 0), 0 0 0px rgba(109, 198, 75, 0);
-                            filter: brightness(1) saturate(1);
-                        }
-                        50% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 40px rgba(0, 212, 255, 1), 0 0 80px rgba(109, 198, 75, 0.9), 0 0 120px rgba(109, 198, 75, 0.7);
-                            filter: brightness(1.3) saturate(1.4);
-                        }
-                        100% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 20px rgba(0, 212, 255, 0.4), 0 0 40px rgba(109, 198, 75, 0.3), 0 0 60px rgba(109, 198, 75, 0.15);
-                            filter: brightness(1) saturate(1);
-                        }
-                    }
-                    
-                    @keyframes topFaceGlowLose {
-                        0% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0px rgba(231, 76, 60, 0), 0 0 0px rgba(231, 76, 60, 0), 0 0 0px rgba(231, 76, 60, 0);
-                            filter: brightness(1) saturate(1);
-                        }
-                        50% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 40px rgba(231, 76, 60, 1), 0 0 80px rgba(231, 76, 60, 0.9), 0 0 120px rgba(231, 76, 60, 0.7);
-                            filter: brightness(1.1) saturate(1.2);
-                        }
-                        100% {
-                            box-shadow: inset 3px 3px 6px rgba(255, 255, 255, 0.95), inset -3px -3px 6px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 20px rgba(231, 76, 60, 0.5), 0 0 40px rgba(231, 76, 60, 0.3), 0 0 60px rgba(231, 76, 60, 0.15);
-                            filter: brightness(1) saturate(1);
-                        }
-                    }
-                    
-                    .top-face-glow {
-                        animation: topFaceGlow 2s ease-out;
-                    }
-                    
-                    .top-face-glow-win {
-                        animation: topFaceGlowWin 2s ease-out;
-                    }
-                    
-                    .top-face-glow-lose {
-                        animation: topFaceGlowLose 2s ease-out;
-                    }
-                `}
-            </style>
-
             <Last10Result results={results.slice(-25)} />
 
             <Grid
@@ -750,7 +482,7 @@ export default function RubicPage() {
                                                 value={amount}
                                                 onChange={handleAmountChange}
                                                 onBlur={handleAmountBlur}
-                                                placeholder="0.10"
+                                                placeholder="0.50"
                                                 _focus={{ boxShadow: 'none' }}
                                                 flex="1"
                                                 onKeyDown={(e) => {
@@ -1000,115 +732,204 @@ export default function RubicPage() {
                     </Card>
                 </GridItem>
 
-                {/* Center - Rubic Game (Dice) */}
-                <GridItem area="game" minH="450px">
-                    <Card pt="30px" pb="22px" px="22px" overflow="visible" minH="450px" position="relative">
-                        <CardBody overflow="visible" display="flex" alignItems="center" justifyContent="center" minH="100%" position="relative">
-                            {/* Top left - Amount */}
-                            <Box position="absolute" top="16px" left="22px" zIndex={2}>
-                                <Text fontSize="sm" color="rgba(255,255,255,0.7)" mb="2px">Amount</Text>
-                                <Text fontSize="lg" fontWeight="bold" color="#fff">
-                                    {amount && amount !== '' && !isNaN(parseFloat(amount))
-                                        ? parseFloat(amount).toFixed(2)
-                                        : amount || '0.00'}
-                                </Text>
-                            </Box>
-                            {/* Top right - Target & Operator */}
-                            <Box position="absolute" top="16px" right="22px" zIndex={2} textAlign="right">
-                                <Text fontSize="sm" color="rgba(255,255,255,0.7)" mb="2px">Target</Text>
-                                <Text fontSize="lg" fontWeight="bold" color="#00D4FF">{operator} {target}</Text>
-                            </Box>
-                            <Flex
-                                direction={{ base: 'column', md: 'row' }}
-                                align="center"
-                                justify="center"
-                                w="100%"
+                <GridItem area="game" minH={'450px'}>
+                    <Card
+                        pt="22px"
+                        pb="22px"
+                        px="22px"
+                        minH="100%"
+                        alignItems="center"
+                        w="100%"
+                        position="relative"
+                        overflow="hidden"
+                    >
+                        <AnimatePresence>
+                            {rubicOutcomeFx === 'win' && (
+                                <MotionBox
+                                    key={`rubic-win-${rubicOutcomeFxKey}`}
+                                    position="absolute"
+                                    inset={0}
+                                    pointerEvents="none"
+                                    zIndex={1}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.35 }}
+                                    bg="radial-gradient(ellipse 85% 70% at 50% 38%, rgba(45,212,191,0.22) 0%, rgba(0,212,255,0.08) 45%, transparent 72%)"
+                                    boxShadow="inset 0 0 100px rgba(45,212,191,0.12)"
+                                />
+                            )}
+                            {rubicOutcomeFx === 'lose' && (
+                                <MotionBox
+                                    key={`rubic-lose-${rubicOutcomeFxKey}`}
+                                    position="absolute"
+                                    inset={0}
+                                    pointerEvents="none"
+                                    zIndex={1}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    bg="radial-gradient(ellipse 80% 65% at 50% 42%, rgba(248,113,113,0.14) 0%, rgba(127,29,29,0.08) 48%, transparent 70%)"
+                                />
+                            )}
+                        </AnimatePresence>
+
+                        {rubicOutcomeFx === 'win' && (
+                            <Box
+                                position="absolute"
+                                inset={0}
+                                pointerEvents="none"
+                                zIndex={2}
+                                overflow="hidden"
+                                borderRadius="inherit"
                             >
-                                {/* Result display on the left */}
-
-                                {/* Dice in the center */}
-                                <VStack spacing="24px" align="center">
-                                    <Box display="flex" justifyContent="center" alignItems="center">
-                                        <DiceFace value={diceValue} isRolling={isRolling} showTopFaceEffect={showTopFaceEffect} isWin={isWin} />
-                                    </Box>
-                                    {/* Payout section (bc.game style) */}
-                                    {(() => {
-                                        const payout = getPayoutInfo(parseInt(target, 10), operator);
-                                        // if (payout.error) return null;
-                                        const winChance = payout.winRate;
-
-                                        return (
-                                            <Flex
-                                                align="center"
-                                                justify="center"
-                                                gap="16px"
-                                                // mt="8px"
-                                                px="20px"
-                                                py="10px"
-                                                bg="#323738"
-                                                borderRadius="10px"
-                                                border="1px solid rgba(0, 212, 255, 0.2)"
-                                            >
-                                                <HStack spacing="6px" align="baseline">
-                                                    <Text fontSize="xs" color="rgba(255,255,255,0.7)" fontWeight="500">
-                                                        Bet Amount:
-                                                    </Text>
-                                                    <Text fontSize="md" fontWeight="bold" color="#00D4FF">
-                                                        {amount}
-                                                    </Text>
-                                                </HStack>
-                                                <Box w="1px" h="14px" bg="rgba(255,255,255,0.15)" />
-                                                <HStack spacing="6px" align="baseline">
-                                                    <Text fontSize="xs" color="rgba(255,255,255,0.7)" fontWeight="500">
-                                                        Payout:
-                                                    </Text>
-                                                    <Text fontSize="md" fontWeight="bold" color="#fff">
-                                                        {payout.multiplier}×
-                                                    </Text>
-                                                </HStack>
-                                                <Box w="1px" h="14px" bg="rgba(255,255,255,0.15)" />
-                                                <HStack spacing="6px" align="baseline">
-                                                    <Text fontSize="xs" color="rgba(255,255,255,0.7)" fontWeight="500">
-                                                        Win Chance:
-                                                    </Text>
-                                                    <Text fontSize="md" fontWeight="bold" color="#fff">
-                                                        {winChance}%
-                                                    </Text>
-                                                </HStack>
-                                            </Flex>
-                                        );
-                                    })()}
-                                </VStack>
-                            </Flex>
-                            <Box justifyItems="center" position="absolute" right="-17px" bottom="-17px">
-                                <Tooltip label="Rubic Balance Graph">
-                                    <Button
-                                        onClick={onGraphOpen}
-                                        width="40px"
-                                        height="40px"
-                                        borderRadius="50%"
-                                        display="flex"
-                                        justifyContent="center"
-                                        alignItems="center"
-                                        bg="#00D4FF"
-                                        color="white"
-                                        _hover={{
-                                            bg: 'white',
-                                            color: '#00D4FF',
-                                            transform: 'scale(1.2)',
-                                            boxShadow: '0 0 20px #00f5ff',
-                                        }}
-                                        style={{
-                                            boxShadow: '0 0 10px #00f5ff',
-                                        }}
-                                    >
-                                        <AutoGraphIcon style={{ fontSize: '16px' }} />
-                                    </Button>
-                                </Tooltip>
+                                {rubicSparkSpecs.map((p) => (
+                                    <MotionBox
+                                        key={`sp-${rubicOutcomeFxKey}-${p.id}`}
+                                        position="absolute"
+                                        left={`${p.x}%`}
+                                        top="36%"
+                                        w="5px"
+                                        h="5px"
+                                        borderRadius="full"
+                                        bg="rgba(190, 242, 100, 0.95)"
+                                        boxShadow="0 0 10px rgba(45,212,191,0.9)"
+                                        initial={{ opacity: 0, y: 0, scale: 0 }}
+                                        animate={{ opacity: [0, 1, 0], y: [-6, -52 - p.id * 3], scale: [0, 1, 0.4] }}
+                                        transition={{ duration: p.dur, delay: p.delay, ease: 'easeOut' }}
+                                    />
+                                ))}
                             </Box>
-                        </CardBody>
+                        )}
+
+                        <MotionBox
+                            w="100%"
+                            justify="center"
+                            flexDirection="column"
+                            align="center"
+                            gap="12px"
+                            display="flex"
+                            position="relative"
+                            zIndex={2}
+                            animate={
+                                rubicOutcomeFx === 'lose'
+                                    ? { x: [0, -7, 7, -5, 5, -3, 3, 0] }
+                                    : rubicOutcomeFx === 'win'
+                                      ? { scale: [1, 1.02, 1] }
+                                      : { x: 0, scale: 1 }
+                            }
+                            transition={
+                                rubicOutcomeFx === 'lose'
+                                    ? { duration: 0.42, ease: 'easeInOut' }
+                                    : { duration: 0.5, ease: 'easeOut' }
+                            }
+                        >
+                            <DiceCanvas3D ref={diceRef} height={400} onRollComplete={onRollComplete} />
+                        </MotionBox>
+
+                        <AnimatePresence>
+                            {rubicOutcomeFx === 'win' && (
+                                <MotionText
+                                    key={`rubic-win-txt-${rubicOutcomeFxKey}`}
+                                    position="absolute"
+                                    top="14px"
+                                    left={0}
+                                    right={0}
+                                    textAlign="center"
+                                    fontSize={{ base: 'md', md: 'lg' }}
+                                    fontWeight="900"
+                                    letterSpacing="0.2em"
+                                    color="#5eead4"
+                                    textShadow="0 0 24px rgba(45,212,191,0.85), 0 2px 12px rgba(0,0,0,0.75)"
+                                    zIndex={3}
+                                    pointerEvents="none"
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                                >
+                                    WIN
+                                    {rubicWinAmountDisplay > 0 ? ` +$${truncateToTwo(rubicWinAmountDisplay)}` : ''}
+                                </MotionText>
+                            )}
+                            {rubicOutcomeFx === 'lose' && (
+                                <MotionText
+                                    key={`rubic-lose-txt-${rubicOutcomeFxKey}`}
+                                    position="absolute"
+                                    top="14px"
+                                    left={0}
+                                    right={0}
+                                    textAlign="center"
+                                    fontSize={{ base: 'sm', md: 'md' }}
+                                    fontWeight="800"
+                                    letterSpacing="0.18em"
+                                    color="rgba(252,165,165,0.98)"
+                                    textShadow="0 0 18px rgba(248,113,113,0.55), 0 2px 10px rgba(0,0,0,0.8)"
+                                    zIndex={3}
+                                    pointerEvents="none"
+                                    initial={{ opacity: 0, y: -4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.25 }}
+                                >
+                                    NO MATCH — TRY AGAIN
+                                </MotionText>
+                            )}
+                        </AnimatePresence>
+
+                        <VStack position={'absolute'} zIndex={300} bottom="42px" spacing="24px" align="center">
+                                    {/* Payout section (bc.game style) */}
+                            {(() => {
+                                const payout = getPayoutInfo(parseInt(target, 10), operator);
+                                // if (payout.error) return null;
+                                const winChance = payout.winRate;
+
+                                return (
+                                    <Flex
+                                        align="center"
+                                        justify="center"
+                                        gap="16px"
+                                        // mt="8px"
+                                        px="20px"
+                                        py="10px"
+                                        bg="transparent"
+                                        borderRadius="10px"
+                                        border="1px solid rgba(0, 212, 255, 0.4)"
+                                    >
+                                        <HStack spacing="6px" align="baseline">
+                                            <Text fontSize="xs" color="rgba(255,255,255,0.7)" fontWeight="500">
+                                                Bet Amount:
+                                            </Text>
+                                            <Text fontSize="md" fontWeight="bold" color="#00D4FF">
+                                                {amount}
+                                            </Text>
+                                        </HStack>
+                                        <Box w="1px" h="14px" bg="rgba(255,255,255,0.15)" />
+                                        <HStack spacing="6px" align="baseline">
+                                            <Text fontSize="xs" color="rgba(255,255,255,0.7)" fontWeight="500">
+                                                Payout:
+                                            </Text>
+                                            <Text fontSize="md" fontWeight="bold" color="#fff">
+                                                {payout.multiplier}×
+                                            </Text>
+                                        </HStack>
+                                        <Box w="1px" h="14px" bg="rgba(255,255,255,0.15)" />
+                                        <HStack spacing="6px" align="baseline">
+                                            <Text fontSize="xs" color="rgba(255,255,255,0.7)" fontWeight="500">
+                                                Win Chance:
+                                            </Text>
+                                            <Text fontSize="md" fontWeight="bold" color="#fff">
+                                                {winChance}%
+                                            </Text>
+                                        </HStack>
+                                    </Flex>
+                                );
+                            })()}
+                        </VStack>
                     </Card>
                 </GridItem>
+
                 {/* Right - User History (Latest bet & Race) */}
                 <UserHistory />
 
@@ -1268,7 +1089,7 @@ export default function RubicPage() {
                                                 3. Set Your Bet Amount
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Enter your bet amount (min: 0.1, max: your balance). Use the slider or Min/Max buttons to adjust quickly.
+                                                Enter your bet amount (min: {MIN_AMOUNT}, max: {MAX_AMOUNT}). Use the slider or Min/Max buttons to adjust quickly.
                                             </Text>
                                         </Box>
                                         <Box>
@@ -1276,7 +1097,7 @@ export default function RubicPage() {
                                                 4. Roll the Dice
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Click the BET button to roll the dice. The dice will roll for 2 seconds, then show the result.
+                                                Click the BET button to roll the dice. The dice will roll for about 1 second, then show the result (the top number of the dice).
                                             </Text>
                                         </Box>
                                         <Box>
@@ -1284,7 +1105,7 @@ export default function RubicPage() {
                                                 5. Win Conditions
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                When your prediction matches the final result, your stake is multiplied by the winning multiplier.
+                                                When your prediction matches the final result (the top number of the dice), your stake is multiplied by the winning multiplier.
                                             </Text>
                                         </Box>
                                         <Box>
@@ -1324,7 +1145,7 @@ export default function RubicPage() {
                                         </Box>
                                         <Box pt="8px" borderTop="1px solid rgba(0, 212, 255, 0.2)">
                                             <Text fontSize="sm" color="rgba(255,255,255,0.6)" fontStyle="italic">
-                                                Your last 10 results are displayed at the top. Check your bet history below for all previous games.
+                                                Your last results are displayed at the top. Check your bet history below for all previous games.
                                             </Text>
                                         </Box>
                                     </VStack>

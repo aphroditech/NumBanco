@@ -541,7 +541,93 @@ export const getWinners = async (req, res) => {
             }
         ]);
 
-        const winners = [...userHistoryWinners, ...minesTopWinner, ...doveTopWinner, ...jackalTopWinner]
+        // Top Joker Crash: user with highest sum of jokerCrashHistory.totalWin
+        const jokerCrashTopWinner = await User.aggregate([
+            {
+                $match: {
+                    "jokerCrashHistory.0": { $exists: true }
+                }
+            },
+            {
+                $project: {
+                    altas: 1,
+                    avatar: 1,
+                    membership: 1,
+                    updatedAt: 1,
+                    jokerTotalWinSum: {
+                        $reduce: {
+                            input: { $ifNull: ["$jokerCrashHistory", []] },
+                            initialValue: 0,
+                            in: { $add: ["$$value", { $ifNull: ["$$this.totalWin", 0] }] }
+                        }
+                    }
+                }
+            },
+            {
+                $match: { jokerTotalWinSum: { $gt: 0 } }
+            },
+            {
+                $project: {
+                    username: "$altas",
+                    avatar: 1,
+                    membership: 1,
+                    gameType: { $literal: "Joker Crash" },
+                    winAmount: "$jokerTotalWinSum",
+                    date: "$updatedAt"
+                }
+            },
+            {
+                $sort: { winAmount: -1, date: -1 }
+            },
+            {
+                $limit: 1
+            }
+        ]);
+
+        // Top Card Game: user with highest sum of cardGameHistory.totalWin
+        const cardGameTopWinner = await User.aggregate([
+            {
+                $match: {
+                    "cardGameHistory.0": { $exists: true }
+                }
+            },
+            {
+                $project: {
+                    altas: 1,
+                    avatar: 1,
+                    membership: 1,
+                    updatedAt: 1,
+                    cardGameTotalWinSum: {
+                        $reduce: {
+                            input: { $ifNull: ["$cardGameHistory", []] },
+                            initialValue: 0,
+                            in: { $add: ["$$value", { $ifNull: ["$$this.totalWin", 0] }] }
+                        }
+                    }
+                }
+            },
+            {
+                $match: { cardGameTotalWinSum: { $gt: 0 } }
+            },
+            {
+                $project: {
+                    username: "$altas",
+                    avatar: 1,
+                    membership: 1,
+                    gameType: { $literal: "Card Game" },
+                    winAmount: "$cardGameTotalWinSum",
+                    date: "$updatedAt"
+                }
+            },
+            {
+                $sort: { winAmount: -1, date: -1 }
+            },
+            {
+                $limit: 1
+            }
+        ]);
+
+        const winners = [...userHistoryWinners, ...minesTopWinner, ...doveTopWinner, ...jackalTopWinner, ...jokerCrashTopWinner, ...cardGameTopWinner]
             .sort((a, b) => (b.winAmount || 0) - (a.winAmount || 0))
             .slice(0, 10);
 
