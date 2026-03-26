@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
     Box,
@@ -72,7 +72,10 @@ import Last10Result from './RubicItem/Last10Result';
 import UserHistory from './RubicItem/UserHistory';
 import RubicBalanceGraph from './RubicItem/RubicBalanceGraph';
 import { onlineUser, offlineUser } from "action/BetActions";
+import { motion, AnimatePresence } from 'framer-motion';
 
+const MotionBox = motion(Box);
+const MotionText = motion(Text);
 
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20.00;
@@ -129,11 +132,36 @@ export default function RubicPage() {
     const results = useSelector((state) => state.user.userInfo?.rubicHistory);
     const [winningProbability, setWinningProbability] = useState(0);
     const [isWin, setIsWin] = useState(false);
+    /** Post-roll UI: win / lose highlight (clears before next bet and after a short delay). */
+    const [rubicOutcomeFx, setRubicOutcomeFx] = useState(null);
+    const [rubicOutcomeFxKey, setRubicOutcomeFxKey] = useState(0);
+    const [rubicWinAmountDisplay, setRubicWinAmountDisplay] = useState(0);
     const diceRef = useRef(null);
-    
+
+    useEffect(() => {
+        if (!rubicOutcomeFx) return;
+        const t = window.setTimeout(() => setRubicOutcomeFx(null), 2600);
+        return () => window.clearTimeout(t);
+    }, [rubicOutcomeFxKey, rubicOutcomeFx]);
+
+    const rubicSparkSpecs = useMemo(() => {
+        let s = rubicOutcomeFxKey * 9973 + 1;
+        const rnd = () => {
+            s = (s * 1103515245 + 12345) & 0x7fffffff;
+            return s / 0x7fffffff;
+        };
+        return Array.from({ length: 10 }, (_, i) => ({
+            id: i,
+            x: 12 + rnd() * 76,
+            delay: rnd() * 0.08,
+            dur: 0.55 + rnd() * 0.35,
+            rot: rnd() * 360,
+        }));
+    }, [rubicOutcomeFxKey]);
 
     const handleBet = async () => {
         if (isRolling) return; // Prevent multiple clicks during roll
+        setRubicOutcomeFx(null);
         setIsRolling(true);
         const data = {
             amount: parseFloat(amount),
@@ -317,10 +345,14 @@ export default function RubicPage() {
         }
         setIsRolling(false);
 
-        // console.log(typeof(amount),amount);
         const winData = await handleRubicBet(data, history, dispatch);
-        setIsWin(winData?.isWin);
-    }, [amount, target, operator]);
+        if (winData != null) {
+            setIsWin(Boolean(winData.isWin));
+            setRubicOutcomeFx(winData.isWin ? 'win' : 'lose');
+            setRubicWinAmountDisplay(Number(winData.winAmount) || 0);
+            setRubicOutcomeFxKey((k) => k + 1);
+        }
+    }, [amount, target, operator, history, dispatch]);
 
 
     return (
@@ -701,10 +733,150 @@ export default function RubicPage() {
                 </GridItem>
 
                 <GridItem area="game" minH={'450px'}>
-                    <Card pt="22px" pb="22px" px="22px" minH="100%" alignItems="center" w="100%">
-                        <Flex w="100%" justify="center" direction="column" align="center" gap="12px">
+                    <Card
+                        pt="22px"
+                        pb="22px"
+                        px="22px"
+                        minH="100%"
+                        alignItems="center"
+                        w="100%"
+                        position="relative"
+                        overflow="hidden"
+                    >
+                        <AnimatePresence>
+                            {rubicOutcomeFx === 'win' && (
+                                <MotionBox
+                                    key={`rubic-win-${rubicOutcomeFxKey}`}
+                                    position="absolute"
+                                    inset={0}
+                                    pointerEvents="none"
+                                    zIndex={1}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.35 }}
+                                    bg="radial-gradient(ellipse 85% 70% at 50% 38%, rgba(45,212,191,0.22) 0%, rgba(0,212,255,0.08) 45%, transparent 72%)"
+                                    boxShadow="inset 0 0 100px rgba(45,212,191,0.12)"
+                                />
+                            )}
+                            {rubicOutcomeFx === 'lose' && (
+                                <MotionBox
+                                    key={`rubic-lose-${rubicOutcomeFxKey}`}
+                                    position="absolute"
+                                    inset={0}
+                                    pointerEvents="none"
+                                    zIndex={1}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    bg="radial-gradient(ellipse 80% 65% at 50% 42%, rgba(248,113,113,0.14) 0%, rgba(127,29,29,0.08) 48%, transparent 70%)"
+                                />
+                            )}
+                        </AnimatePresence>
+
+                        {rubicOutcomeFx === 'win' && (
+                            <Box
+                                position="absolute"
+                                inset={0}
+                                pointerEvents="none"
+                                zIndex={2}
+                                overflow="hidden"
+                                borderRadius="inherit"
+                            >
+                                {rubicSparkSpecs.map((p) => (
+                                    <MotionBox
+                                        key={`sp-${rubicOutcomeFxKey}-${p.id}`}
+                                        position="absolute"
+                                        left={`${p.x}%`}
+                                        top="36%"
+                                        w="5px"
+                                        h="5px"
+                                        borderRadius="full"
+                                        bg="rgba(190, 242, 100, 0.95)"
+                                        boxShadow="0 0 10px rgba(45,212,191,0.9)"
+                                        initial={{ opacity: 0, y: 0, scale: 0 }}
+                                        animate={{ opacity: [0, 1, 0], y: [-6, -52 - p.id * 3], scale: [0, 1, 0.4] }}
+                                        transition={{ duration: p.dur, delay: p.delay, ease: 'easeOut' }}
+                                    />
+                                ))}
+                            </Box>
+                        )}
+
+                        <MotionBox
+                            w="100%"
+                            justify="center"
+                            flexDirection="column"
+                            align="center"
+                            gap="12px"
+                            display="flex"
+                            position="relative"
+                            zIndex={2}
+                            animate={
+                                rubicOutcomeFx === 'lose'
+                                    ? { x: [0, -7, 7, -5, 5, -3, 3, 0] }
+                                    : rubicOutcomeFx === 'win'
+                                      ? { scale: [1, 1.02, 1] }
+                                      : { x: 0, scale: 1 }
+                            }
+                            transition={
+                                rubicOutcomeFx === 'lose'
+                                    ? { duration: 0.42, ease: 'easeInOut' }
+                                    : { duration: 0.5, ease: 'easeOut' }
+                            }
+                        >
                             <DiceCanvas3D ref={diceRef} height={400} onRollComplete={onRollComplete} />
-                        </Flex>
+                        </MotionBox>
+
+                        <AnimatePresence>
+                            {rubicOutcomeFx === 'win' && (
+                                <MotionText
+                                    key={`rubic-win-txt-${rubicOutcomeFxKey}`}
+                                    position="absolute"
+                                    top="14px"
+                                    left={0}
+                                    right={0}
+                                    textAlign="center"
+                                    fontSize={{ base: 'md', md: 'lg' }}
+                                    fontWeight="900"
+                                    letterSpacing="0.2em"
+                                    color="#5eead4"
+                                    textShadow="0 0 24px rgba(45,212,191,0.85), 0 2px 12px rgba(0,0,0,0.75)"
+                                    zIndex={3}
+                                    pointerEvents="none"
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                                >
+                                    WIN
+                                    {rubicWinAmountDisplay > 0 ? ` +$${truncateToTwo(rubicWinAmountDisplay)}` : ''}
+                                </MotionText>
+                            )}
+                            {rubicOutcomeFx === 'lose' && (
+                                <MotionText
+                                    key={`rubic-lose-txt-${rubicOutcomeFxKey}`}
+                                    position="absolute"
+                                    top="14px"
+                                    left={0}
+                                    right={0}
+                                    textAlign="center"
+                                    fontSize={{ base: 'sm', md: 'md' }}
+                                    fontWeight="800"
+                                    letterSpacing="0.18em"
+                                    color="rgba(252,165,165,0.98)"
+                                    textShadow="0 0 18px rgba(248,113,113,0.55), 0 2px 10px rgba(0,0,0,0.8)"
+                                    zIndex={3}
+                                    pointerEvents="none"
+                                    initial={{ opacity: 0, y: -4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.25 }}
+                                >
+                                    NO MATCH — TRY AGAIN
+                                </MotionText>
+                            )}
+                        </AnimatePresence>
 
                         <VStack position={'absolute'} bottom="42px" spacing="24px" align="center">
                                     {/* Payout section (bc.game style) */}
@@ -925,7 +1097,7 @@ export default function RubicPage() {
                                                 4. Roll the Dice
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Click the BET button to roll the dice. The dice will roll for about 1 second, then show the result.
+                                                Click the BET button to roll the dice. The dice will roll for about 1 second, then show the result (the top number of the dice).
                                             </Text>
                                         </Box>
                                         <Box>
@@ -933,7 +1105,7 @@ export default function RubicPage() {
                                                 5. Win Conditions
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                When your prediction matches the final result, your stake is multiplied by the winning multiplier.
+                                                When your prediction matches the final result (the top number of the dice), your stake is multiplied by the winning multiplier.
                                             </Text>
                                         </Box>
                                         <Box>
@@ -973,7 +1145,7 @@ export default function RubicPage() {
                                         </Box>
                                         <Box pt="8px" borderTop="1px solid rgba(0, 212, 255, 0.2)">
                                             <Text fontSize="sm" color="rgba(255,255,255,0.6)" fontStyle="italic">
-                                                Your last 10 results are displayed at the top. Check your bet history below for all previous games.
+                                                Your last results are displayed at the top. Check your bet history below for all previous games.
                                             </Text>
                                         </Box>
                                     </VStack>

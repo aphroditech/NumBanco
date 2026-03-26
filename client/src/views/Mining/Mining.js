@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { motion } from "framer-motion";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import {
     Box,
@@ -10,6 +10,7 @@ import {
     Input,
     Button,
     Text,
+    Image,
     Flex,
     VStack,
     Modal,
@@ -30,6 +31,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { checkCanWin, resultGameMining } from 'action/MiningActions';
 import UserMiningHistory from './UserMiningHistory'
+import MiningTreasureGrid from './MiningTreasureGrid';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HandshakeRoundedIcon from '@mui/icons-material/HandshakeRounded';
 import OtherUserHistory from './OtherUserHistory';
@@ -37,6 +39,10 @@ import HelpIcon from '@mui/icons-material/Help';
 import { useHistory } from 'react-router-dom';
 
 import { toast } from 'react-toastify';
+
+import jackalImage from "assets/img/Jackal/jackal.png"
+
+import backgroundImage from "assets/img/Jackal/background.png"
 
 
 const MIN_AMOUNT = 0.5;
@@ -46,6 +52,8 @@ const MIN_TURNS = 1;
 const MAX_TURNS = 8;
 /** Each safe flip reduces payout: mult = maxMult * DECAY_BASE^(turn - 1) */
 const MULTIPLIER_DECAY = 0.8;
+const OUTCOME_FX_MS = 1500;
+const INITIAL_RESULT_MESSAGE = 'Good luck! Play your best!';
 
 function getMaxMultiplier(turns) {
     if (turns < MIN_TURNS || turns > MAX_TURNS) return 0;
@@ -79,8 +87,33 @@ export default function Mining() {
     const [resultMessage, setResultMessage] = useState('');
     // Incremented every time the player finds the jackal so we can replay effects.
     const [jackalCelebrationKey, setJackalCelebrationKey] = useState(0);
+    const [lastWinSummary, setLastWinSummary] = useState(null);
+    const [lossEffectKey, setLossEffectKey] = useState(0);
+    /** Full-screen win/loss FX; auto-hidden after OUTCOME_FX_MS. */
+    const [showOutcomeFx, setShowOutcomeFx] = useState(false);
+    const outcomeFxTimerRef = useRef(null);
 
     const [canWin, setCanWin] = useState(false);
+
+    const clearOutcomeFxTimer = useCallback(() => {
+        if (outcomeFxTimerRef.current != null) {
+            window.clearTimeout(outcomeFxTimerRef.current);
+            outcomeFxTimerRef.current = null;
+        }
+    }, []);
+
+    const armOutcomeFxAutoDismiss = useCallback(() => {
+        clearOutcomeFxTimer();
+        setShowOutcomeFx(true);
+        outcomeFxTimerRef.current = window.setTimeout(() => {
+            outcomeFxTimerRef.current = null;
+            setShowOutcomeFx(false);
+            setGameState('idle');
+            setResultMessage(INITIAL_RESULT_MESSAGE);
+        }, OUTCOME_FX_MS);
+    }, [clearOutcomeFxTimer]);
+
+    useEffect(() => () => clearOutcomeFxTimer(), [clearOutcomeFxTimer]);
 
     const betNum = parseFloat(amount) || 0;
 
@@ -101,18 +134,36 @@ export default function Mining() {
     const currentWinAmount = betNum * currentDisplayMultiplier;
 
     const showJackalCelebration = gameState === "won" && jackalCelebrationKey > 0;
+    const showWinFxOverlay = showJackalCelebration && showOutcomeFx;
+    const showLossFxOverlay = gameState === 'lost' && showOutcomeFx;
 
     const jackalCelebrationConfetti = useMemo(() => {
-        if (!showJackalCelebration) return [];
-        return Array.from({ length: 18 }).map((_, i) => {
-            const leftPct = 10 + Math.random() * 80;
-            const delay = Math.random() * 0.12;
-            const rot = Math.random() * 180 - 90;
-            const hue = 180 + Math.random() * 140;
-            const drift = (Math.random() - 0.5) * 50;
-            return { i, leftPct, delay, rot, hue, drift };
+        if (!showWinFxOverlay) return [];
+        return Array.from({ length: 32 }).map((_, i) => {
+            const leftPct = 6 + Math.random() * 88;
+            const delay = Math.random() * 0.35;
+            const rot = Math.random() * 360;
+            const gold = Math.random() < 0.45;
+            const hue = gold ? 38 + Math.random() * 28 : 168 + Math.random() * 55;
+            const drift = (Math.random() - 0.5) * 70;
+            const size = 5 + Math.random() * 7;
+            const duration = 1.35 + Math.random() * 0.55;
+            return { i, leftPct, delay, rot, hue, drift, size, duration };
         });
-    }, [showJackalCelebration, jackalCelebrationKey]);
+    }, [showWinFxOverlay, jackalCelebrationKey]);
+
+    const lossAmbientParticles = useMemo(() => {
+        if (!showLossFxOverlay) return [];
+        return Array.from({ length: 22 }).map((_, i) => ({
+            i,
+            leftPct: Math.random() * 100,
+            delay: Math.random() * 0.8,
+            duration: 2.8 + Math.random() * 1.8,
+            y0: 10 + Math.random() * 40,
+            opacity: 0.12 + Math.random() * 0.2,
+            w: 2 + Math.random() * 3,
+        }));
+    }, [showLossFxOverlay, lossEffectKey]);
 
     const handleAmountChange = (e) => {
         const v = e.target.value.replace(/[^0-9.]/g, '');
@@ -130,6 +181,9 @@ export default function Mining() {
         const bet = parseFloat(amount) || 0;
         if (bet < MIN_AMOUNT || bet > MAX_AMOUNT || bet > balance) return;
 
+        clearOutcomeFxTimer();
+        setShowOutcomeFx(false);
+
         const allowedToWin = await checkCanWin({ betAmt: bet, turn: maxTurns }, dispatch, history);
         setCanWin(allowedToWin === true);
 
@@ -143,8 +197,9 @@ export default function Mining() {
         setFlippedCount(0);
         setFlippedIndices(new Set());
         setJackalCelebrationKey(0);
-        
-        setResultMessage('Good luck! Play your best!');
+        setLastWinSummary(null);
+
+        setResultMessage(INITIAL_RESULT_MESSAGE);
     };
 
     const flipTile = (index) => {
@@ -171,18 +226,26 @@ export default function Mining() {
                 const effectiveMult = getEffectiveMultiplier(maxTurns, currentTurn);
                 const winAmount = betNum * effectiveMult;
                 setJackalCelebrationKey((k) => k + 1);
+                setLastWinSummary({
+                    winAmount,
+                    mult: effectiveMult,
+                    turn: currentTurn,
+                });
                 setGameState('won');
                 setResultMessage(
                     `Jackal found! You win ${winAmount.toFixed(2)}  (× ${effectiveMult.toFixed(2)} on flip ${currentTurn})`
                 );
+                armOutcomeFxAutoDismiss();
                 resultGameMining(
                     { betAmt: parseFloat(amount), turn: maxTurns, multiplier: parseFloat(effectiveMult.toFixed(2)), isWin: true, currentTurn },
                     dispatch,
                     history
                 );
             } else if (flippedCount + 1 >= maxTurns) {
+                setLossEffectKey((k) => k + 1);
                 setGameState('lost');
                 setResultMessage('No jackal in your turns. Try again next time!');
+                armOutcomeFxAutoDismiss();
                 setTiles((prev) => {
                     const next = [...prev];
                     next[jackalIndex] = true;
@@ -200,8 +263,10 @@ export default function Mining() {
                 const remaining = [...Array(TOTAL_TILES).keys()].filter((i) => !newFlipped.has(i));
                 const jackalAt = remaining[Math.floor(Math.random() * remaining.length)];
                 setJackalIndex(jackalAt);
+                setLossEffectKey((k) => k + 1);
                 setGameState('lost');
                 setResultMessage('No jackal in your turns. Try again next time!');
+                armOutcomeFxAutoDismiss();
                 setTiles((prev) => {
                     const next = [...prev];
                     next[jackalAt] = true;
@@ -230,15 +295,38 @@ export default function Mining() {
                 templateRows={{
                     base: 'auto auto auto',
                     md: 'auto auto',
-                    '1550px': 'auto',
+                    /** Single row: all columns share the same track height (tallest cell). */
+                    '1550px': 'minmax(450px, auto)',
                 }}
                 gap={{ base: '16px', md: '24px' }}
                 w="100%"
+                alignItems="stretch"
             >
                 {/* Left – Bet & Turns */}
-                <GridItem area="panel" minW="350px">
-                    <Card pt="30px" pb="22px" px="22px" overflow="visible" minH="450px" position="relative">
-                        <CardBody overflow="visible" display="flex" alignItems="center" justifyContent="center" minH="100%" position="relative">
+                <GridItem area="panel" minW="350px" display="flex" flexDirection="column" minH="0">
+                    <Card
+                        pt="30px"
+                        pb="22px"
+                        px="22px"
+                        overflow="visible"
+                        position="relative"
+                        flex="1"
+                        w="100%"
+                        minH="450px"
+                        h="100%"
+                        display="flex"
+                        flexDirection="column"
+                    >
+                        <CardBody
+                            overflow="visible"
+                            display="flex"
+                            flexDirection="column"
+                            alignItems="center"
+                            justifyContent="flex-start"
+                            flex="1"
+                            minH="0"
+                            position="relative"
+                        >
                             <Box position="absolute" top="-30px" right="-20px" zIndex={2}>
                                 <IconButton
                                     aria-label="Help"
@@ -251,7 +339,7 @@ export default function Mining() {
                                     onClick={() => setIsHelpModalOpen(true)}
                                 />
                             </Box>
-                            <VStack spacing="24px" align="center" w="100%">
+                            <VStack spacing="24px" align="center" w="100%" flex="1">
                                 <FormControl w="100%" maxW="300px">
                                     <FormLabel color="#fff" fontSize="sm" fontWeight="bold" mb="8px" textAlign="left">
                                         Bet Amount
@@ -455,9 +543,31 @@ export default function Mining() {
                 </GridItem>
 
                 {/* Center – 16 tiles (find the jackal) */}
-                <GridItem area="game" minH="450px">
-                    <Card pt="30px" pb="22px" px="22px" overflow="visible" minH="450px"  position="relative">
-                        <CardBody overflow="visible" display="flex" flexDirection="column" alignItems="center" justifyContent="center" minH="100%" position="relative">
+                <GridItem area="game" display="flex" flexDirection="column" minH="0">
+                    <Card
+                        pt="30px"
+                        pb="22px"
+                        px="22px"
+                        overflow="visible"
+                        position="relative"
+                        flex="1"
+                        w="100%"
+                        minH="450px"
+                        h="100%"
+                        display="flex"
+                        flexDirection="column"
+                    >
+                        <CardBody
+                            overflow="visible"
+                            display="flex"
+                            flexDirection="column"
+                            alignItems="center"
+                            justifyContent="center"
+                            flex="1"
+                            minH="0"
+                            position="relative"
+                        >
+                            {/* <Image src={backgroundImage} alt="Background" position="absolute" top="0" left="0" right="0" bottom="0" zIndex={1} /> */}
                             <Box position="absolute" top="16px" left="22px" zIndex={2}>
                                 <Text fontSize="sm" color="rgba(255,255,255,0.7)" mb="2px">Bet</Text>
                                 <Text fontSize="lg" fontWeight="bold" color="#fff">{amount || '0.00'}</Text>
@@ -471,283 +581,278 @@ export default function Mining() {
                             The sooner you find it, the higher your payout
                             </Text>
 
-                            <Grid
-                                templateColumns="repeat(4, 1fr)"
-                                gap="10px"
-                                w="100%"
-                                maxW="320px"
-                            >
-                                {tiles.map((revealed, index) => {
-                                    const canFlip = gameState === "playing" && revealed === null && flippedCount < maxTurns;
-                                    const isJackal = revealed === true;
+                            <MiningTreasureGrid
+                                tiles={tiles}
+                                gameState={gameState}
+                                flippedCount={flippedCount}
+                                maxTurns={maxTurns}
+                                jackalIndex={jackalIndex}
+                                jackalCelebrationKey={jackalCelebrationKey}
+                                flipTile={flipTile}
+                            />
 
-                                    return (
-                                        <Button
-                                            key={index}
-                                            variant="unstyled"
-                                            p="0"
-                                            minW="0"
-                                            w="100%"
-                                            h="64px"
-                                            borderRadius="16px"
-                                            onClick={() => flipTile(index)}
-                                            _focusVisible={
-                                                canFlip
-                                                    ? {
-                                                        boxShadow: "0 0 0 3px rgba(0, 212, 255, 0.35), 0 0 22px rgba(0, 212, 255, 0.25)",
-                                                    }
-                                                    : undefined
-                                            }
-                                        >
-                                            <Box
-                                                w="100%"
-                                                h="100%"
-                                                position="relative"
-                                                style={{ perspective: "900px" }}
-                                            >
-                                                <motion.div
-                                                    initial={false}
-                                                    animate={{
-                                                        rotateY: revealed === null ? 0 : 180,
-                                                        ...(gameState === "won" &&
-                                                        jackalIndex === index &&
-                                                        jackalCelebrationKey > 0
-                                                            ? {
-                                                                x: [0, -4, 4, -3, 0],
-                                                                y: [0, 2, -2, 1, 0],
-                                                                rotateZ: [0, -2, 2, -1, 0],
-                                                                scale: [1, 1.06, 0.98, 1.03, 1],
-                                                            }
-                                                            : {}),
-                                                    }}
-                                                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                                                    whileHover={canFlip ? { scale: 1.03 } : undefined}
-                                                    whileTap={canFlip ? { scale: 0.98 } : undefined}
-                                                    style={{
-                                                        width: "100%",
-                                                        height: "100%",
-                                                        position: "relative",
-                                                        transformStyle: "preserve-3d",
-                                                    }}
-                                                >
-                                                    {/* Front (hidden) */}
-                                                    <Box
-                                                        position="absolute"
-                                                        inset="0"
-                                                        display="flex"
-                                                        alignItems="center"
-                                                        justifyContent="center"
-                                                        borderRadius="16px"
-                                                        bg="rgba(50, 55, 56, 1)"
-                                                        border="1px solid rgba(0, 212, 255, 0.28)"
-                                                        color="rgba(255,255,255,0.9)"
-                                                        style={{ backfaceVisibility: "hidden" }}
-                                                        overflow="hidden"
-                                                    >
-                                                        <Box
-                                                            position="absolute"
-                                                            inset="-20%"
-                                                            bg="radial-gradient(circle at 50% 20%, rgba(0,212,255,0.25) 0%, rgba(0,212,255,0) 60%)"
-                                                            opacity={canFlip ? 1 : 0.4}
-                                                        />
-                                                        <motion.div
-                                                            animate={canFlip ? { opacity: [0.9, 1, 0.9] } : undefined}
-                                                            transition={{ duration: 1.2, repeat: canFlip ? Infinity : 0 }}
-                                                            style={{ position: "relative" }}
-                                                        >
-                                                            <Box fontSize="22px" fontWeight="900" lineHeight="1" textShadow="0 0 18px rgba(0,212,255,0.2)">
-                                                                ?
-                                                            </Box>
-                                                        </motion.div>
-                                                    </Box>
-
-                                                    {/* Back (revealed) */}
-                                                    <Box
-                                                        position="absolute"
-                                                        inset="0"
-                                                        display="flex"
-                                                        alignItems="center"
-                                                        justifyContent="center"
-                                                        borderRadius="16px"
-                                                        style={{ transform: "rotateY(180deg)", backfaceVisibility: "hidden" }}
-                                                        overflow="hidden"
-                                                        bg={isJackal ? "rgba(239, 68, 68, 0.35)" : "rgba(0, 255, 160, 0.18)"}
-                                                        border={
-                                                            isJackal
-                                                                ? "1px solid rgba(239, 68, 68, 0.65)"
-                                                                : "1px solid rgba(0, 255, 160, 0.35)"
-                                                        }
-                                                        color="#fff"
-                                                    >
-                                                        <Box
-                                                            position="absolute"
-                                                            inset="-30%"
-                                                            bg={
-                                                                isJackal
-                                                                    ? "radial-gradient(circle at 50% 35%, rgba(239,68,68,0.35) 0%, rgba(239,68,68,0) 55%)"
-                                                                    : "radial-gradient(circle at 50% 35%, rgba(0,255,160,0.25) 0%, rgba(0,255,160,0) 55%)"
-                                                            }
-                                                        />
-
-                                                        {revealed !== null && (
-                                                            <motion.div
-                                                                key={isJackal ? `jackal-${jackalCelebrationKey}` : "safe"}
-                                                                initial={{ scale: 0.92, opacity: 0.4 }}
-                                                                animate={{
-                                                                    scale:
-                                                                        isJackal && gameState === "won" && jackalIndex === index && jackalCelebrationKey > 0
-                                                                            ? [1, 1.16, 0.95, 1.10, 1]
-                                                                            : isJackal
-                                                                                ? [1, 1.08, 1]
-                                                                                : [1, 1.04, 1],
-                                                                    opacity: 1,
-                                                                    filter: isJackal ? "drop-shadow(0 0 12px rgba(239,68,68,0.35))" : "drop-shadow(0 0 12px rgba(0,255,160,0.25))",
-                                                                }}
-                                                                transition={{ duration: isJackal && gameState === "won" ? 0.35 : 0.35 }}
-                                                                style={{ position: "relative" }}
-                                                            >
-                                                                <Box fontSize="26px" fontWeight="900" lineHeight="1">
-                                                                    {isJackal ? "🐺" : "🛡️"}
-                                                                </Box>
-                                                            </motion.div>
-                                                        )}
-                                                    </Box>
-                                                </motion.div>
-                                            </Box>
-                                        </Button>
-                                    );
-                                })}
-                            </Grid>
-
-                            {/* Jackal celebration overlay (only on win) */}
-                            {showJackalCelebration && (
-                                <Box
-                                    position="absolute"
-                                    top="90px"
-                                    left="0"
-                                    right="0"
-                                    margin="0 auto"
-                                    width="320px"
-                                    maxW="100%"
-                                    pointerEvents="none"
-                                >
+                            {/* Win / loss overlays — full-stage, modern glass + motion */}
+                            <AnimatePresence>
+                                {showWinFxOverlay && (
                                     <motion.div
-                                        key={jackalCelebrationKey}
-                                        initial={{ opacity: 0, scale: 0.96 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ duration: 0.2 }}
+                                        key={`win-${jackalCelebrationKey}`}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.28 }}
                                         style={{
-                                            position: "relative",
-                                            width: "100%",
-                                            height: "240px",
-                                            margin: "0 auto",
-                                            borderRadius: "16px",
-                                            background:
-                                                "radial-gradient(circle at 50% 35%, rgba(0,212,255,0.22) 0%, rgba(0,212,255,0) 60%), radial-gradient(circle at 50% 50%, rgba(239,68,68,0.18) 0%, rgba(239,68,68,0) 62%)",
-                                            border: "1px solid rgba(0,212,255,0.22)",
-                                            boxShadow: "0 0 40px rgba(0,212,255,0.12)",
-                                            overflow: "hidden",
+                                            position: 'absolute',
+                                            inset: 0,
+                                            zIndex: 28,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '72px 12px 100px',
+                                            pointerEvents: 'none',
                                         }}
                                     >
-                                        {/* Big jackpot text */}
+                                        <Box
+                                            position="absolute"
+                                            inset={0}
+                                            bg="linear-gradient(165deg, rgba(0,40,48,0.55) 0%, rgba(0,0,0,0.72) 45%, rgba(20,10,8,0.65) 100%)"
+                                            backdropFilter="blur(10px)"
+                                            sx={{ WebkitBackdropFilter: 'blur(10px)' }}
+                                        />
+                                        {/* Soft vignette rings */}
                                         <motion.div
-                                            initial={{ opacity: 0, y: 6 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.25, delay: 0.05 }}
+                                            aria-hidden
+                                            initial={{ opacity: 0, scale: 0.85 }}
+                                            animate={{ opacity: 0.5, scale: 1 }}
+                                            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                                             style={{
-                                                position: "absolute",
-                                                top: "8px",
-                                                left: 0,
-                                                right: 0,
-                                                display: "flex",
-                                                justifyContent: "center",
-                                                pointerEvents: "none",
+                                                position: 'absolute',
+                                                width: 'min(420px, 90vw)',
+                                                height: 'min(420px, 90vw)',
+                                                borderRadius: '50%',
+                                                border: '1px solid rgba(0, 212, 255, 0.18)',
+                                                boxShadow:
+                                                    '0 0 80px rgba(0, 212, 255, 0.12), inset 0 0 60px rgba(0, 212, 255, 0.06)',
+                                            }}
+                                        />
+                                        <motion.div
+                                            aria-hidden
+                                            animate={{ scale: [1, 1.04, 1], opacity: [0.25, 0.4, 0.25] }}
+                                            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                                            style={{
+                                                position: 'absolute',
+                                                width: 'min(360px, 85vw)',
+                                                height: 'min(360px, 85vw)',
+                                                borderRadius: '50%',
+                                                border: '1px solid rgba(255, 200, 120, 0.12)',
+                                            }}
+                                        />
+
+                                        {jackalCelebrationConfetti.map((c) => (
+                                            <motion.div
+                                                key={`${jackalCelebrationKey}-c-${c.i}`}
+                                                initial={{ opacity: 0, y: -20, x: 0, rotate: c.rot, scale: 0.6 }}
+                                                animate={{
+                                                    opacity: [0, 1, 0.9, 0],
+                                                    y: 220,
+                                                    x: c.drift,
+                                                    rotate: c.rot + 180,
+                                                    scale: 1,
+                                                }}
+                                                transition={{ duration: c.duration, delay: c.delay, ease: [0.22, 1, 0.36, 1] }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '18%',
+                                                    left: `${c.leftPct}%`,
+                                                    width: `${c.size}px`,
+                                                    height: `${c.size * 1.6}px`,
+                                                    borderRadius: '3px',
+                                                    background: `hsl(${c.hue} 78% 58%)`,
+                                                    boxShadow: '0 0 14px rgba(255,255,255,0.15)',
+                                                }}
+                                            />
+                                        ))}
+
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 16, scale: 0.94 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            transition={{ type: 'spring', stiffness: 320, damping: 28, delay: 0.06 }}
+                                            style={{
+                                                position: 'relative',
+                                                maxWidth: 'min(340px, 92vw)',
+                                                width: '100%',
                                             }}
                                         >
                                             <Box
-                                                fontWeight="900"
-                                                fontSize="22px"
-                                                color="rgba(255,255,255,0.95)"
-                                                textShadow="0 0 18px rgba(0,212,255,0.35)"
+                                                borderRadius="20px"
+                                                overflow="hidden"
+                                                border="1px solid rgba(255,255,255,0.14)"
+                                                bg="rgba(12, 18, 24, 0.55)"
+                                                backdropFilter="blur(16px)"
+                                                sx={{ WebkitBackdropFilter: 'blur(16px)' }}
+                                                boxShadow="0 24px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,212,255,0.08) inset"
+                                                px={{ base: 5, md: 7 }}
+                                                py={{ base: 5, md: 6 }}
+                                                textAlign="center"
                                             >
-                                                JACKPOT
+                                                <Text
+                                                    fontSize="10px"
+                                                    fontWeight="800"
+                                                    letterSpacing="0.35em"
+                                                    color="rgba(180, 240, 255, 0.85)"
+                                                    mb={3}
+                                                >
+                                                    JACKAL FOUND
+                                                </Text>
+                                                <motion.div
+                                                    initial={{ scale: 0.88, opacity: 0 }}
+                                                    animate={{ scale: 1, opacity: 1 }}
+                                                    transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.12 }}
+                                                    style={{ marginBottom: 12 }}
+                                                >
+                                                    <Image
+                                                        src={jackalImage}
+                                                        alt="Jackal"
+                                                        mx="auto"
+                                                        maxH="100px"
+                                                        objectFit="contain"
+                                                        filter="drop-shadow(0 12px 28px rgba(0,0,0,0.65))"
+                                                        draggable={false}
+                                                    />
+                                                </motion.div>
+                                                {lastWinSummary && (
+                                                    <>
+                                                        <Text
+                                                            fontSize={{ base: '36px', md: '42px' }}
+                                                            fontWeight="900"
+                                                            lineHeight="1"
+                                                            letterSpacing="-0.03em"
+                                                            fontFamily="system-ui, -apple-system, sans-serif"
+                                                            bgGradient="linear(to-br, #ffffff, #7aebff, #c8f7ff)"
+                                                            bgClip="text"
+                                                            sx={{
+                                                                WebkitBackgroundClip: 'text',
+                                                                WebkitTextFillColor: 'transparent',
+                                                            }}
+                                                            mb={1}
+                                                        >
+                                                            ×{Number(lastWinSummary.mult).toFixed(2)}
+                                                        </Text>
+                                                        <Text fontSize="sm" color="rgba(255,255,255,0.55)" mb={1}>
+                                                            Flip {lastWinSummary.turn} · payout
+                                                        </Text>
+                                                        <Text fontSize="xl" fontWeight="800" color="rgba(255,255,255,0.95)">
+                                                            +${Number(lastWinSummary.winAmount).toFixed(2)}
+                                                        </Text>
+                                                    </>
+                                                )}
                                             </Box>
                                         </motion.div>
-
-                                        {/* Minimal confetti */}
-                                        {jackalCelebrationConfetti.map((c) => {
-                                            return (
-                                                <motion.div
-                                                    key={`${jackalCelebrationKey}-c-${c.i}`}
-                                                    initial={{ opacity: 0, y: 0, x: 0, rotate: c.rot, scale: 0.9 }}
-                                                    animate={{ opacity: [0, 1, 0], y: 130, x: c.drift, rotate: c.rot + 120, scale: 1 }}
-                                                    transition={{ duration: 1.1, delay: c.delay }}
-                                                    style={{
-                                                        position: "absolute",
-                                                        top: "42px",
-                                                        left: `${c.leftPct}%`,
-                                                        width: "10px",
-                                                        height: "18px",
-                                                        borderRadius: "4px",
-                                                        background: `hsl(${c.hue} 90% 60%)`,
-                                                        boxShadow: "0 0 16px rgba(0,212,255,0.15)",
-                                                    }}
-                                                />
-                                            );
-                                        })}
                                     </motion.div>
-                                </Box>
-                            )}
+                                )}
+                            </AnimatePresence>
 
-                            {resultMessage && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    transition={{ duration: 0.25 }}
-                                >
-                                    <Box
-                                        mt="20px"
-                                        px="16px"
-                                        py="12px"
-                                        borderRadius="14px"
-                                        bg={
-                                            gameState === "playing"
-                                                ? "linear-gradient(180deg, rgba(59, 130, 246, 0.26) 0%, rgba(59, 130, 246, 0.10) 100%)"
-                                                : gameState === "won"
-                                                ? "linear-gradient(180deg, rgba(74, 222, 128, 0.22) 0%, rgba(74, 222, 128, 0.08) 100%)"
-                                                : "linear-gradient(180deg, rgba(248, 113, 113, 0.22) 0%, rgba(248, 113, 113, 0.08) 100%)"
-                                        }
-                                        border="1px solid"
-                                        borderColor={
-                                            gameState === "playing"
-                                                ? "rgba(59, 130, 246, 0.70)"
-                                                : gameState === "won"
-                                                    ? "rgba(74, 222, 128, 0.65)"
-                                                    : "rgba(248, 113, 113, 0.65)"
-                                        }
-                                        boxShadow={
-                                            gameState === "playing"
-                                                ? "0 0 26px rgba(59, 130, 246, 0.22)"
-                                                : gameState === "won"
-                                                ? "0 0 26px rgba(74, 222, 128, 0.18)"
-                                                : "0 0 26px rgba(248, 113, 113, 0.18)"
-                                        }
+                            <AnimatePresence>
+                                {showLossFxOverlay && (
+                                    <motion.div
+                                        key={`loss-${lossEffectKey}`}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.32 }}
+                                        style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            zIndex: 27,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '72px 12px 100px',
+                                            pointerEvents: 'none',
+                                        }}
                                     >
-                                        <Text
-                                            fontWeight="900"
-                                            color={
-                                                gameState === "playing"
-                                                    ? "rgba(147, 197, 253, 1)"
-                                                    : gameState === "won"
-                                                        ? "rgba(74, 222, 128, 1)"
-                                                        : "rgba(248, 113, 113, 1)"
-                                            }
+                                        <Box
+                                            position="absolute"
+                                            inset={0}
+                                            bg="linear-gradient(195deg, rgba(15, 23, 42, 0.62) 0%, rgba(15, 15, 25, 0.78) 50%, rgba(30, 20, 35, 0.7) 100%)"
+                                            backdropFilter="blur(10px)"
+                                            sx={{ WebkitBackdropFilter: 'blur(10px)' }}
+                                        />
+                                        {lossAmbientParticles.map((p) => (
+                                            <motion.div
+                                                key={`${lossEffectKey}-p-${p.i}`}
+                                                initial={{ opacity: 0, y: `${p.y0}%` }}
+                                                animate={{ opacity: [0, p.opacity, 0], y: ['10%', '110%'] }}
+                                                transition={{
+                                                    duration: p.duration,
+                                                    delay: p.delay,
+                                                    repeat: Infinity,
+                                                    ease: 'linear',
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    left: `${p.leftPct}%`,
+                                                    top: 0,
+                                                    width: `${p.w}px`,
+                                                    height: `${p.w * 4}px`,
+                                                    borderRadius: '999px',
+                                                    background:
+                                                        'linear-gradient(180deg, rgba(148, 163, 184, 0.35) 0%, transparent 100%)',
+                                                }}
+                                            />
+                                        ))}
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ type: 'spring', stiffness: 280, damping: 30, delay: 0.08 }}
+                                            style={{ position: 'relative', maxWidth: 'min(320px, 90vw)', width: '100%' }}
                                         >
-                                            {resultMessage}
-                                        </Text>
-                                    </Box>
-                                </motion.div>
-                            )}
+                                            <Box
+                                                borderRadius="20px"
+                                                border="1px solid rgba(148, 163, 184, 0.22)"
+                                                bg="rgba(15, 18, 28, 0.5)"
+                                                backdropFilter="blur(18px)"
+                                                sx={{ WebkitBackdropFilter: 'blur(18px)' }}
+                                                boxShadow="0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)"
+                                                px={{ base: 5, md: 7 }}
+                                                py={{ base: 6, md: 7 }}
+                                                textAlign="center"
+                                            >
+                                                <Text
+                                                    fontSize="10px"
+                                                    fontWeight="800"
+                                                    letterSpacing="0.32em"
+                                                    color="rgba(148, 163, 184, 0.9)"
+                                                    mb={3}
+                                                >
+                                                    ROUND COMPLETE
+                                                </Text>
+                                                <Text
+                                                    fontSize={{ base: '22px', md: '24px' }}
+                                                    fontWeight="800"
+                                                    color="rgba(248, 250, 252, 0.96)"
+                                                    lineHeight="1.35"
+                                                    mb={2}
+                                                >
+                                                    The jackal stayed hidden
+                                                </Text>
+                                                <Text fontSize="sm" color="rgba(148, 163, 184, 0.88)" lineHeight="1.5">
+                                                    Your picks are revealed — bet again when you are ready for another hunt.
+                                                </Text>
+                                                <Box
+                                                    mt={4}
+                                                    h="2px"
+                                                    w="40px"
+                                                    mx="auto"
+                                                    borderRadius="full"
+                                                    bg="linear-gradient(90deg, transparent, rgba(148,163,184,0.5), transparent)"
+                                                />
+                                            </Box>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            
                         </CardBody>
                     </Card>
                 </GridItem>

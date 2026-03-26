@@ -19,22 +19,21 @@ function RealTimeHistory() {
     const history = useHistory();
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect( () => {
+    useEffect(async() => {
         let isMounted = true;
-        getAToZResults(history).then((res) => {
-            if (isMounted) {
-                setAToZResults(res.aToZResults);
-                setIsLoading(false);
-            }
-        });
+        const results = await getAToZResults(history);
+        if (isMounted) {
+            setAToZResults(results || []);
+            setIsLoading(false);
+        }
         return () => { isMounted = false; };
     }, [history]);
-    
+
     if (isLoading) {
         return <Loading />;
     }
 
-    const maxRows = 12;
+    const maxRows = 17;
     const rowsToRender = (Array.isArray(aToZResults) ? aToZResults : []).slice(0, maxRows);
 
     return (
@@ -78,10 +77,10 @@ function RealTimeHistory() {
                 }}
             >
                 <Table
-                variant="unstyled"
-                color="#fff"
-                width="100%"
-                sx={{ tableLayout: "fixed" }}
+                    variant="unstyled"
+                    color="#fff"
+                    width="100%"
+                    sx={{ tableLayout: "fixed" }}
                 >
                     <Thead>
                         <Tr borderBottom="1px solid rgba(255,255,255,0.12)">
@@ -97,17 +96,17 @@ function RealTimeHistory() {
                         </Tr>
                     </Thead>
                     <Tbody>
-                    {rowsToRender.map((row, index) => {
-                        return (
-                            <AToZRealViewRow
-                                key={index}
-                                userName={row.userName}
-                                avatar={row.avatar}
-                                result={row.multiplier}
-                                winAmount={row.winAmount}
-                            />
-                        );
-                    })}
+                        {rowsToRender.map((row, index) => {
+                            return (
+                                <AToZRealViewRow
+                                    key={index}
+                                    userName={row.userName}
+                                    avatar={row.avatar}
+                                    result={row.multiplier}
+                                    winAmount={row.winAmount}
+                                />
+                            );
+                        })}
                     </Tbody>
                 </Table>
             </Box>

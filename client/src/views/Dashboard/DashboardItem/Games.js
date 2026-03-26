@@ -33,6 +33,7 @@ import alphaTree from "assets/img/Games/alphaTree.png"
 import digits from "assets/img/Games/digits.png"
 import cloud from "assets/img/Games/cloud.png"
 import dice from "assets/img/Games/dice.png"
+import coinImage from "assets/img/Games/coin.png"
 
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
@@ -57,6 +58,7 @@ const DASHBOARD_GAMES = [
     { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4900 },
     { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
+    { img: coinImage, name: "Coin", path: "/game/coin", reduxKey: "coinUsers", tickMs: 3600 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {

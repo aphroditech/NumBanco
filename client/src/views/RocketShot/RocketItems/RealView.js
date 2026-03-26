@@ -73,7 +73,7 @@ function RealView() {
         });
     }, []);
 
-    const maxRows = 12;
+    const maxRows =20;
     const baseRows = Array.isArray(rocketResults) ? rocketResults : [];
     const rowsToRender = baseRows.slice(0, maxRows);
 

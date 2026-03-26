@@ -135,7 +135,7 @@ function checkValid(history, settings, betAmt) {
 
     // check if the last 10 results are valid
     const tempNumbers = settings?.limits?.find(
-        r => betAmt >= r.min && betAmt < r.max
+        r => betAmt >= r.min && betAmt <= r.max
     );
 
     if (!tempNumbers) return false;
@@ -143,7 +143,7 @@ function checkValid(history, settings, betAmt) {
     const { min, max, totalNumber, canWinNumber } = tempNumbers;
 
     const filtered = history?.filter(
-        h => h.betAmount >= min && h.betAmount < max
+        h => h.betAmount >= min && h.betAmount <= max
     );
 
     const recentCount = filtered?.length ? filtered.length % totalNumber : 0;
