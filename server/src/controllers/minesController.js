@@ -1,7 +1,7 @@
-import MinesGame from "../models/MinesGame.js";
-import MinesResult from "../models/MinesResult.js";
-import MinesHistory from "../models/MinesHistory.js";
-import MinesSetting from "../models/MinesSetting.js";
+import MinesGame from "../models/mines/MinesGame.js";
+import MinesResult from "../models/mines/MinesResult.js";
+import MinesHistory from "../models/mines/MinesHistory.js";
+import MinesSetting from "../models/mines/MinesSetting.js";
 import User from "../models/User.js";
 import {
   getMultiplierForRevealed,

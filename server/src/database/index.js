@@ -24,6 +24,7 @@ import { initializeMinesSettings } from './minesSettings.js';
 import { initializeAlphaTreeSettings } from './initAlphaTreeSettings.js';
 import { initializeCocoRates } from './initCocoRates.js';
 import { initCoinSettings } from './initCoinSettings.js';
+import { initDoubleBotSettings } from './initDoubleBotSettings.js';
 
 
 export const initializeDatabase = async () => {
@@ -45,6 +46,7 @@ export const initializeDatabase = async () => {
     await initAToZSetting();
     await initCloudSpreadSetting();
     await initGravityBot();
+    await initDoubleBotSettings();
     await initializeMinesSettings();
     await initializeAlphaTreeSettings();
     await initializeCocoRates();

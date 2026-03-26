@@ -1,7 +1,7 @@
-import CloudSpreadRound from "../../models/CloudSpreadRound.js";
-import CloudSpreadHistory from "../../models/CloudSpreadHistory.js";
-import CloudSpreadPlayRecord from "../../models/CloudSpreadPlayRecord.js";
-import CloudSpreadSettings from "../../models/CloudSpreadSettings.js";
+import CloudSpreadRound from "../../models/cloud/CloudSpreadRound.js";
+import CloudSpreadHistory from "../../models/cloud/CloudSpreadHistory.js";
+import CloudSpreadPlayRecord from "../../models/cloud/CloudSpreadPlayRecord.js";
+import CloudSpreadSettings from "../../models/cloud/CloudSpreadSettings.js";
 import User from "../../models/User.js";
 
 const TOTAL_STEPS = 8;
