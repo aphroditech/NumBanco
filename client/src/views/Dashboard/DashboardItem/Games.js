@@ -35,7 +35,7 @@ import cloud from "assets/img/Games/cloud.jpg"
 import twist from "assets/img/Games/twist.jpg"
 import dice from "assets/img/Games/dice.jpg"
 import coinImage from "assets/img/Games/coin.jpg"
-import doubleGame from "assets/img/Games/double.png"
+import doubleGame from "assets/img/Games/double.jpg"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
