@@ -9,10 +9,9 @@ export const coinBet = async (data, dispatch, history) => {
                 payload: res.data.balance,
             });
         }
-        console.log(res.data);
         return res.data;
     } catch (error) {
-        console.error(error);
+        console.error(error.response?.data?.message);
         if(error.response?.status === 401 && history) {
             history.push('/auth/landing');
         }

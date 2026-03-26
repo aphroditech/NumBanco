@@ -3,11 +3,14 @@ import CoinSettings from '../models/coin/CoinSettings.js';
 import CoinHistory from '../models/coin/CoinHistory.js';
 import CoinResult from '../models/coin/CoinResult.js';
 
+import CalendarCoin from '../models/coin/CalendarCoin.js';
+
 const USER_BET_SELECT =
     'balance totalBet refreshBet lotterybet coinAmount coinWinAmount coinMode totalhistory';
 
 export const bet = async (req, res) => {
     try {
+        console.log('bet', req.body);
         const { betAmount, flip } = req.body;
         const betNum = Number(betAmount);
         if (!Number.isFinite(betNum) || betNum <= 0) {
@@ -32,8 +35,9 @@ export const bet = async (req, res) => {
         }
 
         const tempNumbers = coinSettings.multiple?.find(
-            (item) => betNum >= item.min && betNum < item.max
+            (item) => betNum >= item.min && betNum <= item.max
         );
+        console.log('tempNumbers', tempNumbers);
         if (!tempNumbers) {
             return res.status(400).json({ message: 'Invalid bet amount', error: 'Invalid bet amount' });
         }
@@ -154,6 +158,13 @@ export const spinComplete = async (req, res) => {
 
         await CoinResult.create(resultData);
 
+        await CalendarCoin.create({
+            userName: user.altas,
+            isWin: isWin,
+            betAmount: betAmount,
+            winAmount: winAmount,
+            date: new Date(),
+        });
         // Real-time feed (client: `coinFlipResult` + event `COIN_FLIP_RESULT`). Requires `app.locals.ably` in server.js.
         const ably = req.app.locals.ablyDiceGames ?? req.app.locals.ably;
         if (ably?.channels) {

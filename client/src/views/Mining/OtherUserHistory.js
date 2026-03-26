@@ -63,13 +63,13 @@ export default function OtherUserHistory() {
     const rowsToRender = (Array.isArray(miningResults) ? miningResults : []).slice(0, maxRows);
 
     return (
-        <GridItem area="empty" minH="250px" display="flex" h="100%">
+        <GridItem area="empty" display="flex" flexDirection="column" h="100%" minH="0">
             {isLoading && <Loading />}
             <Box
                 w="100%"
                 maxW="100%"
-                h="450px"
-                minH={0}
+                h="100%"
+                minH="450px"
                 flex={1}
                 bg="#2b2b2b"
                 borderRadius="14px"
