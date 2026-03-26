@@ -5,7 +5,7 @@ import MinesSetting, {
   defaultHardMultipliers,
   defaultAceMultipliers,
   defaultWinRateBands,
-} from "../models/MinesSetting.js";
+} from "../models/mines/MinesSetting.js";
 
 export const initializeMinesSettings = async () => {
   const existing = await MinesSetting.findOne({});

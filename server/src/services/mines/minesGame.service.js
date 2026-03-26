@@ -1,4 +1,4 @@
-import MinesSetting from "../../models/MinesSetting.js";
+import MinesSetting from "../../models/mines/MinesSetting.js";
 
 const GRID_SIZE = 25;
 const MODES = { easy: 2, normal: 4, hard: 6, ace: 8 };

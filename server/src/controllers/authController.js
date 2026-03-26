@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sendUserResponse } from "../utils/responses.js";
 import RealTimeWinner from "../models/RealTimeWinner.js";
-import MinesHistory from "../models/MinesHistory.js";
+import MinesHistory from "../models/mines/MinesHistory.js";
 import MiningHistory from "../models/jackal/MiningHistory.js";
 import { generateUserWallets } from "../utils/walletGenerator.js";
 

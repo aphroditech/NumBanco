@@ -37,6 +37,7 @@ export const userActive = async () => {
         const rubicUsers = countByActive(5) + 150;
         const pumpingUsers = countByActive(6) + 270;
         const gravityUsers = countByActive(7) + 100;
+        const doubleUsers = countByActive(17) + 72;
         const doveUsers = countByActive(8) + 123;
         const cloudSpreadUsers = countByActive(9) + 96;
         const cocoUsers = countByActive(10) + 88;
@@ -49,7 +50,7 @@ export const userActive = async () => {
         const twistUsers = countByActive(17) + 100;
         const jokerCrashUsers = countByActive(18) + 90;
         const cardGameUsers = countByActive(19) + 80;
-        const totalActiveUsers = tierAUsers + tierBUsers + tierCUsers + rubicUsers + pumpingUsers + gravityUsers + doveUsers + cloudSpreadUsers + cocoUsers + rocketUsers + jackalUsers + mineUsers + fishingUsers + alphaTreeUsers + aToZUsers + twistUsers + jokerCrashUsers + cardGameUsers;
+        const totalActiveUsers = tierAUsers + tierBUsers + tierCUsers + rubicUsers + pumpingUsers + gravityUsers + doubleUsers + doveUsers + cloudSpreadUsers + cocoUsers + rocketUsers + jackalUsers + mineUsers + fishingUsers + alphaTreeUsers + aToZUsers + twistUsers + jokerCrashUsers + cardGameUsers;
         const result = {
             offlineUsers,
             onlineUsers,
@@ -60,6 +61,7 @@ export const userActive = async () => {
             otherPageUsers,
             pumpingUsers,
             gravityUsers,
+            doubleUsers,
             doveUsers,
             cloudSpreadUsers,
             cocoUsers,

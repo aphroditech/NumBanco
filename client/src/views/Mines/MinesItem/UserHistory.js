@@ -7,13 +7,11 @@ export default function UserHistory() {
     const { minesResults } = useAblyMinesResult();
 
     return (
-        <GridItem area="empty" minH="250px" display="flex" h="100%">
+        <GridItem area="empty" minH="250px" display="flex" alignSelf="start" w="100%">
             <Box
                 w="100%"
                 maxW="100%"
-                h="500px"
-                minH={0}
-                flex={1}
+                minH="250px"
                 bg="#2b2b2b"
                 borderRadius="14px"
                 border="1px solid rgba(255,255,255,0.1)"
@@ -35,18 +33,7 @@ export default function UserHistory() {
                 >
                     Live Results
                 </Text>
-                <Box
-                    flex="1"
-                    minH="0"
-                    overflowX="hidden"
-                    width="100%"
-                    overflowY="auto"
-                    sx={{
-                        "&::-webkit-scrollbar": { display: "none" },
-                        "msOverflowStyle": "none",
-                        "scrollbarWidth": "none",
-                    }}
-                >
+                <Box overflowX="hidden" width="100%" overflowY="visible">
                     <Table variant="unstyled" color="#fff" width="100%" sx={{ tableLayout: "fixed" }}>
                         <Thead>
                             <Tr borderBottom="1px solid rgba(255,255,255,0.12)">

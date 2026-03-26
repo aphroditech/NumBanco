@@ -474,7 +474,7 @@ export default function MinesPage() {
                                         icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
                                         size="md"
                                         bg="transparent"
-                                        color="rgba(255,255,255,0.7)"
+                                        color="#00d4ff"
                                         borderRadius="50%"
                                         _hover={{ bg: "rgba(255,255,255,0.1)", color: "#fff" }}
                                         onClick={onHelpOpen}
