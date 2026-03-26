@@ -179,6 +179,7 @@ export default function PumpingPage() {
     });
     const [bangFx, setBangFx] = useState({ visible: false, anchorRect: null });
     const [isMultiBetActive, setIsMultiBetActive] = useState(false);
+    const [isBetting, setIsBetting] = useState(false);
     const multiBetIntervalRef = useRef(null);
 
     const calcY = (x) => {
@@ -396,10 +397,17 @@ export default function PumpingPage() {
             multiplier: Number(multiplier),
             bet: currentAmount,
             target: currentTarget,
+        };
+
+        setIsBetting(true);
+        let pumping;
+        try {
+            pumping = await pumpingBet(data, dispatch, history);
+        } finally {
+            setIsBetting(false);
         }
-        const pumping = await pumpingBet(data, dispatch, history);
-        
-        if(pumping) {
+
+        if (pumping) {
             // Capture current target value from ref to ensure we get the latest value
             setRoll(true);
             setLedCount(0);
@@ -552,6 +560,11 @@ export default function PumpingPage() {
                             setRoll(false);
                         }, 800);
                     }, 800);
+                } else {
+                    window.setTimeout(() => {
+                        setIsHammerAnimating(false);
+                        setRoll(false);
+                    }, 2000);
                 }
             }, 200);
         }
@@ -640,13 +653,14 @@ export default function PumpingPage() {
             }
             else if (e.key === ' ') {
                 e.preventDefault();
+                if (isBetting || isMultiBetActive || roll) return;
                 setBet(1);
                 handleBet(1);
             }
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [bet, roll, amount, balance, target, maxAmount]);
+    }, [bet, roll, amount, balance, target, maxAmount, isBetting, isMultiBetActive]);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -1058,6 +1072,7 @@ export default function PumpingPage() {
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
+                                            disabled={isBetting || isMultiBetActive || roll}
                                             onClick={
                                                 () => {
                                                     setBet(1)
@@ -1083,6 +1098,7 @@ export default function PumpingPage() {
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
+                                            disabled={!isMultiBetActive && (isBetting || roll)}
                                             onClick={
                                                 () => {
                                                     if (isMultiBetActive) {
