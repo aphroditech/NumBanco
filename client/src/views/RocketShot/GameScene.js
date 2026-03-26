@@ -1,24 +1,24 @@
 import Phaser from "phaser";
-import backgroundImg from "assets/img/Javelin/background.png";
-import rocketImg from "assets/img/Javelin/rocket.png";
-import launchImg from "assets/img/Javelin/launch.png";
-import targetImg1 from "assets/img/Javelin/target1.png";
-import targetImg2 from "assets/img/Javelin/target2.png";
-import targetImg3 from "assets/img/Javelin/target3.png";
-import targetImg4 from "assets/img/Javelin/target4.png";
-import targetImg5 from "assets/img/Javelin/target5.png";
-import targetImg6 from "assets/img/Javelin/target6.png";
-import targetImg7 from "assets/img/Javelin/target7.png";
-import targetImg8 from "assets/img/Javelin/target8.png";
-import targetImg9 from "assets/img/Javelin/target9.png";
-import targetImg10 from "assets/img/Javelin/target10.png";
-import targetImg11 from "assets/img/Javelin/target11.png";
-import targetImg12 from "assets/img/Javelin/target12.png";
-import targetImg13 from "assets/img/Javelin/target13.png";
-import targetImg14 from "assets/img/Javelin/target14.png";
-import targetImg15 from "assets/img/Javelin/target15.png";
+const backgroundImg = "/img/Javelin/background.png";
+const rocketImg = "/img/Javelin/rocket.png";
+const launchImg = "/img/Javelin/launch.png";
+const targetImg1 = "/img/Javelin/target1.png";
+const targetImg2 = "/img/Javelin/target2.png";
+const targetImg3 = "/img/Javelin/target3.png";
+const targetImg4 = "/img/Javelin/target4.png";
+const targetImg5 = "/img/Javelin/target5.png";
+const targetImg6 = "/img/Javelin/target6.png";
+const targetImg7 = "/img/Javelin/target7.png";
+const targetImg8 = "/img/Javelin/target8.png";
+const targetImg9 = "/img/Javelin/target9.png";
+const targetImg10 = "/img/Javelin/target10.png";
+const targetImg11 = "/img/Javelin/target11.png";
+const targetImg12 = "/img/Javelin/target12.png";
+const targetImg13 = "/img/Javelin/target13.png";
+const targetImg14 = "/img/Javelin/target14.png";
+const targetImg15 = "/img/Javelin/target15.png";
 
-import handImg from "assets/img/Javelin/hand.png";
+const handImg = "/img/Javelin/hand.png";
 
 export default class GameScene extends Phaser.Scene {
     constructor() {

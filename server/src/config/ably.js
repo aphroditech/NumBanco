@@ -1,6 +1,6 @@
 import Ably from "ably";
 
-export const createAblyClient = () => {
+export const createAblyClient = (name = "default") => {
     const key = process.env.ABLY_API_KEY;
     if (!key) {
         console.error("❌ ABLY_API_KEY missing");
@@ -9,7 +9,7 @@ export const createAblyClient = () => {
 
     const ably = new Ably.Realtime({
         key,
-        clientId: `server-${new Date().getTime()}`
+        clientId: `server-${name}-${Date.now()}`
     });
 
     ably.connection.on((stateChange) => {

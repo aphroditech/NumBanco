@@ -38,8 +38,12 @@ import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
 import TokenIcon from '@mui/icons-material/Token';
 import TrafficIcon from '@mui/icons-material/Traffic';
+import { FaDice } from 'react-icons/fa';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CoinPage from "views/Coin/CoinPage";
+import TwistPage from "views/Twist/TwistPage";
+import DonutLargeIcon from "@mui/icons-material/DonutLarge";
+import DicePage from "views/Dice/DicePage";
 
 export const TierA = {
     path: "/tierA",
@@ -83,6 +87,14 @@ export const Reward = {
     icon: <CurrencyExchangeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: "Reward",
     layout: "/admin",
+}
+
+export const Dice = {
+    path: "/dice",
+    name: "DICE",
+    icon: <FaDice style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: DicePage,
+    layout: "/game",
 }
 
 export const Jackal = {
@@ -212,5 +224,13 @@ export const Coin = {
     name: "COIN FLIP",
     icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: CoinPage,
+    layout: "/game",
+}
+
+export const Twist = {
+    path: "/twist",
+    name: "TWIST",
+    icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwistPage,
     layout: "/game",
 }

@@ -34,7 +34,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 
 import { aToZBet, aToZSpinComplete } from '../../action/AtoZActions';
 
-import backgroundImage from 'assets/img/Digits/background.png'
+const backgroundImage = '/img/Digits/background.png'
 
 import RealTimeHistory from './AToZItems/RealTimeHistory';
 import UserBetHistory from './AToZItems/UserBetHistory';

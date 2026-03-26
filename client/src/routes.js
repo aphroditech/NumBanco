@@ -56,6 +56,7 @@ import Dove from "views/DovePage/Dove";
 import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
+import DicePage from "views/Dice/DicePage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -65,7 +66,8 @@ import AToZPage from "views/AToZ/AToZ";
 import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-
+import TwistPage from "views/Twist/TwistPage";
+import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 
 import {
   DocumentIcon,
@@ -111,6 +113,14 @@ var dashRoutes = [
   {
     name: "GAMES",
     icon: <GamesIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+  },
+  {
+    redirect: true,
+    path: "/dice",
+    name: "DICE",
+    icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: DicePage,
+    layout: "/game",
   },
   {
     redirect: true,
@@ -238,6 +248,14 @@ var dashRoutes = [
     name: "ALPHA TREE",
     icon: <ForestIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AlphaTreePage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/twist",
+    name: "TWIST",
+    icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwistPage,
     layout: "/game",
   },
   {

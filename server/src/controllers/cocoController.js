@@ -25,6 +25,9 @@ const COCO_USER_SELECT = {
     avatar: 1,
     membership: 1,
     balance: 1,
+    totalBet: 1,
+    refreshBet: 1,
+    lotterybet: 1,
     cocoHistory: 1,
     cocoMode: 1,
     cocoTotalProfit: 1,
@@ -205,6 +208,9 @@ function buildCocoUserPayload(user) {
         avatar: user.avatar,
         membership: user.membership,
         balance: user.balance,
+        totalBet: user.totalBet,
+        refreshBet: user.refreshBet,
+        lotterybet: user.lotterybet,
         cocoHistory: user.cocoHistory,
         cocoMode: user.cocoMode,
         cocoTotalProfit: user.cocoTotalProfit,
@@ -243,6 +249,9 @@ export const smash = async (req, res) => {
         }
 
         user.balance = newBalance;
+        user.totalBet = Number(user.totalBet ?? 0) + betAmount;
+        user.refreshBet = Number(user.refreshBet ?? 0) + betAmount;
+        user.lotterybet = Number(user.lotterybet ?? 0) + betAmount;
         let state = stateFromDb;
 
 

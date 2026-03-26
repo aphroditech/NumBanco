@@ -54,7 +54,7 @@ export const aToZSpinComplete = async (result, dispatch, history) => {
 export const getAToZResults = async (history) => {
     try {
         const res = await axiosInstance.get('/aToZ/getAToZResults');
-        return res.data;
+        return res.data.aToZResults;
     } catch (error) {
         console.error(error);
         if (error.response?.status === 401 && history) {

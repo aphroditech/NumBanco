@@ -269,14 +269,14 @@ function getPayoutMultiplier(target, operator) {
 async function checkWinningNumber(multiplier, amount, rubicHistory) {
     const rubicSettings = await RubicSetting.findOne({});
     const times = "times" + multiplier;
-    const tempNumbers = rubicSettings[times]?.find(r => amount >= r.min && amount < r.max);
+    const tempNumbers = rubicSettings[times]?.find(r => amount >= r.min && amount <= r.max);
     if (!tempNumbers || tempNumbers.totalNumber == null || tempNumbers.winningNumber == null) {
         return false;
     }
     const { min, max, totalNumber, winningNumber } = tempNumbers;
 
     // Filter history to bets within the amount range
-    const inRange = rubicHistory.filter(h => h.betAmount >= min && h.betAmount < max && h.multiplier == multiplier / 100);
+    const inRange = rubicHistory.filter(h => h.betAmount >= min && h.betAmount <= max && h.multiplier == multiplier / 100);
     // Take the last totalNumber bets (most recent)
     const recentHistory = inRange.length % totalNumber;
     const lastN = recentHistory > 0 ? inRange.slice(-recentHistory) : inRange.slice(-totalNumber);
@@ -297,7 +297,7 @@ export const truncateToTwo = (num) => {
 
 export const getUserRubicHistory = async (req, res) => {
     try {
-        const rubicHistory = await RubicResult.find({}).sort({ createAt: -1 }).limit(12);
+        const rubicHistory = await RubicResult.find({}).sort({ createAt: -1 }).limit(10);
         return res.status(200).json(rubicHistory);
     } catch (error) {
         console.error(error);

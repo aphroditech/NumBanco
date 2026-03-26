@@ -61,7 +61,12 @@ import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { toast } from "react-toastify"
 import Loading from 'components/Loading/Loading';
 import { onlineUser, offlineUser } from 'action/BetActions';
+import WinFireworksEffect from 'components/Effects/WinFireworksEffect';
+import BangBurstEffect from 'components/Effects/BangBurstEffect';
+
 const MIN_AMOUNT = 0.1;
+const WIN_FIREWORKS_MS = 2200;
+const BANG_EFFECT_MS = 1000;
 
 
 const KeyCap = ({ children, minW }) => (
@@ -98,13 +103,6 @@ const hammerStrike = keyframes`
   100% { 
     transform: rotate(10deg);
   }
-`;
-
-const bangPop = keyframes`
-  0% { opacity: 0; transform: scale(0.6) translateY(6px); }
-  30% { opacity: 1; transform: scale(1.15) translateY(0); }
-  60% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.9) translateY(-6px); }
 `;
 
 export default function PumpingPage() {
@@ -170,9 +168,18 @@ export default function PumpingPage() {
     const [winLit, setWinLit] = useState(false);
     const winDelayRef = useRef(null);
     const winFlickerRef = useRef(null);
-    const [showBang, setShowBang] = useState(false);
-    const bangTimeoutRef = useRef(null);
+    const pumpingFxAnchorRef = useRef(null);
+    const pumpingFxScheduleRef = useRef(null);
+    const winFxTimeoutRef = useRef(null);
+    const bangFxTimeoutRef = useRef(null);
+    const [winFx, setWinFx] = useState({
+        visible: false,
+        totalEarn: '0',
+        anchorRect: null,
+    });
+    const [bangFx, setBangFx] = useState({ visible: false, anchorRect: null });
     const [isMultiBetActive, setIsMultiBetActive] = useState(false);
+    const [isBetting, setIsBetting] = useState(false);
     const multiBetIntervalRef = useRef(null);
 
     const calcY = (x) => {
@@ -326,6 +333,13 @@ export default function PumpingPage() {
             clearInterval(multiBetIntervalRef.current);
             multiBetIntervalRef.current = null;
         }
+        if (pumpingFxScheduleRef.current) {
+            clearTimeout(pumpingFxScheduleRef.current);
+            pumpingFxScheduleRef.current = null;
+        }
+        clearWinBangTimers();
+        setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+        setBangFx({ visible: false, anchorRect: null });
         setIsMultiBetActive(false);
         setBet(1);
     };
@@ -337,6 +351,28 @@ export default function PumpingPage() {
             }
         };
     }, []);
+
+    const clearWinBangTimers = () => {
+        if (winFxTimeoutRef.current != null) {
+            clearTimeout(winFxTimeoutRef.current);
+            winFxTimeoutRef.current = null;
+        }
+        if (bangFxTimeoutRef.current != null) {
+            clearTimeout(bangFxTimeoutRef.current);
+            bangFxTimeoutRef.current = null;
+        }
+    };
+
+    useEffect(
+        () => () => {
+            if (pumpingFxScheduleRef.current != null) {
+                clearTimeout(pumpingFxScheduleRef.current);
+                pumpingFxScheduleRef.current = null;
+            }
+            clearWinBangTimers();
+        },
+        []
+    );
 
     const handleBet = async (multiplier) => {
         const currentTarget = Number(targetRef.current || target);
@@ -361,10 +397,17 @@ export default function PumpingPage() {
             multiplier: Number(multiplier),
             bet: currentAmount,
             target: currentTarget,
+        };
+
+        setIsBetting(true);
+        let pumping;
+        try {
+            pumping = await pumpingBet(data, dispatch, history);
+        } finally {
+            setIsBetting(false);
         }
-        const pumping = await pumpingBet(data, dispatch, history);
-        
-        if(pumping) {
+
+        if (pumping) {
             // Capture current target value from ref to ensure we get the latest value
             setRoll(true);
             setLedCount(0);
@@ -408,29 +451,47 @@ export default function PumpingPage() {
                 clearInterval(winFlickerRef.current);
                 winFlickerRef.current = null;
             }
-            if (bangTimeoutRef.current) {
-                clearTimeout(bangTimeoutRef.current);
-                bangTimeoutRef.current = null;
+            if (pumpingFxScheduleRef.current) {
+                clearTimeout(pumpingFxScheduleRef.current);
+                pumpingFxScheduleRef.current = null;
             }
-            setShowBang(false);
+            clearWinBangTimers();
+            setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+            setBangFx({ visible: false, anchorRect: null });
             setWinLit(false);
             setIsHammerAnimating(true);
             setWeightPosition(WEIGHT_BOTTOM); // Reset weight to bottom
             setWeightDirection('down'); // Reset direction
     
-    
-            setShowBang(true);
-            if (bangTimeoutRef.current) {
-                clearTimeout(bangTimeoutRef.current);
-            }
-            bangTimeoutRef.current = setTimeout(() => {
-                setShowBang(false);
-                bangTimeoutRef.current = null;
-            }, 900);
-    
             const result = Number(pumping?.betResult) || 0;
+            const winAmount = Math.max(0, Number(pumping?.win ?? 0));
             setPumpingResult(result);
-    
+
+            const fxDelayMs = result > 0 ? 950 : 450;
+            pumpingFxScheduleRef.current = setTimeout(() => {
+                pumpingFxScheduleRef.current = null;
+                const el = pumpingFxAnchorRef.current;
+                const anchorRect = el?.getBoundingClientRect?.() ?? null;
+                clearWinBangTimers();
+                if (winAmount > 0) {
+                    setWinFx({
+                        visible: true,
+                        totalEarn: winAmount.toFixed(2),
+                        anchorRect,
+                    });
+                    winFxTimeoutRef.current = setTimeout(() => {
+                        winFxTimeoutRef.current = null;
+                        setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+                    }, WIN_FIREWORKS_MS);
+                } else {
+                    setBangFx({ visible: true, anchorRect });
+                    bangFxTimeoutRef.current = setTimeout(() => {
+                        bangFxTimeoutRef.current = null;
+                        setBangFx({ visible: false, anchorRect: null });
+                    }, BANG_EFFECT_MS);
+                }
+            }, fxDelayMs);
+
             setTimeout(() => {
                 if (result && result > 0) {
                     setIsWeightMoving(true);
@@ -499,6 +560,11 @@ export default function PumpingPage() {
                             setRoll(false);
                         }, 800);
                     }, 800);
+                } else {
+                    window.setTimeout(() => {
+                        setIsHammerAnimating(false);
+                        setRoll(false);
+                    }, 2000);
                 }
             }, 200);
         }
@@ -587,13 +653,14 @@ export default function PumpingPage() {
             }
             else if (e.key === ' ') {
                 e.preventDefault();
+                if (isBetting || isMultiBetActive || roll) return;
                 setBet(1);
                 handleBet(1);
             }
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [bet, roll, amount, balance, target, maxAmount]);
+    }, [bet, roll, amount, balance, target, maxAmount, isBetting, isMultiBetActive]);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -1005,6 +1072,7 @@ export default function PumpingPage() {
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
+                                            disabled={isBetting || isMultiBetActive || roll}
                                             onClick={
                                                 () => {
                                                     setBet(1)
@@ -1030,6 +1098,7 @@ export default function PumpingPage() {
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
+                                            disabled={!isMultiBetActive && (isBetting || roll)}
                                             onClick={
                                                 () => {
                                                     if (isMultiBetActive) {
@@ -1049,7 +1118,16 @@ export default function PumpingPage() {
                 </GridItem>
                 <GridItem area="game" minH={'450px'}>
                     <Card pt="30px" pb="22px" px="22px" minH="100%" alignItems="center" w="100%">
-                        <CardBody minH="100%" w={{ base: '100%' }} minW="450px" maxW="450px" mx="auto" overflow="visible" position="relative">
+                        <CardBody
+                            ref={pumpingFxAnchorRef}
+                            minH="100%"
+                            w={{ base: '100%' }}
+                            minW="450px"
+                            maxW="450px"
+                            mx="auto"
+                            overflow="visible"
+                            position="relative"
+                        >
                             <Box
                                 position="absolute"
                                 top="19px"
@@ -1065,22 +1143,6 @@ export default function PumpingPage() {
                                 animation={isHammerAnimating ? `${hammerStrike} 2.0s ease-in-out forwards` : 'none'}
                                 style={{ transform: isHammerAnimating ? undefined : 'rotate(10deg)' }}
                             />
-                            {showBang && (
-                                <Text
-                                    position="absolute"
-                                    top={`${WEIGHT_BOTTOM - 20}px`}
-                                    left="305px"
-                                    fontSize="35px"
-                                    fontWeight="bold"
-                                    color="#FF7A2E"
-                                    textShadow="0 0 12px #FF7A2E"
-                                    zIndex="6"
-                                    animation={`${bangPop} 0.9s ease-out forwards`}
-                                    pointerEvents="none"
-                                >
-                                    BANG
-                                </Text>
-                            )}
                             <Box
                                 position="absolute"
                                 top="0"
@@ -1237,6 +1299,21 @@ export default function PumpingPage() {
                     <RealView />
                 </GridItem>
             </Grid>
+
+            <WinFireworksEffect
+                isVisible={winFx.visible}
+                totalEarn={winFx.totalEarn}
+                duration={WIN_FIREWORKS_MS}
+                zIndex={10000}
+                anchorRect={winFx.anchorRect ?? undefined}
+            />
+            <BangBurstEffect
+                isVisible={bangFx.visible}
+                duration={BANG_EFFECT_MS}
+                zIndex={9999}
+                anchorRect={bangFx.anchorRect ?? undefined}
+            />
+
             <History />
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
                 <ModalOverlay bg="blackAlpha.700" />

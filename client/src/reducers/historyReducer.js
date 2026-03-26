@@ -2,6 +2,7 @@ const initialState = {
     miningHistory: [],
     rocketHistory: [],
     aToZHistory: [],
+    coinHistory: [],
 };
   
 export const HistoryReducer = (state = initialState, action) => {
@@ -12,6 +13,8 @@ export const HistoryReducer = (state = initialState, action) => {
         return { ...state, rocketHistory: action.payload };
         case "SET_AToZ_HISTORY":
         return { ...state, aToZHistory: action.payload };
+        case "SET_COIN_HISTORY":
+        return { ...state, coinHistory: action.payload };
         default:
             return state;
     }

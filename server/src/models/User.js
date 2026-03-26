@@ -219,17 +219,17 @@ const userSchema = new mongoose.Schema({
     default: 0
   },
 
-  weelAmount: {
+  coinAmount: {
     type: Number,
     default: 0
   },
-  wheelWinAmount: {
+  coinWinAmount: {
     type: Number,
     default: 0
   },
-  wheelMode: {
+  coinMode: {
     type: Number,
-    default: 0, // normal 0, and hard 1
+    default: 0, // 0=normal, 1=hard
   },
 
   partnerActivity: {
@@ -372,6 +372,40 @@ const userSchema = new mongoose.Schema({
   cocoTotalBet: {
     type: Number,
     default: 0
+  },
+  /** Twist multiplier ladder positions (persisted per user). */
+  twistGreenMultIndex: {
+    type: Number,
+    default: 0,
+  },
+  twistOrangeMultIndex: {
+    type: Number,
+    default: 0,
+  },
+  twistPurpleMultIndex: {
+    type: Number,
+    default: 0,
+  },
+  /** Last Twist stake (used for cash-out win = lastBet × (purpleIdx + orangeIdx + greenIdx)). */
+  twistLastBetAmount: {
+    type: Number,
+    default: 0,
+  },
+  /** Twist cash-out rows (same shape as alphaTreeHistory for shared UI). */
+  twistHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
   },
   alphaTreeMode: {
     type: Number,
@@ -666,6 +700,45 @@ const userSchema = new mongoose.Schema({
         active: {
           type: Boolean,
           default: false
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
+  diceHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        dice: {
+          type: Number,
+          required: true
+        },
+        type: {
+          type: Number,
+          required: true,
+        },
+        win: {
+          type: Number,
+          required: true
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        diceBalance: {
+          type: Number,
+          default: 0
         },
         createAt: {
           type: Date,
