@@ -82,31 +82,31 @@ connectDB()
 
         // });
 
-        ably.connection.once("connected", () => {
+        ablyCore.connection.once("connected", () => {
             console.log("✅ Ably connected");
-            // confirmDepositEngine(ably);
-            // tronEngine(ably);
-            // startPartnerDepositCron(ably);
-            // startWithdrawApprovalCron(ably);
-            // getUserStatusChannel(ably);
-            // cardGameBot(ably);
-            // pumpingBot(ably);
-            // jokerCrashBot(ably);
-            // rubicBot(ably);
-            // miningBot(ably);
-            // minesBot(ably);
-            // rocketBot(ably);
-            // aToZBot(ably);
-            // fishingBot(ably);
-            // startGravityGameLoop(ably);
-            // setCloudSpreadAbly(ably);
+            // confirmDepositEngine(ablyCore);
+            // tronEngine(ablyCore);
+            // startPartnerDepositCron(ablyCore);
+            // startWithdrawApprovalCron(ablyCore);
+            // getUserStatusChannel(ablyCore);
+            // cardGameBot(ablyCore);
+            // pumpingBot(ablyCore);
+            // jokerCrashBot(ablyCore);
+            // rubicBot(ablyCore);
+            // miningBot(ablyCore);
+            // minesBot(ablyCore);
+            // rocketBot(ablyCore);
+            // aToZBot(ablyCore);
+            // fishingBot(ablyCore);
+            // startGravityGameLoop(ablyCore);
+            // setCloudSpreadAbly(ablyCore);
             // cloudSpreadBot().catch((err) => {
             //     console.error("[cloud-spread] bot failed to start:", err);
             // });
-            // cocoBot(ably);
-            // twistBot(ably);
-            // alphaTreeBot(ably);
-            // doveBot(ably);
+            // cocoBot(ablyCore);
+            // twistBot(ablyCore);
+            // alphaTreeBot(ablyCore);
+            // doveBot(ablyCore);
             // fundMergeEngine();
             // tankCheckEngine();
             // getWithdrawWallet();
