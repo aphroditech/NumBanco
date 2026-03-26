@@ -2,7 +2,7 @@ import CloudSpreadSettings, {
   DEFAULT_LIMIT_MODE_1_TO_2,
   DEFAULT_LIMIT_MODE_2_TO_1,
   DEFAULT_STEP_MULTIPLIER_PROFILES,
-} from "../models/CloudSpreadSettings.js";
+} from "../models/cloud/CloudSpreadSettings.js";
 
 /**
  * On server startup:

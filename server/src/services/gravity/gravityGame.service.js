@@ -1,6 +1,6 @@
-import GravityRound from "../../models/GravityRound.js";
-import GravityHistory from "../../models/GravityHistory.js";
-import GravityBot from "../../models/GravityBot.js";
+import GravityRound from "../../models/gravity/GravityRound.js";
+import GravityHistory from "../../models/gravity/GravityHistory.js";
+import GravityBot from "../../models/gravity/GravityBot.js";
 import User from "../../models/User.js";
 
 const ROUND_MS = 18000;
@@ -24,13 +24,50 @@ let settlePromise = null;
 let settlingRoundId = null;
 let loopInFlight = false;
 
-function buildUserNotification(message, status = "success", from = "Gravity", to = "") {
+/** Per-round bot quotas: sampled from GravityBot config when a round enters betting. */
+let gravityRoundBotPlan = null;
+
+function randomIntInclusive(lo, hi) {
+  const a = Math.ceil(Number(lo));
+  const b = Math.floor(Number(hi));
+  const lo2 = Number.isFinite(a) && Number.isFinite(b) ? Math.min(a, b) : 0;
+  const hi2 = Number.isFinite(a) && Number.isFinite(b) ? Math.max(a, b) : 0;
+  if (hi2 < lo2) return lo2;
+  return lo2 + Math.floor(Math.random() * (hi2 - lo2 + 1));
+}
+
+/** Uniform random amount in [min, max], rounded to 2 decimals (Gravity min bet 0.1). */
+function randomUniformBet2(min, max) {
+  const lo = Math.min(Number(min), Number(max));
+  const hi = Math.max(Number(min), Number(max));
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return 0.1;
+  const v = lo + Math.random() * (hi - lo);
+  return round2(Math.max(0.1, v));
+}
+
+function ensureGravityRoundBotPlan(roundId, cfg) {
+  if (gravityRoundBotPlan?.roundId === roundId) return;
+  const upBotsMin = Math.max(0, Math.floor(Number(cfg.upBotsMin ?? 5)));
+  const upBotsMax = Math.max(upBotsMin, Math.floor(Number(cfg.upBotsMax ?? 10)));
+  const downBotsMin = Math.max(0, Math.floor(Number(cfg.downBotsMin ?? 6)));
+  const downBotsMax = Math.max(downBotsMin, Math.floor(Number(cfg.downBotsMax ?? 20)));
+  gravityRoundBotPlan = {
+    roundId,
+    targetUp: randomIntInclusive(upBotsMin, upBotsMax),
+    targetDown: randomIntInclusive(downBotsMin, downBotsMax),
+    placedUp: 0,
+    placedDown: 0,
+  };
+}
+
+function buildUserNotification(message, status = "success", from = "Gravity", to = "", gameType = "gravity") {
   return {
     id: Date.now() + Math.floor(Math.random() * 1000),
     notification: message,
     status,
     from,
     to,
+    gameType,
     unread: true,
   };
 }
@@ -42,7 +79,7 @@ async function pushUserNotification(userId, message, status = "success") {
       { userId },
       {
         $push: {
-          notification: buildUserNotification(message, status, "Gravity", userId),
+          notification: buildUserNotification(message, status, "Gravity", userId, "gravity"),
         },
       }
     );
@@ -340,12 +377,14 @@ async function settleRound(ably) {
         user.balance = round2(user.balance + winAmount);
         user.totalEarn = round2((user.totalEarn || 0) + winAmount);
 
+        if (!Array.isArray(user.notification)) user.notification = [];
         user.notification.push(
           buildUserNotification(
-            `You won $${Number(winAmount).toFixed(2)} in round ${round.roundId}`,
+            `You won $${Number(winAmount).toFixed(2)} in round ${round.roundId} ${gameType}`,
             "success",
             "Gravity",
-            user.userId
+            user.userId,
+            "gravity"
           )
         );
       }
@@ -522,14 +561,15 @@ export async function placeGravityBet({ user, amount, direction }) {
             date: new Date(),
             type: "gravity",
           },
-          notification: buildUserNotification(
-            `You bet $${parsedAmount.toFixed(2)} in round ${currentRound.roundId}`,
-            "success",
-            "Gravity",
-            user.userId
-          ),
         },
       }
+    );
+
+    // Ensure a user notification is created every time a real user places a bet.
+    await pushUserNotification(
+      user.userId,
+      `You bet $${parsedAmount.toFixed(2)} in round ${currentRound.roundId}`,
+      "success"
     );
   }
 
@@ -645,13 +685,14 @@ export async function startGravityGameLoop(ably) {
   // Bots place automatic bets during the betting phase.
   const getDefaultBotConfig = () => ({
     enabled: true,
-    totalBots: 6,
-    betsPerSecond: 1,
-    upRatio: 0.5,
-    downRatio: 0.5,
-    minBet: 0.1,
-    maxBet: 5,
-    chanceToBet: 0.8,
+    upBotsMin: 5,
+    upBotsMax: 10,
+    upBetMinAmount: 5,
+    upBetMaxAmount: 20,
+    downBotsMin: 6,
+    downBotsMax: 20,
+    downBetMinAmount: 2,
+    downBetMaxAmount: 30,
   });
 
   let gravityBotConfig = getDefaultBotConfig();
@@ -717,40 +758,50 @@ export async function startGravityGameLoop(ably) {
           } catch {}
         }
 
-        const chanceToBet = Number(gravityBotConfig?.chanceToBet ?? 0.8);
-        const roll = Math.random();
-        if (!Number.isFinite(chanceToBet) || roll <= chanceToBet) {
-          const betsPerSecondRaw = Number(gravityBotConfig?.betsPerSecond ?? 1);
-          const base = Math.floor(betsPerSecondRaw);
-          const extra = betsPerSecondRaw - base;
-          const attempts = Math.max(0, base) + (Math.random() < extra ? 1 : 0);
+        const cfg = gravityBotConfig;
+        ensureGravityRoundBotPlan(roundAtTick.roundId, cfg);
+        const plan = gravityRoundBotPlan;
+        if (plan && plan.roundId === roundAtTick.roundId) {
+          const upBetLo = Math.max(0.1, Number(cfg.upBetMinAmount ?? 5));
+          const upBetHi = Math.max(upBetLo, Number(cfg.upBetMaxAmount ?? 20));
+          const downBetLo = Math.max(0.1, Number(cfg.downBetMinAmount ?? 2));
+          const downBetHi = Math.max(downBetLo, Number(cfg.downBetMaxAmount ?? 30));
 
-          const minBet = Math.max(0.1, Number(gravityBotConfig?.minBet ?? 0.1));
-          const maxBet = Math.max(minBet, Number(gravityBotConfig?.maxBet ?? 5));
-          const upRatio = Number(gravityBotConfig?.upRatio ?? 0.5);
-          const downRatio = Number(gravityBotConfig?.downRatio ?? 0.5);
-          const dirPick = upRatio / ((upRatio + downRatio) || 1);
+          if (plan.placedUp < plan.targetUp || plan.placedDown < plan.targetDown) {
+            const MAX_TRIES = 48;
+            for (let k = 0; k < MAX_TRIES; k += 1) {
+              const stillUp = plan.placedUp < plan.targetUp;
+              const stillDown = plan.placedDown < plan.targetDown;
+              if (!stillUp && !stillDown) break;
 
-          for (let k = 0; k < attempts; k += 1) {
-            const botUserId = sampleBotUserId();
-            if (!botUserId) continue;
+              let direction;
+              if (stillUp && stillDown) direction = Math.random() < 0.5 ? "up" : "down";
+              else if (stillUp) direction = "up";
+              else direction = "down";
 
-            const botUser = await User.findOne({ userId: botUserId });
-            if (!botUser) continue;
+              const botUserId = sampleBotUserId();
+              if (!botUserId) break;
 
-            const direction = Math.random() < dirPick ? "up" : "down";
+              const botUser = await User.findOne({ userId: botUserId });
+              if (!botUser) continue;
 
-            const affordableMax = Math.min(maxBet, Number(botUser.balance ?? 0));
-            if (affordableMax < minBet) continue;
+              const rangeLo = direction === "up" ? upBetLo : downBetLo;
+              const rangeHi = direction === "up" ? upBetHi : downBetHi;
+              const gameCap = 50;
+              const affordableMax = Math.min(gameCap, rangeHi, Number(botUser.balance ?? 0));
+              if (affordableMax < rangeLo) continue;
 
-            const betAmount = round2(randomBetween(minBet, affordableMax));
-            if (!Number.isFinite(betAmount) || betAmount < 0.1) continue;
+              const betAmount = randomUniformBet2(rangeLo, affordableMax);
+              if (!Number.isFinite(betAmount) || betAmount < 0.1) continue;
 
-            try {
-              const { row, round } = await placeGravityBet({ user: botUser, amount: betAmount, direction });
-              await publishGravityBetEvent(ably, row, round);
-            } catch {
-              // ignore duplicate-side bets or insufficient balance
+              try {
+                const { row, round } = await placeGravityBet({ user: botUser, amount: betAmount, direction });
+                if (direction === "up") plan.placedUp += 1;
+                else plan.placedDown += 1;
+                await publishGravityBetEvent(ably, row, round);
+              } catch {
+                // already bet this round / phase closed / balance
+              }
             }
           }
         }

@@ -1,5 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Button, Grid, GridItem, HStack, Input, Text, VStack, useBreakpointValue } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Grid,
+  GridItem,
+  HStack,
+  IconButton,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  Text,
+  VStack,
+  useBreakpointValue,
+  useDisclosure,
+} from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Card from "components/Card/Card";
@@ -9,6 +27,7 @@ import { getUserData } from "action";
 import { useAblyCloudSpreadLive } from "hooks/useAblyCloudSpreadLive";
 import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 import truncateToTwo from "variables/truncateToTwo";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import CloudSpreadCanvas from "./CloudSpreadItem/CloudSpreadCanvas";
 import CloudSpreadBetHistory from "./CloudSpreadItem/CloudSpreadBetHistory";
 import CloudSpreadLiveFeed from "./CloudSpreadItem/CloudSpreadLiveFeed";
@@ -58,6 +77,7 @@ export default function CloudSpreadPage() {
   const zeroBangTimeoutRef = useRef(null);
   /** Hide ball only after it lands on x0.00 (canvas calls onZeroMultiplierLand) */
   const [hideBallAfterZero, setHideBallAfterZero] = useState(false);
+  const { isOpen: isHelpOpen, onOpen: onHelpOpen, onClose: onHelpClose } = useDisclosure();
 
   useEffect(() => {
     let mounted = true;
@@ -304,6 +324,18 @@ export default function CloudSpreadPage() {
             boxShadow="none"
           >
             <CardBody flexDirection="column" alignItems="stretch">
+              <Box position="absolute" top="0" right="0" zIndex={2}>
+                <IconButton
+                  aria-label="How to play"
+                  icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
+                  size="md"
+                  bg="transparent"
+                  color="#00d4ff"
+                  borderRadius="50%"
+                  _hover={{ bg: "rgba(255,255,255,0.1)"}}
+                  onClick={onHelpOpen}
+                />
+              </Box>
               <VStack align="start" spacing="3" mb="12px">
                 <Text color={S.text} fontSize="2xl" fontWeight="800" letterSpacing="-0.02em">
                   Cloud Spread
@@ -597,6 +629,35 @@ export default function CloudSpreadPage() {
           <CloudSpreadBetHistory results={myHistory} />
         </GridItem>
       </Grid>
+      <Modal isOpen={isHelpOpen} onClose={onHelpClose} size="md" isCentered>
+        <ModalOverlay bg="blackAlpha.700" />
+        <ModalContent bg="#2a2d2e" border="1px solid #00d4ff">
+          <ModalHeader color="white">Cloud Spread</ModalHeader>
+          <ModalCloseButton color="#fff" _hover={{ color: S.playGreen }} />
+          <ModalBody pb="6">
+            <VStack align="start" spacing="3">
+              <Text color="#00d4ff" fontWeight="700" fontSize="sm">
+                How to play
+              </Text>
+              <Text color={S.textMuted} fontSize="sm" lineHeight="1.65">
+                1) Click Start to pay your stake and begin at step 1.
+              </Text>
+              <Text color={S.textMuted} fontSize="sm" lineHeight="1.65">
+                2) Click Play to move to the next step. One cloud is selected each step.
+              </Text>
+              <Text color={S.textMuted} fontSize="sm" lineHeight="1.65">
+                3) The maximum multiplier increases every step (x2, x4, x8, x16, …).
+              </Text>
+              <Text color={S.textMuted} fontSize="sm" lineHeight="1.65">
+                4) If the selected cloud is x0.00, the round ends immediately.
+              </Text>
+              <Text color={S.textMuted} fontSize="sm" lineHeight="1.65">
+                5) Click Cash Out anytime before x0.00 to collect your current payout.
+              </Text>
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

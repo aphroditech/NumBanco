@@ -1,6 +1,30 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Badge, Box, Button, CircularProgress, CircularProgressLabel, Flex, Grid, GridItem, HStack, Input, Progress, Select, Text, useBreakpointValue, VStack } from "@chakra-ui/react";
-import { useDispatch } from "react-redux";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Badge,
+  Box,
+  Button,
+  CircularProgress,
+  CircularProgressLabel,
+  Flex,
+  Grid,
+  GridItem,
+  HStack,
+  IconButton,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  Progress,
+  Select,
+  Text,
+  useBreakpointValue,
+  useDisclosure,
+  VStack,
+} from "@chakra-ui/react";
+import { useDispatch, useSelector } from "react-redux";
 import ablyClient from "../../ably/ablyClient";
 import Card from "components/Card/Card";
 import CardBody from "components/Card/CardBody";
@@ -8,6 +32,9 @@ import GravityBetHistory from "./GravityItem/BetHistory";
 import GravityCanvasChart from "./GravityItem/GravityCanvasChart";
 import { getGravityState, getMyGravityHistory, placeGravityBet } from "action/GravityActions";
 import { toast } from "react-toastify";
+import WinFireworksEffect from "components/Effects/WinFireworksEffect";
+import { getUserData } from "action";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 const phaseColor = { betting: "green", viewing: "yellow", result: "red" };
 const MAX_LIVE_ROWS = 120;
@@ -18,8 +45,21 @@ const roundTo2 = (n) => {
   return Number.isFinite(num) ? Math.round(num * 100) / 100 : 0;
 };
 
+const buildLocalGravityNotification = (message, userId) => ({
+  id: Date.now() + Math.floor(Math.random() * 1000),
+  notification: message,
+  status: "success",
+  from: "Gravity",
+  to: userId || "",
+  gameType: "gravity",
+  unread: true,
+  createdAt: new Date().toISOString(),
+});
+
 export default function GravityPage() {
   const dispatch = useDispatch();
+  const user = useSelector((s) => s.user.userInfo) || {};
+  const myUserId = user?.userId;
   const defer = (fn) => setTimeout(fn, 0);
   const [state, setState] = useState(null);
   const [amount, setAmount] = useState("1");
@@ -40,6 +80,11 @@ export default function GravityPage() {
   const lastSyncRoundIdRef = React.useRef(null);
   const lastResultHistorySyncAtRef = React.useRef(0);
   const recentOwnBetIdsRef = React.useRef(new Map());
+  const lastWinFxRoundIdRef = useRef(null);
+  const [showWinFireworks, setShowWinFireworks] = useState(false);
+  const [winFireworksAmount, setWinFireworksAmount] = useState("0.00");
+  const winFireworksTimeoutRef = useRef(null);
+  const { isOpen: isHelpOpen, onOpen: onHelpOpen, onClose: onHelpClose } = useDisclosure();
 
   const fetchMyHistoryOnce = React.useCallback(async (force = false) => {
     const now = Date.now();
@@ -224,6 +269,34 @@ export default function GravityPage() {
         const me = await fetchMyHistoryOnce(false);
         if (mounted && Array.isArray(me) && me.length) {
           setMyHistory(me.slice(-MAX_MY_HISTORY_ROWS));
+
+          // If this user won this round, show fireworks and refresh user balance.
+          if (resultRoundId != null && String(lastWinFxRoundIdRef.current) !== String(resultRoundId)) {
+            const row = me.find((r) => String(r?.roundId) === String(resultRoundId));
+            const winAmount = Number(row?.winAmount ?? 0);
+
+            if (winAmount > 0) {
+              lastWinFxRoundIdRef.current = resultRoundId;
+              // Show the credited win amount (not profit), consistent with server balance credit.
+              const winLabel = roundTo2(winAmount).toFixed(2);
+              const winMsg = `You won $${winLabel} in round ${resultRoundId} Gravity`;
+              setWinFireworksAmount(winLabel);
+              toast.success(winMsg);
+              dispatch({
+                type: "SET_NOTIFICATION",
+                payload: buildLocalGravityNotification(winMsg, myUserId),
+              });
+              setShowWinFireworks(true);
+              if (winFireworksTimeoutRef.current) clearTimeout(winFireworksTimeoutRef.current);
+              winFireworksTimeoutRef.current = setTimeout(() => {
+                setShowWinFireworks(false);
+                winFireworksTimeoutRef.current = null;
+              }, 2200);
+
+              // Pull the new balance from server (Gravity settlement credits balance server-side).
+              getUserData(dispatch);
+            }
+          }
         }
       } catch {}
     };
@@ -232,6 +305,10 @@ export default function GravityPage() {
     channel.subscribe("GRAVITY_RESULT", onResult);
     return () => {
       mounted = false;
+      if (winFireworksTimeoutRef.current) {
+        clearTimeout(winFireworksTimeoutRef.current);
+        winFireworksTimeoutRef.current = null;
+      }
       channel.unsubscribe("GRAVITY_STATE", onState);
       channel.unsubscribe("GRAVITY_NEW_BET", onBet);
       channel.unsubscribe("GRAVITY_RESULT", onResult);
@@ -437,6 +514,13 @@ export default function GravityPage() {
       const betAmount = res?.betAmount ?? Number(amount);
       const roundId = res?.roundId ?? state?.roundId;
       const dirNorm = String(dir || "").toLowerCase();
+      const betLabel = roundTo2(betAmount).toFixed(2);
+      const betMsg = `You bet $${betLabel} in round ${roundId}`;
+      toast.success(betMsg);
+      dispatch({
+        type: "SET_NOTIFICATION",
+        payload: buildLocalGravityNotification(betMsg, myUserId),
+      });
 
       // Defer optimistic UI updates to the next tick to keep the click response snappy
       // and prevent immediate main-thread blocking that could cause graph stutter.
@@ -473,6 +557,7 @@ export default function GravityPage() {
 
   return (
     <Box px={{ base: "8px", md: "16px" }} minH="100vh" mt="90px" w="100%">
+      <WinFireworksEffect isVisible={showWinFireworks} totalEarn={winFireworksAmount} duration={2200} />
       <Grid
         templateAreas={{ base: `"board" "side" "history"`, xl: `"board side" "history history"` }}
         templateColumns={{ base: "1fr", xl: "minmax(0, 1fr) 420px" }}
@@ -485,7 +570,20 @@ export default function GravityPage() {
           backdropFilter="blur(12px)"
           border="1px solid rgba(255,255,255,0.06)"
           boxShadow="0 0 30px rgba(0,0,0,0.6)"
+          position="relative"
         >
+            <Box position="absolute" top="0" right="0" zIndex={2}>
+              <IconButton
+                aria-label="How to play"
+                icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
+                size="md"
+                bg="transparent"
+                color="#00d4ff"
+                borderRadius="50%"
+                _hover={{ bg: "rgba(255,255,255,0.1)"}}
+                onClick={onHelpOpen}
+              />
+            </Box>
             <CardBody flexDirection="column" alignItems="stretch">
               <Grid templateColumns="1fr auto 1fr" alignItems="center" mb="8px" px={{ base: "2px", md: "6px" }}>
                 <VStack spacing="0" gridColumn="1 / -1" w="100%">
@@ -736,6 +834,32 @@ export default function GravityPage() {
           <GravityBetHistory results={myHistory} />
         </GridItem>
       </Grid>
+      <Modal isOpen={isHelpOpen} onClose={onHelpClose} size="md" isCentered>
+        <ModalOverlay bg="blackAlpha.700" />
+        <ModalContent bg="#2a2d2e" border="1px solid #00d4ff">
+          <ModalHeader color="white">Gravity</ModalHeader>
+          <ModalCloseButton color="#fff" _hover={{ color: "#00d4ff" }} />
+          <ModalBody pb="6">
+            <VStack align="start" spacing="3">
+              <Text color="#00d4ff" fontWeight="700" fontSize="sm">
+                How to play
+              </Text>
+              <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="1.65">
+                1) Enter your amount and choose UP or DOWN before betting phase ends.
+              </Text>
+              <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="1.65">
+                2) You can place up to one UP and one DOWN bet per round.
+              </Text>
+              <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="1.65">
+                3) When the round settles, the winning side is paid according to the round result.
+              </Text>
+              <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="1.65">
+                4) Wait for the next betting phase to place new bets.
+              </Text>
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

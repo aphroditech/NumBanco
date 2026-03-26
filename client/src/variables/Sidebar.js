@@ -16,6 +16,7 @@ import PumpingPage from "views/Pumping/PumpingPage";
 import FishingPage from "views/Fishing/FishingPage";
 import JokerCrashPage from "views/JokerCrash/JokerCrashPage";
 import GravityPage from "views/Gravity/GravityPage";
+import DoublePage from "views/Double/DoublePage";
 import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
@@ -32,10 +33,10 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import StyleIcon from '@mui/icons-material/Style';
-import NumbersIcon from '@mui/icons-material/Numbers';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
+import TokenIcon from '@mui/icons-material/Token';
 import TrafficIcon from '@mui/icons-material/Traffic';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CoinPage from "views/Coin/CoinPage";
@@ -153,6 +154,14 @@ export const Gravity = {
     name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: GravityPage,
+    layout: "/game",
+}
+
+export const DoubleGame = {
+    path: "/double",
+    name: "DOUBLE",
+    icon: <TokenIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: DoublePage,
     layout: "/game",
 }
 

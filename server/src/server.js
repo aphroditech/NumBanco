@@ -19,6 +19,7 @@ import { initializeDatabase } from "./database/index.js";
 import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
+import { startDoubleGameLoop } from "./services/double/doubleGame.service.js";
 import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSpread/cloudSpreadGame.service.js";
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 import { minesBot } from "./services/mines/minesBot.js";
@@ -51,9 +52,9 @@ connectDB()
         }
 
         // Cloud Spread game loop (per-user rounds). Live feed uses Ably after `setCloudSpreadAbly` on connect.
-        startCloudSpreadGameLoop().catch((err) => {
-            console.error("[cloud-spread] failed to start game loop:", err);
-        });
+        // startCloudSpreadGameLoop().catch((err) => {
+        //     console.error("[cloud-spread] failed to start game loop:", err);
+        // });
 
         // Load SSL certificates
         const sslOptions = {
@@ -87,6 +88,7 @@ connectDB()
             // aToZBot(ably);
             // fishingBot(ably);
             startGravityGameLoop(ably);
+            startDoubleGameLoop(ably);
             setCloudSpreadAbly(ably);
             cloudSpreadBot().catch((err) => {
                 console.error("[cloud-spread] bot failed to start:", err);

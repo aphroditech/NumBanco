@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import CloudSpreadHistory from "../../models/CloudSpreadHistory.js";
-import CloudSpreadSettings from "../../models/CloudSpreadSettings.js";
+import CloudSpreadHistory from "../../models/cloud/CloudSpreadHistory.js";
+import CloudSpreadSettings from "../../models/cloud/CloudSpreadSettings.js";
 import { publishCloudSpreadLiveRow } from "./cloudSpreadGame.service.js";
 
 /** Used only if DB has no document or bad data (see `initCloudSpreadSetting`). */

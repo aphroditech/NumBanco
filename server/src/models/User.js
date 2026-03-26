@@ -88,6 +88,10 @@ const userSchema = new mongoose.Schema({
           type: String,
           default: "success"
         },
+        gameType: {
+          type: String,
+          default: ""
+        },
         unread: {
           type: Boolean,
           default: true
