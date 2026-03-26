@@ -19,7 +19,7 @@ function RealTimeHistory() {
     const history = useHistory();
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
+    useEffect(async() => {
         let isMounted = true;
         const results = await getAToZResults(history);
         if (isMounted) {
