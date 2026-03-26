@@ -40,7 +40,7 @@ import { useHistory } from 'react-router-dom';
 
 import { toast } from 'react-toastify';
 
-import jackalImage from "assets/img/Jackal/jackal.png"
+const jackalImage = "/img/Jackal/jackal.png"
 
 
 const MIN_AMOUNT = 0.5;

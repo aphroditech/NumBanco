@@ -99,7 +99,7 @@ async function isWinLimitReached(user, betAmt, turn, settings) {
     const turns = "Turns" + turn;
 
     const tempNumbers = settings[turns]?.find(
-        r => betAmt >= r.min && betAmt < r.max
+        r => betAmt >= r.min && betAmt <= r.max
     );
 
     if (!tempNumbers) return false;
@@ -107,7 +107,7 @@ async function isWinLimitReached(user, betAmt, turn, settings) {
     const { min, max, totalNumber, canWinNumber } = tempNumbers;
 
     const filtered = miningHistory?.history?.filter(
-        h => h.betAmount >= min && h.betAmount < max
+        h => h.betAmount >= min && h.betAmount <= max
     );
 
     const recentCount = filtered?.length ? filtered.length % totalNumber : 0;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Button, Grid, Image } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
-import jackalImage from 'assets/img/Jackal/jackal.png';
+const jackalImage = '/img/Jackal/jackal.png';
 
 const METAL_FRAME = {
     bg: 'linear-gradient(168deg, #6b4e38 0%, #2d1a12 28%, #4a3224 55%, #1f120c 100%)',
