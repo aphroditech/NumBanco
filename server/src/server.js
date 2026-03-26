@@ -46,7 +46,6 @@ const ablyCrashGames = createAblyClient("crash-games");
 const ablyDiceGames = createAblyClient("dice-games");
 const ablyMiningGames = createAblyClient("mining-games");
 
-app.locals.ablyCore = ablyCore;
 /** Controllers use `req.app.locals.ably` for channel.publish (coin, bet, rocket, etc.). */
 app.locals.ably = ablyCore;
 /** Same Ably app/key: dice/table bots publish here; optional alias if a route must match that connection. */
