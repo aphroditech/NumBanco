@@ -426,7 +426,7 @@ export default function HeaderLinks(props) {
                           ? "#E74C3C"
                           : "white"
                     }
-                    sx={{ fontVariantNumeric: 'tabular-nums' }}
+                    // sx={{ fontVariantNumeric: 'tabular-nums' }}
                   >
                     $
                     {(

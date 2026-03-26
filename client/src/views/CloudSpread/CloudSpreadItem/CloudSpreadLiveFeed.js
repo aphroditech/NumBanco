@@ -114,10 +114,10 @@ export default function CloudSpreadLiveFeed({ rows = [], title = "Live", maxRows
                     </Text>
                   </Tooltip>
                 </HStack>
-                <Text flex="0.85" textAlign="center" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                <Text flex="0.85" textAlign="center" /* sx={{ fontVariantNumeric: "tabular-nums" }} */>
                   {Number.isFinite(bet) ? bet.toFixed(2) : "—"}
                 </Text>
-                <Text flex="0.85" textAlign="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                <Text flex="0.85" textAlign="right" /* sx={{ fontVariantNumeric: "tabular-nums" }} */>
                   {Number.isFinite(win) ? win.toFixed(2) : "—"}
                 </Text>
               </HStack>

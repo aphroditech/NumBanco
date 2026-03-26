@@ -215,17 +215,17 @@ const userSchema = new mongoose.Schema({
     default: 0
   },
 
-  weelAmount: {
+  coinAmount: {
     type: Number,
     default: 0
   },
-  wheelWinAmount: {
+  coinWinAmount: {
     type: Number,
     default: 0
   },
-  wheelMode: {
+  coinMode: {
     type: Number,
-    default: 0, // normal 0, and hard 1
+    default: 0, // 0=normal, 1=hard
   },
 
   partnerActivity: {

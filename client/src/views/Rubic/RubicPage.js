@@ -925,7 +925,7 @@ export default function RubicPage() {
                                                 4. Roll the Dice
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Click the BET button to roll the dice. The dice will roll for about 1 second, then show the result.
+                                                Click the BET button to roll the dice. The dice will roll for about 1 second, then show the result (the top number of the dice).
                                             </Text>
                                         </Box>
                                         <Box>
@@ -933,7 +933,7 @@ export default function RubicPage() {
                                                 5. Win Conditions
                                             </Text>
                                             <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                When your prediction matches the final result, your stake is multiplied by the winning multiplier.
+                                                When your prediction matches the final result (the top number of the dice), your stake is multiplied by the winning multiplier.
                                             </Text>
                                         </Box>
                                         <Box>
@@ -973,7 +973,7 @@ export default function RubicPage() {
                                         </Box>
                                         <Box pt="8px" borderTop="1px solid rgba(0, 212, 255, 0.2)">
                                             <Text fontSize="sm" color="rgba(255,255,255,0.6)" fontStyle="italic">
-                                                Your last 10 results are displayed at the top. Check your bet history below for all previous games.
+                                                Your last results are displayed at the top. Check your bet history below for all previous games.
                                             </Text>
                                         </Box>
                                     </VStack>

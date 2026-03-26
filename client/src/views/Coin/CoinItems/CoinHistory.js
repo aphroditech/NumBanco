@@ -11,14 +11,14 @@ import CardHeader from 'components/Card/CardHeader.js';
 import CardBody from 'components/Card/CardBody.js';
 import GradientBorder from 'components/GradientBorder/GradientBorder';
 import CardFooter from 'components/Card/CardFooter';
-import { getRocketHistory } from 'action/RocketActions';
+import { getCoinHistory } from 'action/CoinActions';
 import { useHistory } from 'react-router-dom';
 
 function CoinHistory() {
     const dispatch = useDispatch();
     const History = useHistory();
     const [results, setResults] = useState([]);
-    const history = useSelector((state) => state.histories.rocketHistory) || [];
+    const history = useSelector((state) => state.histories?.coinHistory) || [];
     useEffect(() => {
         setResults(history);
     }, [history]);
@@ -34,8 +34,8 @@ function CoinHistory() {
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
     useEffect(() => {
-        dispatch(getRocketHistory(History, dispatch));
-    }, [dispatch]);
+        getCoinHistory(History, dispatch);
+    }, [dispatch, History]);
 
     // Calculate pagination
     const totalPages = useMemo(() => {
@@ -112,13 +112,16 @@ function CoinHistory() {
                                             Bet
                                         </Th>
                                         <Th color="white" textAlign="left" className="real_th_font" width="12%">
+                                            Flip
+                                        </Th>
+                                        <Th color="white" textAlign="left" className="real_th_font" width="12%">
+                                            Result
+                                        </Th>
+                                        <Th color="white" textAlign="left" className="real_th_font" width="12%">
                                             Win
                                         </Th>
-                                        <Th color="white" textAlign="left" className="real_th_font" width="15%">
-                                            Multiplier
-                                        </Th>
                                         <Th color="white" textAlign="left" className="real_th_font" width="24%">
-                                            Date
+                                            Time
                                         </Th>
                                     </Tr>
                                 </Thead>
@@ -156,10 +159,10 @@ function CoinHistory() {
                                                     borderBottomColor='#56577A'
                                                     overflow="hidden"
                                                     fontSize='sm'
-                                                    color={result.isWin ? '#68d391' : '#f56565'}
+                                                    color={result.flip ? 'HEADS' : 'TAILS'}
                                                     fontWeight='normal'
                                                 >
-                                                    ${truncateToTwo(result.winAmount)}
+                                                    {result.flip ? 'HEADS' : 'TAILS'}
                                                 </Td>
                                                 <Td
                                                     textAlign="left"
@@ -170,7 +173,18 @@ function CoinHistory() {
                                                     color='#fff'
                                                     fontWeight='normal'
                                                 >
-                                                    x{result.multiplier}x
+                                                    {result.result ? 'HEADS' : 'TAILS'}
+                                                </Td>
+                                                <Td
+                                                    textAlign="left"
+                                                    border={lastItem ? "none" : null}
+                                                    borderBottomColor='#56577A'
+                                                    overflow="hidden"
+                                                    fontSize='sm'
+                                                    color={result.isWin ? '#68d391' : '#f56565'}
+                                                    fontWeight='normal'
+                                                >
+                                                    {result.winAmount ? 'WIN' : 'LOSE'}
                                                 </Td>
                                                 <Td
                                                     textAlign="left"
@@ -181,7 +195,7 @@ function CoinHistory() {
                                                     color='rgba(255, 255, 255, 0.7)'
                                                     fontWeight='normal'
                                                 >
-                                                    {new Date(result.date).toLocaleDateString()}, {new Date(result.date).toLocaleTimeString()}
+                                                    {new Date(result.date).toLocaleString()}
                                                 </Td>
                                             </Tr>
                                         );

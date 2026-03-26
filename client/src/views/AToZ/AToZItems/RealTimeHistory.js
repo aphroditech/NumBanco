@@ -25,9 +25,9 @@ function RealTimeHistory() {
 
     useEffect( async () => {
         let isMounted = true;
-        const res = await getAToZResults(history);
+        const results = await getAToZResults(history);
         if (isMounted) {
-            setAToZResults(res.aToZResults);
+            setAToZResults(results || []);
             setIsLoading(false);
         }
         return () => { isMounted = false; };

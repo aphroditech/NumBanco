@@ -70,6 +70,14 @@ export const checkCanWin = async (req, res) => {
                     lotterybet: betAmount,
                     miningAmount: betAmount,
                 },
+                $push: {
+                    totalhistory: {
+                        amount: -betAmount,
+                        date: new Date(),
+                        type: "Lose",
+                        game: "Jackal",
+                    },
+                },
             }
         );
 
@@ -133,7 +141,8 @@ export const resultGameMining = async (req, res) => {
             user.totalhistory?.push({
                 amount: profit,
                 date: new Date(),
-                type: "Mining"
+                type: "Win",
+                game: "Jackal",
             });
             await user.save();
         }
