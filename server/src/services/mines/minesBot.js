@@ -84,7 +84,7 @@ export const minesBot = async (ably) => {
             // Keep only recent 50 bot records
             const recent = await MinesResult.find()
                 .sort({ createAt: -1 })
-                .limit(50)
+                .limit(20)
                 .select("_id");
             const recentIds = recent.map((d) => d._id);
             await MinesResult.deleteMany({ _id: { $nin: recentIds } });

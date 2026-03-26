@@ -31,6 +31,7 @@ import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
 import { cardGameBot } from "./services/cardGame/cardGameBot.service.js";
+import { diceBot } from "./services/dice/diceBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
 import { coinFlipBot } from "./services/coinFlip/coinFlipBot.service.js";
 
@@ -83,66 +84,66 @@ connectDB()
         ablyCore.connection.once("connected", () => {
 
             console.log("✅ Core Ably connected");
-    
+
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);
             // startBetEngine(ablyCore, 1);
             // startBetEngine(ablyCore, 2);
-    
+
         });
         ablyFinance.connection.once("connected", () => {
 
             console.log("💰 Finance Ably connected");
-    
+
             // confirmDepositEngine(ablyFinance);
             // tronEngine(ablyFinance);
             // startPartnerDepositCron(ablyFinance);
             // startWithdrawApprovalCron(ablyFinance);
-    
+
         });
-    
+
         /*
         ========================================
         CRASH / FAST LOOP GAMES
         ========================================
         */
-    
+
         ablyCrashGames.connection.once("connected", () => {
-    
+
             console.log("🎯 Crash Games Ably connected");
-    
+
             // rocketBot(ablyCrashGames);
             // jokerCrashBot(ablyCrashGames);
             // pumpingBot(ablyCrashGames);
-    
+
         });
-    
+
         /*
         ========================================
         DICE / TABLE GAMES
         ========================================
         */
-    
+
         ablyDiceGames.connection.once("connected", () => {
             console.log("🎲 Dice Games Ably connected");
-    
+
             // rubicBot(ablyDiceGames);
             coinFlipBot(ablyDiceGames);
             // cardGameBot(ablyDiceGames);
             // aToZBot(ablyDiceGames);
-    
+
         });
-    
+
         /*
         ========================================
         MINING STYLE GAMES
         ========================================
         */
-    
+
         ablyMiningGames.connection.once("connected", () => {
-    
+
             console.log("⛏️ Mining Games Ably connected");
-    
+
             // miningBot(ablyMiningGames);
             // minesBot(ablyMiningGames);
             // fishingBot(ablyMiningGames);
@@ -152,14 +153,14 @@ connectDB()
             // startGravityGameLoop(ablyMiningGames);
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);
-    
+
         });
-    
-            /*
-        ========================================
-        SYSTEM SERVICES
-        ========================================
-        */
+
+        /*
+    ========================================
+    SYSTEM SERVICES
+    ========================================
+    */
 
         fundMergeEngine();
         tankCheckEngine();

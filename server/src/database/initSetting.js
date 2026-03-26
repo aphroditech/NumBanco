@@ -27,6 +27,7 @@ export const initializeSetting = async () => {
                 cardGameGreaterMultipler: 1.2,
                 cardGameLesserMultipler: 2,
                 cardGameEqualMultipler: 3,
+                diceWinMultipler: 1.97,
             });
             await defaultSetting.save();
             console.log('✅ Default Setting document created');

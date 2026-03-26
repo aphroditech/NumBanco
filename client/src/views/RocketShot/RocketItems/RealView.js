@@ -1,18 +1,14 @@
 import {
     Box,
-    Text,
     Table,
     Thead,
     Tbody,
     Tr,
     Th,
-    Flex,
+    Text,
 } from '@chakra-ui/react';
-import Card from 'components/Card/Card.js';
-import CardHeader from 'components/Card/CardHeader';
 import React, { useEffect, useState, useRef } from 'react';
 import RocketRealViewRow from 'components/Tables/RocketRealViewRow';
-import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import { getRocketResults } from 'action/RocketActions';
 import { useAblyRocketResult } from 'hooks/useAblyRocketResult';
 import { useHistory } from 'react-router-dom';
@@ -25,9 +21,13 @@ function RealView() {
     const hasInitializedRef = useRef(false);
     const [isLoading, setIsLoading] = useState(true);
     const history = useHistory();
-    const getRowId = (row) => {
-        if (!row) return "";
-        return row._id || row.id || `${row.altas || "user"}-${row.bet || 0}-${row.win || 0}`;
+    const getRowId = (row, index) => {
+        if (!row) return `rs-empty-${index}`;
+        if (row._id != null) return String(row._id);
+        if (row.id != null) return String(row.id);
+        const t = row.time ?? row.createdAt ?? "";
+        const uid = row.userId ?? "u";
+        return `rs-${uid}-${t}-${row.step ?? ""}-${row.multi ?? ""}-${index}`;
     };
 
     useEffect(() => {
@@ -38,7 +38,7 @@ function RealView() {
             return;
         }
 
-        const currentIds = new Set(rocketResults.map(getRowId));
+        const currentIds = new Set(rocketResults.map((row, i) => getRowId(row, i)));
 
         if (!hasInitializedRef.current) {
             prevRowIdsRef.current = currentIds;
@@ -63,18 +63,17 @@ function RealView() {
         }
     }, [rocketResults]);
 
-    useEffect(async () => {
-        try {
-            const data = await getRocketResults(history)();
+    useEffect(() => {
+        getRocketResults(history)().then((data) => {
             setRocketResults(data);
             setIsLoading(false);
-        } catch(err) {
+        }).catch(err => {
             console.log(err);
             setIsLoading(false);
-        }
+        });
     }, []);
 
-    const maxRows = 23;
+    const maxRows = 12;
     const baseRows = Array.isArray(rocketResults) ? rocketResults : [];
     const rowsToRender = baseRows.slice(0, maxRows);
 
@@ -83,17 +82,45 @@ function RealView() {
     }
     
     return (
-        <Card
-            p="24px"
-            pt="30px"
+        <Box
+            w="100%"
+            maxW="100%"
+            h="450px"
+            minH={0}
+            flex={1}
+            bg="#2b2b2b"
+            borderRadius="14px"
+            border="1px solid rgba(255,255,255,0.1)"
+            boxShadow="none"
             overflow="hidden"
             display="flex"
             flexDirection="column"
-            h="100%"
-            minH="0"
-            flex="1"
+            p="12px"
+            pt="16px"
         >
-            <Box overflowX="hidden" width="100%" flex="1" minH="0" overflowY="auto">
+            <Text
+                px="10px"
+                pb="6px"
+                fontSize="sm"
+                fontWeight="800"
+                color="rgba(255,255,255,0.92)"
+                letterSpacing="0.02em"
+                flexShrink={0}
+            >
+                Live Results
+            </Text>
+            <Box
+                overflowX="hidden"
+                width="100%"
+                flex="1"
+                minH="0"
+                overflowY="auto"
+                sx={{
+                    "&::-webkit-scrollbar": { display: "none" },
+                    "msOverflowStyle": "none",
+                    "scrollbarWidth": "none",
+                }}
+            >
                 <Table
                 variant="unstyled"
                 color="#fff"
@@ -101,24 +128,24 @@ function RealView() {
                 sx={{ tableLayout: "fixed" }}
                 >
                     <Thead>
-                        <Tr style={{ textAlignLast: "center" }}>
-                            <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                        <Tr borderBottom="1px solid rgba(255,255,255,0.12)">
+                            <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" whiteSpace="nowrap" w="42%" textTransform="uppercase" letterSpacing="0.06em">
                                 User
                             </Th>
-                            <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                            <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" textAlign="center" whiteSpace="nowrap" w="28%" textTransform="uppercase" letterSpacing="0.06em">
                                 Result
                             </Th>
-                            <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                            <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" textAlign="right" whiteSpace="nowrap" w="30%" textTransform="uppercase" letterSpacing="0.06em">
                                 Win
                             </Th>
                         </Tr>
                     </Thead>
                     <Tbody>
                     {rowsToRender.map((row, index) => {
-                        const rowId = getRowId(row);
+                        const rowId = getRowId(row, index);
                         return (
                             <RocketRealViewRow
-                                key={index}
+                                key={rowId}
                                 altas={row.userName}
                                 avatar={row.avatar}
                                 result={row.multiplier}
@@ -130,7 +157,7 @@ function RealView() {
                     </Tbody>
                 </Table>
             </Box>
-        </Card>
+        </Box>
     );
 }
 

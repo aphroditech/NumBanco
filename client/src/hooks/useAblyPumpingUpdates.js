@@ -13,7 +13,6 @@ export function useAblyPumpingUpdates() {
         const channel = ablyClient.channels.get("pumpingGame");
 
         const handleMessage = (message) => {
-            console.log("🚀 Pumping view updated", message.data.updatedData);
             setPumpingView(message.data.updatedData);
         };
 

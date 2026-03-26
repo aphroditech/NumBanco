@@ -42,13 +42,8 @@ const neonStyles = `
       opacity: 1;
     }
   }
-  tr.realtime-new {
-    isolation: isolate;
-  }
   tr.realtime-new td {
     animation: row-slide-in 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
-    position: relative;
-    z-index: 1;
   }
 `;
 
@@ -65,25 +60,24 @@ if (typeof document !== 'undefined') {
   }
 }
 
-function JokerCrashRealViewRow(props) {
+function DiceRealViewRow(props) {
   const { altas, avatar, bet, win } = props;
-  const isWin = win > 0;
-  const rowColor = isWin ? "#68d391" : "#f56565";
-  const displayName = altas || "—";
+  const winColor = win > 0 ? "#6DC64B" : "#E74C3C";
+  const displayName = altas?.length > 7 ? altas.slice(0, 5) + "..." : (altas || "");
 
   return (
-    <Tr className={props.isNew ? "realtime-new" : undefined} borderBottom="1px solid rgba(255,255,255,0.06)" _last={{ borderBottom: "none" }}>
+    <Tr className={props.isNew ? "realtime-new" : undefined}>
       <Td
-        textAlign="left"
+        textAlign="center"
         px="0px"
-        py="6px"
-        h="auto"
+        py="4px"
+        h="16px"
         border="none"
         overflow="hidden"
         textOverflow="ellipsis"
         whiteSpace="nowrap"
       >
-        <Flex align="center">
+        <Flex justify="space-between" align="center">
           <HStack spacing="8px">
             {avatar ? (
               <Box
@@ -93,13 +87,12 @@ function JokerCrashRealViewRow(props) {
                 backgroundImage={`url(${avatar})`}
                 backgroundSize="cover"
                 backgroundPosition="center"
-                flexShrink={0}
               />
             ) : (
-              <Box w="22px" h="22px" borderRadius="50%" bg="rgba(0, 212, 255, 0.2)" flexShrink={0} />
+              <Box w="24px" h="24px" borderRadius="50%" bg="rgba(231, 76, 60, 0.3)" />
             )}
             <Tooltip label={altas || ""} placement="top" hasArrow>
-              <Text color={rowColor} fontSize="13px" fontWeight="700">
+              <Text color={winColor} fontSize="xs">
                 {displayName}
               </Text>
             </Tooltip>
@@ -107,24 +100,24 @@ function JokerCrashRealViewRow(props) {
         </Flex>
       </Td>
       <Td
-        textAlign="center"
-        py="6px"
-        h="auto"
+        textAlign="left"
+        py="4px"
+        h="16px"
         border="none"
         overflow="visible"
       >
-        <Text fontSize="13px" color={rowColor} fontWeight="700" textAlign="center" whiteSpace="nowrap" sx={{ fontVariantNumeric: "tabular-nums" }}>
+        <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
           {bet}
         </Text>
       </Td>
       <Td
-        textAlign="right"
-        py="6px"
-        h="auto"
+        textAlign="left"
+        py="4px"
+        h="16px"
         border="none"
         overflow="visible"
       >
-        <Text fontSize="13px" color={rowColor} fontWeight="700" textAlign="right" whiteSpace="nowrap" sx={{ fontVariantNumeric: "tabular-nums" }}>
+        <Text fontSize="xs" color={winColor} fontWeight="normal" textAlign="center" whiteSpace="nowrap">
           {truncateToTwo(win)}
         </Text>
       </Td>
@@ -132,4 +125,4 @@ function JokerCrashRealViewRow(props) {
   );
 }
 
-export default JokerCrashRealViewRow;
+export default DiceRealViewRow;

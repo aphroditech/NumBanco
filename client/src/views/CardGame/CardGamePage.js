@@ -267,12 +267,15 @@ export default function CardGamePage() {
             console.log("data", data);
             if(!data.auto) setWin(res.win);
             else setTimeout(() => setWin(res.win), 1000);
-
-            setIsFlipping(true);
-            setFlipTransitionEnabled(true);
-
+            
             const leftFace = cardAssetFor(randomSuitKey(), res.left);
             const rightFace = cardAssetFor(randomSuitKey(), res.right);
+
+            console.log("left", res.left, "right", res.right)
+            setIsFlipping(true);
+            setFlipTransitionEnabled(true);
+            setLeftColBack(leftFace);
+            setRightColBack(rightFace);
 
             if (useAutoFullSpin) {
                 const halfMs = Math.max(350, Math.round(AUTO_BET_SPIN_MS / 2));
@@ -291,20 +294,19 @@ export default function CardGamePage() {
                 flipTargetDegRef.current = 180;
                 setFlipDurationMs(FLIP_MS);
                 // Manual: hidden backs become result faces; classic 180° flip + second pass after delay.
-                setLeftColBack(leftFace);
-                setRightColBack(rightFace);
+
                 requestAnimationFrame(() => {
                     setInnerRotate(180);
+                    setTimeout(() => {
+                        setLeftColBack(leftCard);
+                        setRightColBack(rightCard);
+                        requestAnimationFrame(() => {
+                            setInnerRotate(180);
+                        });
+                        setBet(false);
+                    }, 1000);
                 });
 
-                setTimeout(() => {
-                    setLeftColBack(leftCard);
-                    setRightColBack(rightCard);
-                    requestAnimationFrame(() => {
-                        setInnerRotate(180);
-                    });
-                    setBet(false);
-                }, 1000);
             }
             return res;
         } else {
@@ -757,7 +759,7 @@ export default function CardGamePage() {
                                 </FormControl>
 
                                 <FormControl w="100%" maxW={{ base: "100%", sm: "300px" }} mt="5">
-                                    <Grid templateColumns="1fr 1fr" gap="8px">
+                                    <Grid templateColumns="1fr" gap="8px">
                                         <ClickButton
                                             w="100%"
                                             h="46px"
@@ -781,7 +783,7 @@ export default function CardGamePage() {
                                             onClick={() => handleBet({ auto: false })}
                                             label="BET"
                                         />
-                                        <ClickButton
+                                        {/* <ClickButton
                                             w="100%"
                                             h="46px"
                                             fontSize={{ base: 'md', sm: 'md' }}
@@ -809,7 +811,7 @@ export default function CardGamePage() {
                                                 }
                                             }
                                             label={isAutoBetActive ? "STOP" : "Auto BET"}
-                                        />
+                                        /> */}
                                     </Grid>
                                 </FormControl>
                             </VStack>

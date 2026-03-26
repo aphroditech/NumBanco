@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import {
@@ -50,7 +50,12 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 
 import { getFishingView, fishingBet, fishingPullStay, fishingCashOut } from 'action/FishingActions';
+import WinFireworksEffect from 'components/Effects/WinFireworksEffect';
+import BangBurstEffect from 'components/Effects/BangBurstEffect';
+
 const MIN_AMOUNT = 0.1;
+const WIN_FIREWORKS_MS = 2200;
+const BANG_EFFECT_MS = 1000;
 
 const strengthRiseUp = keyframes`
   from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
@@ -93,6 +98,15 @@ export default function FishingPage() {
     const [confirmText, setConfirmText] = useState("");
     const [confirmKind, setConfirmKind] = useState("finish"); // win | bang | cashout | finish
     const confirmTimeoutRef = useRef(null);
+    const fishingFxAnchorRef = useRef(null);
+    const winFxTimeoutRef = useRef(null);
+    const bangFxTimeoutRef = useRef(null);
+    const [winFx, setWinFx] = useState({
+        visible: false,
+        totalEarn: '0',
+        anchorRect: null,
+    });
+    const [bangFxVisible, setBangFxVisible] = useState(false);
     const maxAmount = Math.max(MIN_AMOUNT, Math.min(20, balance));
 
     const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
@@ -114,6 +128,54 @@ export default function FishingPage() {
             setStrength(50);
         }, 1000);
     };
+
+    const clearWinBangTimers = useCallback(() => {
+        if (winFxTimeoutRef.current != null) {
+            window.clearTimeout(winFxTimeoutRef.current);
+            winFxTimeoutRef.current = null;
+        }
+        if (bangFxTimeoutRef.current != null) {
+            window.clearTimeout(bangFxTimeoutRef.current);
+            bangFxTimeoutRef.current = null;
+        }
+    }, []);
+
+    useEffect(
+        () => () => {
+            clearWinBangTimers();
+        },
+        [clearWinBangTimers]
+    );
+
+    const runWinCelebration = useCallback(
+        (earn) => {
+            const n = Number(earn);
+            if (!Number.isFinite(n) || n <= 0) return;
+            clearWinBangTimers();
+            setBangFxVisible(false);
+            const anchorRect = fishingFxAnchorRef.current?.getBoundingClientRect?.() ?? null;
+            setWinFx({
+                visible: true,
+                totalEarn: n.toFixed(2),
+                anchorRect,
+            });
+            winFxTimeoutRef.current = window.setTimeout(() => {
+                winFxTimeoutRef.current = null;
+                setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+            }, WIN_FIREWORKS_MS);
+        },
+        [clearWinBangTimers]
+    );
+
+    const runBangCelebration = useCallback(() => {
+        clearWinBangTimers();
+        setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+        setBangFxVisible(true);
+        bangFxTimeoutRef.current = window.setTimeout(() => {
+            bangFxTimeoutRef.current = null;
+            setBangFxVisible(false);
+        }, BANG_EFFECT_MS);
+    }, [clearWinBangTimers]);
 
     // Gauge styling constants (0..100 strength scale)
     const GAUGE_STEP = 5;
@@ -226,6 +288,9 @@ export default function FishingPage() {
         }
         const res = await fishingBet(data, dispatch, history);
         if(res?.status === "success") {
+            clearWinBangTimers();
+            setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+            setBangFxVisible(false);
             setBet(amount);
             setStatus("continue");
         }
@@ -257,17 +322,39 @@ export default function FishingPage() {
             if (typeof lastHistoryItem.multi === "number" && Number.isFinite(lastHistoryItem.multi)) setMulti(lastHistoryItem.multi);
         }
 
-        if(status !== "continue") {
-            if (status === "win") openConfirmAndReset("win", "Win!");
-            else if (status === "cashout") openConfirmAndReset("cashout", "Cash Out!");
-            else openConfirmAndReset("bang", "Bang!");
+        if (status !== "continue") {
+            const winFromHistory = Number(lastHistoryItem?.win ?? 0);
+            const fallbackPayout = Number(bet) * Number(multi);
+
+            if (status === "win") {
+                openConfirmAndReset("win", "Win!");
+                const payout =
+                    Number.isFinite(winFromHistory) && winFromHistory > 0
+                        ? winFromHistory
+                        : fallbackPayout;
+                runWinCelebration(payout);
+            } else if (status === "cashout") {
+                openConfirmAndReset("cashout", "Cash Out!");
+                const payout =
+                    Number.isFinite(winFromHistory) && winFromHistory > 0
+                        ? winFromHistory
+                        : fallbackPayout;
+                runWinCelebration(payout);
+            } else {
+                openConfirmAndReset("bang", "Bang!");
+                runBangCelebration();
+            }
         }
     }
 
     const handleCashOut = async () => {
+        const payout = Number(bet) * Number(multi);
         setStatus("cashout");
         await fishingCashOut(dispatch, history);
         openConfirmAndReset("cashout", "Cash Out!");
+        if (Number.isFinite(payout) && payout > 0) {
+            runWinCelebration(payout);
+        }
     }
 
     useEffect(() => {
@@ -651,6 +738,7 @@ export default function FishingPage() {
                 <GridItem area="game" minH={'450px'}>
                     <Card pt="22px" pb="22px" px="22px" minH="100%" alignItems="center" w="100%" position="relative">
                         <Box
+                            ref={fishingFxAnchorRef}
                             position="relative"
                             w="100%"
                             h="406px"
@@ -720,179 +808,6 @@ export default function FishingPage() {
                                 </Box>
                             </Box>
                         </Box>
-
-                        {confirmOpen && (
-                            <Box
-                                position="absolute"
-                                inset="22px"
-                                zIndex="20"
-                                borderRadius="14px"
-                                bg="linear-gradient(180deg, rgba(8,12,20,0.42) 0%, rgba(0,0,0,0.55) 100%)"
-                                backdropFilter="blur(4px)"
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                                px="12px"
-                            >
-                                <Box
-                                    p="2px"
-                                    borderRadius="22px"
-                                    bg={
-                                        confirmKind === "win"
-                                            ? "linear-gradient(135deg, rgba(37,246,168,0.75) 0%, rgba(0,212,255,0.55) 50%, rgba(120,255,200,0.35) 100%)"
-                                            : confirmKind === "bang"
-                                                ? "linear-gradient(135deg, rgba(255,77,109,0.8) 0%, rgba(231,76,60,0.55) 45%, rgba(255,140,160,0.4) 100%)"
-                                                : confirmKind === "cashout"
-                                                    ? "linear-gradient(135deg, rgba(255,209,102,0.75) 0%, rgba(0,212,255,0.5) 55%, rgba(255,230,160,0.35) 100%)"
-                                                    : "linear-gradient(135deg, rgba(0,212,255,0.55) 0%, rgba(88,44,255,0.45) 50%, rgba(0,180,255,0.35) 100%)"
-                                    }
-                                    boxShadow="0 0 0 1px rgba(255,255,255,0.12) inset, 0 24px 80px rgba(0,0,0,0.45)"
-                                    animation={`${confirmModalIn} 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards`}
-                                >
-                                    <Box
-                                        position="relative"
-                                        overflow="hidden"
-                                        bg="linear-gradient(165deg, rgba(22,26,32,0.96) 0%, rgba(12,14,18,0.98) 55%, rgba(18,20,26,0.96) 100%)"
-                                        backdropFilter="blur(14px)"
-                                        borderRadius="20px"
-                                        width={{ base: "min(92vw, 320px)", sm: "340px" }}
-                                        px={{ base: "18px", sm: "24px" }}
-                                        pt={{ base: "16px", sm: "20px" }}
-                                        pb={{ base: "14px", sm: "16px" }}
-                                        textAlign="center"
-                                        border="1px solid rgba(255,255,255,0.10)"
-                                        boxShadow={
-                                            confirmKind === "win"
-                                                ? "0 20px 50px rgba(37,246,168,0.12), inset 0 1px 0 rgba(255,255,255,0.08)"
-                                                : confirmKind === "bang"
-                                                    ? "0 20px 50px rgba(255,77,109,0.18), inset 0 1px 0 rgba(255,255,255,0.08)"
-                                                    : confirmKind === "cashout"
-                                                        ? "0 20px 50px rgba(255,209,102,0.14), inset 0 1px 0 rgba(255,255,255,0.08)"
-                                                        : "0 20px 50px rgba(0, 212, 255, 0.12), inset 0 1px 0 rgba(255,255,255,0.08)"
-                                        }
-                                        _before={{
-                                            content: '""',
-                                            position: "absolute",
-                                            top: "-40%",
-                                            left: "-20%",
-                                            w: "70%",
-                                            h: "80%",
-                                            borderRadius: "full",
-                                            bg:
-                                                confirmKind === "win"
-                                                    ? "radial-gradient(circle, rgba(37,246,168,0.14) 0%, transparent 70%)"
-                                                    : confirmKind === "bang"
-                                                        ? "radial-gradient(circle, rgba(255,77,109,0.18) 0%, transparent 70%)"
-                                                        : confirmKind === "cashout"
-                                                            ? "radial-gradient(circle, rgba(255,209,102,0.12) 0%, transparent 70%)"
-                                                            : "radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%)",
-                                            pointerEvents: "none",
-                                        }}
-                                        animation={`${confirmPump} 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) 3`}
-                                    >
-                                        <Text
-                                            position="relative"
-                                            fontSize={{ base: "22px", sm: "26px" }}
-                                            fontWeight="900"
-                                            letterSpacing="0.02em"
-                                            textTransform="uppercase"
-                                            color={
-                                                confirmKind === "win"
-                                                    ? "#25F6A8"
-                                                    : confirmKind === "bang"
-                                                        ? "#FF6B88"
-                                                        : confirmKind === "cashout"
-                                                            ? "#FFD166"
-                                                            : "#5AE8FF"
-                                            }
-                                            textShadow={
-                                                confirmKind === "bang"
-                                                    ? "0 0 28px rgba(255,77,109,0.55), 0 2px 0 rgba(0,0,0,0.35)"
-                                                    : "0 0 20px rgba(255,255,255,0.12), 0 2px 0 rgba(0,0,0,0.35)"
-                                            }
-                                            mb="14px"
-                                        >
-                                            {confirmText}
-                                        </Text>
-                                        {/* Optional debug stats — compact strip */}
-                                        <Flex
-                                            position="relative"
-                                            wrap="wrap"
-                                            justify="center"
-                                            gap={{ base: "8px 10px", sm: "10px 14px" }}
-                                            pt="12px"
-                                            mt="2px"
-                                            borderTop="1px solid rgba(255,255,255,0.08)"
-                                        >
-                                            {[
-                                                ["Step", step],
-                                                ["Strength", strengthValue],
-                                                ["Multi", multi],
-                                            ].map(([label, val]) => (
-                                                <Box
-                                                    key={label}
-                                                    px="10px"
-                                                    py="1"
-                                                    borderRadius="full"
-                                                    bg="rgba(0,0,0,0.28)"
-                                                    border="1px solid rgba(255,255,255,0.06)"
-                                                >
-                                                    <Text
-                                                        as="span"
-                                                        fontSize="9px"
-                                                        fontWeight="700"
-                                                        letterSpacing="0.14em"
-                                                        color="rgba(255,255,255,0.42)"
-                                                        textTransform="uppercase"
-                                                    >
-                                                        {label}
-                                                    </Text>
-                                                    <Text
-                                                        as="span"
-                                                        ml="6px"
-                                                        fontSize="11px"
-                                                        fontWeight="600"
-                                                        fontFamily="mono"
-                                                        color="rgba(255,255,255,0.88)"
-                                                    >
-                                                        {val}
-                                                    </Text>
-                                                </Box>
-                                            ))}
-                                        </Flex>
-                                        {/* <Button
-                                            size="sm"
-                                            h="40px"
-                                            px="16px"
-                                            bg={
-                                                confirmKind === "win"
-                                                    ? "linear-gradient(135deg, #25F6A8 0%, #00D4FF 100%)"
-                                                    : confirmKind === "bang"
-                                                        ? "linear-gradient(135deg, #FF4D6D 0%, #E74C3C 100%)"
-                                                        : confirmKind === "cashout"
-                                                            ? "linear-gradient(135deg, #FFD166 0%, #00D4FF 100%)"
-                                                            : "linear-gradient(135deg, #00D4FF 0%, #582CFF 100%)"
-                                            }
-                                            color="#fff"
-                                            borderRadius="14px"
-                                            boxShadow="0 0 22px rgba(0,212,255,0.25)"
-                                            _hover={{ filter: "brightness(1.05)" }}
-                                            onClick={() => {
-                                                if (confirmTimeoutRef.current) window.clearTimeout(confirmTimeoutRef.current);
-                                                setConfirmOpen(false);
-                                                setBet(null);
-                                                setMulti(1);
-                                                setStep(0);
-                                                setInfo([]);
-                                                setStrength(50);
-                                            }}
-                                        >
-                                            OK
-                                        </Button> */}
-                                    </Box>
-                                </Box>
-                            </Box>
-                        )}
 
                         {/* Strength gauge overlay (0..100) inside the sea view - LEFT to RIGHT */}
                         <Box
@@ -1183,6 +1098,20 @@ export default function FishingPage() {
                     <RealView />
                 </GridItem>
             </Grid>
+
+            <WinFireworksEffect
+                isVisible={winFx.visible}
+                totalEarn={winFx.totalEarn}
+                duration={WIN_FIREWORKS_MS}
+                zIndex={10000}
+                anchorRect={winFx.anchorRect ?? undefined}
+            />
+            <BangBurstEffect
+                isVisible={bangFxVisible}
+                duration={BANG_EFFECT_MS}
+                zIndex={10050}
+            />
+
             <History />
 
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="md" isCentered>

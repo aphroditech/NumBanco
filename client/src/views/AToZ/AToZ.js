@@ -951,7 +951,9 @@ export default function AToZPage() {
                 </GridItem>
 
                 {/* History Area */}
-                <RealTimeHistory />
+                <GridItem area="side" display="flex">
+                    <RealTimeHistory />
+                </GridItem>
             </Grid>
             <UserBetHistory />
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size='3xl' minW="1000px" isCentered>

@@ -37,6 +37,7 @@ export default function GravityPage() {
   const historyRequestRef = React.useRef(null);
   const lastHistoryFetchAtRef = React.useRef(0);
   const lastResultRoundIdRef = React.useRef(null);
+  const lastSyncRoundIdRef = React.useRef(null);
   const lastResultHistorySyncAtRef = React.useRef(0);
   const recentOwnBetIdsRef = React.useRef(new Map());
 
@@ -60,7 +61,7 @@ export default function GravityPage() {
 
   const graphHeight = useBreakpointValue({ base: 280, md: 340 }) ?? 280;
 
-  const dedupeLiveRows = (rows) => {
+  const dedupeLiveRows = React.useCallback((rows) => {
     const arr = Array.isArray(rows) ? rows : [];
     const map = new Map();
 
@@ -78,7 +79,7 @@ export default function GravityPage() {
     }
 
     return Array.from(map.values()).slice(0, MAX_LIVE_ROWS);
-  };
+  }, []);
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -94,6 +95,7 @@ export default function GravityPage() {
         if (s.serverNow) {
           const offset = Number(s.serverNow) - Date.now();
           setClockOffset(offset);
+          lastSyncRoundIdRef.current = s.roundId;
         }
 
         setState(s);
@@ -111,10 +113,13 @@ export default function GravityPage() {
       const data = msg?.data;
       if (!data) return;
       
-      // Update clock offset periodically on state updates
-      if (data.serverNow) {
+      // Sync clock offset only once per round or if not yet set.
+      // This prevents jitter in the graph progress calculation during a single round.
+      // Use a ref to track the last synced roundId since the state closure might be stale.
+      if (data.serverNow && (lastSyncRoundIdRef.current === null || data.roundId !== lastSyncRoundIdRef.current)) {
         const offset = Number(data.serverNow) - Date.now();
         setClockOffset(offset);
+        lastSyncRoundIdRef.current = data.roundId;
       }
 
       setState((prev) => ({ ...prev, ...data }));
@@ -365,7 +370,8 @@ export default function GravityPage() {
       const b = raw[idx + 1] ?? raw[idx];
       const dt = (b.t - a.t) || 0.1;
       const frac = (t - a.t) / dt;
-      const price = a.price + (b.price - a.price) * frac;
+      // Use roundTo2 to ensure the price is consistent across data updates
+      const price = roundTo2(a.price + (b.price - a.price) * frac);
       dense.push({ time: t, price });
     }
 
@@ -431,33 +437,29 @@ export default function GravityPage() {
       const betAmount = res?.betAmount ?? Number(amount);
       const roundId = res?.roundId ?? state?.roundId;
       const dirNorm = String(dir || "").toLowerCase();
-      setOptimisticPlacedSides((prev) => ({ ...prev, [String(dir).toLowerCase()]: true }));
 
-      // Optimistically show the user's own bet in the right-side Up/Down list
-      // so UI reflects the click instantly, even if socket echo is delayed/skipped.
-      const optimisticRow = {
-        ...(res?.row || {}),
-        betId: betId ?? res?.row?.betId,
-        roundId: roundId ?? res?.row?.roundId,
-        direction: dirNorm || String(res?.row?.direction || "").toLowerCase(),
-        betAmount,
-        amount: betAmount,
-        userId: res?.row?.userId ?? res?.user?.userId,
-        userName: res?.row?.userName ?? res?.user?.altas,
-        avatar: res?.row?.avatar ?? res?.user?.avatar,
-      };
-      setLiveRows((prev) => dedupeLiveRows([optimisticRow, ...(Array.isArray(prev) ? prev : [])]));
+      // Defer optimistic UI updates to the next tick to keep the click response snappy
+      // and prevent immediate main-thread blocking that could cause graph stutter.
+      defer(() => {
+        setOptimisticPlacedSides((prev) => ({ ...prev, [dirNorm]: true }));
 
-      // Mark as own bet so the immediate Ably echo doesn't trigger duplicate heavy list work.
-      if (betId) {
-        recentOwnBetIdsRef.current.set(String(betId), Date.now());
-      }
+        const optimisticRow = {
+          ...(res?.row || {}),
+          betId: betId ?? res?.row?.betId,
+          roundId: roundId ?? res?.row?.roundId,
+          direction: dirNorm || String(res?.row?.direction || "").toLowerCase(),
+          betAmount,
+          amount: betAmount,
+          userId: res?.row?.userId ?? res?.user?.userId,
+          userName: res?.row?.userName ?? res?.user?.altas,
+          avatar: res?.row?.avatar ?? res?.user?.avatar,
+        };
+        setLiveRows((prev) => dedupeLiveRows([optimisticRow, ...(Array.isArray(prev) ? prev : [])]));
 
-      // Keep click path as light as possible; avoid optimistic history row rendering
-      // to prevent bettor-only chart hitching. History sync arrives from result event.
-      if (betId && roundId) {
-        // no-op: intentionally skipping optimistic myHistory update for smoother graph motion
-      }
+        if (betId) {
+          recentOwnBetIdsRef.current.set(String(betId), Date.now());
+        }
+      });
 
       // Cleanup old ids to keep map tiny.
       const now = Date.now();
@@ -549,7 +551,31 @@ export default function GravityPage() {
 
               <Text mt="10px" color="rgba(255,255,255,0.8)" fontSize="sm">Amount(USDT): ${Number(amount || 0).toFixed(2)}</Text>
               <HStack mt="6px">
-                <Input value={amount} onChange={(e) => setAmount(e.target.value)} bg="#1b2025" border="1px solid rgba(255,255,255,0.14)" h="36px" />
+                <Input
+                  value={amount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setAmount("");
+                      return;
+                    }
+                    const num = Number(val);
+                    if (Number.isNaN(num)) return;
+                    if (num > 50) {
+                      setAmount("50");
+                    } else {
+                      setAmount(val);
+                    }
+                  }}
+                  bg="#1b2025"
+                  color="white"
+                  fontWeight="700"
+                  fontSize="md"
+                  border="1px solid rgba(255,255,255,0.14)"
+                  h="36px"
+                  placeholder="Max $50"
+                  _placeholder={{ color: "rgba(255,255,255,0.25)" }}
+                />
               </HStack>
               <Grid mt="8px" templateColumns="repeat(4, 1fr)" gap="8px">
                 {[5, 10, 20, 50].map((preset) => (

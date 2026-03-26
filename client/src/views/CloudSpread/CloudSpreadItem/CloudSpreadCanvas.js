@@ -565,17 +565,20 @@ export default function CloudSpreadCanvas({
         selNum > 0;
 
       if (pickedSet.size > 0) {
-        const mulFont = Math.max(7, Math.round(9 * layoutScale));
-        ctx.font = `700 ${mulFont}px Arial`;
         ctx.fillStyle = "rgba(20, 35, 65, 0.98)";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.shadowColor = "rgba(255, 255, 255, 0.45)";
-        ctx.shadowBlur = 4;
+        ctx.shadowColor = "rgba(41, 38, 38, 0.6)";
+        ctx.shadowBlur = 6;
         const multipliers = cloudMultipliersRef.current || [];
         activeClouds.forEach((c) => {
           if (!pickedSet.has(Number(c.i))) return;
           if (skipCurrentMul && Number(c.i) === selNum) return;
+          
+          // Font size proportional to cloud radius c.r
+          const mulFont = Math.max(4, Math.round(c.r * 0.45)); 
+          ctx.font = `800 ${mulFont}px Orbitron, "Arial Black", sans-serif`;
+          
           const mul = Number(multipliers[c.i - 1] ?? 0);
           ctx.fillText(`x${mul.toFixed(2)}`, c.cx, c.cy);
         });
@@ -655,7 +658,7 @@ export default function CloudSpreadCanvas({
             ballRef.current.landedAt = performance.now();
             ballRef.current.restX = endX;
             ballRef.current.restY = endY;
-            multHitRef.current.pulse = 0.55;
+            multHitRef.current.pulse = 1.0; // Higher pulse for dramatic scale up
             multHitRef.current.prevIdle = 0;
             const multipliers = cloudMultipliersRef.current || [];
             const landMul = Number(multipliers[selected - 1] ?? 0);
@@ -680,14 +683,14 @@ export default function CloudSpreadCanvas({
           ballRef.current.y = targetY - idle;
           const hitTh = IDLE_AMP * 0.9;
           if (idle >= hitTh && multHitRef.current.prevIdle < hitTh) {
-            multHitRef.current.pulse = 0.5;
+            multHitRef.current.pulse = 0.85; // Stronger pulse for idle hits
           }
           multHitRef.current.prevIdle = idle;
-          multHitRef.current.pulse *= 0.88;
+          multHitRef.current.pulse *= 0.9; // Slightly slower decay
         }
 
         if (ballRef.current.progress < 1) {
-          multHitRef.current.pulse *= 0.92;
+          multHitRef.current.pulse *= 0.94; // Slower decay during flight
         }
       }
 
@@ -703,33 +706,34 @@ export default function CloudSpreadCanvas({
           const label = `x${mul.toFixed(2)}`;
           const lx = targetCloud.cx;
           const ly = targetCloud.cy;
-          const pulse = Math.min(1, multHitRef.current.pulse);
-          const scale = 1 + 0.08 * pulse;
-          const fontPx = Math.max(7, 9 * layoutScale + 0.85 * pulse);
+          const pulse = Math.min(1.2, multHitRef.current.pulse);
+          const scale = 1 + 0.12 * pulse; // Further reduced scale for smaller effect
+          // Font size proportional to targetCloud.r
+          const fontPx = Math.max(5, Math.round(targetCloud.r * 0.52 + 1.8 * pulse)); 
 
           ctx.save();
           ctx.translate(lx, ly);
           ctx.scale(scale, scale);
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.font = `700 ${fontPx}px Arial`;
+          ctx.font = `800 ${fontPx}px Orbitron, "Arial Black", sans-serif`;
 
-          const ring = pulse * 8 * layoutScale;
+          const ring = pulse * 14 * layoutScale;
           if (ring > 0.2) {
             ctx.beginPath();
             ctx.arc(0, 0, 11 * layoutScale + ring, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(255, 210, 130, ${0.18 * pulse})`;
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = `rgba(255, 50, 50, ${0.4 * pulse})`; // Red pulse ring
+            ctx.lineWidth = 2;
             ctx.stroke();
           }
 
-          ctx.shadowColor = `rgba(255, 190, 80, ${0.12 + 0.18 * pulse})`;
-          ctx.shadowBlur = 2 + 5 * pulse;
-          ctx.fillStyle = "rgba(28, 43, 71, 0.96)";
+          ctx.shadowColor = `rgba(255, 0, 0, ${0.3 + 0.6 * pulse})`; // Red glow shadow
+          ctx.shadowBlur = 6 + 12 * pulse;
+          ctx.fillStyle = "rgba(28, 43, 71, 0.98)";
           ctx.fillText(label, 0, 0);
           ctx.shadowBlur = 0;
-          ctx.fillStyle = `rgba(255, 255, 255, ${0.08 * pulse})`;
-          ctx.fillText(label, -0.35 * pulse, -0.35 * pulse);
+          ctx.fillStyle = `rgba(255, 150, 150, ${0.2 * pulse})`; // Reddish inner text highlight
+          ctx.fillText(label, -0.4 * pulse, -0.4 * pulse);
 
           ctx.restore();
         }
@@ -737,12 +741,12 @@ export default function CloudSpreadCanvas({
 
       ctx.restore();
 
-      const hudFont = Math.max(11, Math.round(14 * layoutScale));
+      const hudFont = Math.max(9, Math.round(12 * layoutScale));
       const hudPadX = Math.max(12, w * 0.028);
-      const hudLine1Y = h - Math.max(38, h * 0.12);
-      const hudLine2Y = h - Math.max(18, h * 0.05);
+      const hudLine1Y = Math.max(22, h * 0.08);
+      const hudLine2Y = hudLine1Y + hudFont + 6;
       ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
-      ctx.font = `700 ${hudFont}px Arial`;
+      ctx.font = `700 ${hudFont}px Orbitron, sans-serif`;
       ctx.textAlign = "left";
       ctx.fillText(`Step ${step}/${totalSteps}`, hudPadX, hudLine1Y);
       ctx.fillText(`Clouds: ${cloudCount}`, hudPadX, hudLine2Y);
