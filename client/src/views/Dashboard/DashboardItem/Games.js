@@ -20,7 +20,6 @@ import tierC from "assets/img/Games/tierC.png";
 import rubic from "assets/img/Games/dice5.png";
 import pumping from "assets/img/Games/pumping.png";
 import gravity from "assets/img/Games/gravity.png";
-import doubleGame from "assets/img/Games/digits.png";
 import cloudSpread from "assets/img/Games/gravity.png";
 import dove from "assets/img/Games/dove.png"
 import coco from "assets/img/Games/coco.png"
@@ -36,6 +35,7 @@ import cloud from "assets/img/Games/cloud.png"
 import twist from "assets/img/Games/twist.png"
 import dice from "assets/img/Games/dice.png"
 import coinImage from "assets/img/Games/coin.png"
+import doubleGame from "assets/img/Games/double.png"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
