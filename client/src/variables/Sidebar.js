@@ -39,6 +39,8 @@ import Filter9Icon from '@mui/icons-material/Filter9';
 import TrafficIcon from '@mui/icons-material/Traffic';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CoinPage from "views/Coin/CoinPage";
+import TwistPage from "views/Twist/TwistPage";
+import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 
 export const TierA = {
     path: "/tierA",
@@ -203,5 +205,13 @@ export const Coin = {
     name: "COIN FLIP",
     icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: CoinPage,
+    layout: "/game",
+}
+
+export const Twist = {
+    path: "/twist",
+    name: "TWIST",
+    icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwistPage,
     layout: "/game",
 }

@@ -29,6 +29,7 @@ import { rocketBot } from "./services/rocket/rocketBot.service.js";
 import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
+import { twistBot } from "./services/twist/twistBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
 import { cardGameBot } from "./services/cardGame/cardGameBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
@@ -92,6 +93,7 @@ connectDB()
             //     console.error("[cloud-spread] bot failed to start:", err);
             // });
             // cocoBot(ably);
+            // twistBot(ably);
             // alphaTreeBot(ably);
             // doveBot(ably);
             // fundMergeEngine();

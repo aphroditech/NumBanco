@@ -571,6 +571,11 @@ export const cashOut = async (req, res) => {
         const viewUserId = req.user?.userId || userId;
 
         user.balance = round2(Number(user.balance ?? 0) + win);
+        // Count this round's stake as "bet" for shared game stats.
+        // (Mirrors other games like Coco: totalBet/refreshBet/lotterybet bump per cash-out.)
+        user.totalBet = Number(user.totalBet ?? 0) + Number(betAmount ?? 0);
+        user.refreshBet = Number(user.refreshBet ?? 0) + Number(betAmount ?? 0);
+        user.lotterybet = Number(user.lotterybet ?? 0) + Number(betAmount ?? 0);
         user.totalhistory = user.totalhistory || [];
         user.totalhistory.push({
             amount: win,

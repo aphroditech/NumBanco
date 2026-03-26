@@ -42,6 +42,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import StyleIcon from '@mui/icons-material/Style';
 import { toast } from 'react-toastify';
+import { onlineUser, offlineUser } from 'action/BetActions';
 
 
 import leftCard from 'assets/img/CardGame/left.svg';
@@ -180,6 +181,14 @@ export default function CardGamePage() {
         rightF: rightCard,
         rightB: leftCard,
     });
+
+
+    useEffect(() => {
+        onlineUser(17);
+        return () => {
+            offlineUser(17);
+        };
+    }, []);
 
     useEffect(() => {
         innerRotateRef.current = innerRotate;
