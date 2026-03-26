@@ -14,7 +14,7 @@ import MailRoundedIcon from "@mui/icons-material/MailRounded";
 import { useHistory, NavLink, useLocation } from "react-router-dom";
 
 
-import backgroundImage from "assets/img/ContactUs/6.png"
+import backgroundImage from "assets/img/ContactUs/6.jpg"
 import Loading from 'components/Loading/Loading';
 
 // Site accent: #00D4FF (cyan)

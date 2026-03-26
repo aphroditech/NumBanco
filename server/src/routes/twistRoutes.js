@@ -9,4 +9,3 @@ router.post("/bet", passport.authenticate("jwt", { session: false }), postTwistB
 router.post("/cashOut", passport.authenticate("jwt", { session: false }), postTwistCashOut);
 
 export default router;
-

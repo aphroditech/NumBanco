@@ -35,6 +35,7 @@ import { cardGameBot } from "./services/cardGame/cardGameBot.service.js";
 import { diceBot } from "./services/dice/diceBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
 import { coinFlipBot } from "./services/coinFlip/coinFlipBot.service.js";
+import { twistBot } from "./services/twist/twistBot.service.js";
 
 
 dotenv.config();
@@ -132,7 +133,7 @@ connectDB()
             coinFlipBot(ablyDiceGames);
             // cardGameBot(ablyDiceGames);
             // aToZBot(ablyDiceGames);
-
+            twistBot(ablyDiceGames);
         });
 
         /*

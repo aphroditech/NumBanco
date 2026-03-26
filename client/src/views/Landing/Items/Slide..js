@@ -162,6 +162,7 @@ export default function Slide() {
                                     onMouseLeave={() => setIsPaused(false)}
                                     transition="all 0.25s ease"
                                 >
+                                    
                                     <Image
                                         src={slide.image}
                                         alt={slide.title}
