@@ -1,8 +1,8 @@
 // Images
-import fairness from "assets/img/Concept/fairness.png";
-import method from "assets/img/Concept/method.png";
-import reward from "assets/img/Concept/reward.png";
-import partner from "assets/img/Concept/partner.png";
+import fairness from "assets/img/Concept/fairness.jpg";
+import method from "assets/img/Concept/method.jpg";
+import reward from "assets/img/Concept/reward.jpg";
+import partner from "assets/img/Concept/partner.jpg";
 
 export const concepts = [
     {

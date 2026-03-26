@@ -1,15 +1,15 @@
-import slideImage1 from "assets/img/Ad/time.png";
-import slideImage2 from "assets/img/Ad/rate.png";
-import slideImage3 from "assets/img/Ad/dailyloot.png";
-import slideImage4 from "assets/img/Ad/reward.png";
-import slideImage5 from "assets/img/Ad/protect.png";
-import slideImage6 from "assets/img/Ad/partnership.png";
-import slideImage7 from "assets/img/Ad/betting.png";
-import slideImage8 from "assets/img/Ad/Casino.png";
-import slideImage9 from "assets/img/Ad/dice.png";
-import slideImage10 from "assets/img/Ad/harmer.png";
-import slideImage11 from "assets/img/Ad/graph.png";
-import free from "assets/img/Ad/free.png";
+import slideImage1 from "assets/img/Ad/time.jpg";
+import slideImage2 from "assets/img/Ad/rate.jpg";
+import slideImage3 from "assets/img/Ad/dailyloot.jpg";
+import slideImage4 from "assets/img/Ad/reward.jpg";
+import slideImage5 from "assets/img/Ad/protect.jpg";
+import slideImage6 from "assets/img/Ad/partnership.jpg";
+import slideImage7 from "assets/img/Ad/betting.jpg";
+import slideImage8 from "assets/img/Ad/Casino.jpg";
+import slideImage9 from "assets/img/Ad/dice.jpg";
+import slideImage10 from "assets/img/Ad/harmer.jpg";
+import slideImage11 from "assets/img/Ad/graph.jpg";
+import free from "assets/img/Ad/free.jpg";
 
 export const baseSlides = [
     { title: "Fast draw period and fair draw", desc: "Our site's betting time is very short at 30 seconds and we use a fair draw method.", image: slideImage1 },
