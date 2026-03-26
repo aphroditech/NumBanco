@@ -16,7 +16,13 @@ export async function placeCloudSpreadBet(data, dispatch) {
 export async function cashOutCloudSpread(dispatch) {
   const res = await axiosInstance.post("/cloud-spread/cashout");
   if (dispatch && res.data?.user) {
-    dispatch({ type: "SET_USER", payload: res.data.user });
+    // Instead of replacing the entire user object (which might be partial), 
+    // only update the fields that changed to avoid flickering and redundant header updates.
+    if (Number.isFinite(Number(res.data.user.balance))) {
+      dispatch({ type: "SET_BALANCE", payload: Number(res.data.user.balance) });
+    }
+    // If we need more user data, we can call getUserData(dispatch) or merge carefully.
+    // For now, balance is the most critical for the header.
   }
   return res.data;
 }

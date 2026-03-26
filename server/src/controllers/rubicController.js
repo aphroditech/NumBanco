@@ -175,7 +175,6 @@ export const removeUserBalance = async (req, res) => {
 
         // check if the user should be in hard mode or normal mode
         if (user.rubicMode == 1 && await checkNormalToHard(userRubicAmount, userRubicWinAmount)) {
-            console.log("user should be in hard mode");
             user.rubicMode = 2;
         } else if (user.rubicMode == 2 && await checkHardToNormal(userRubicAmount, userRubicWinAmount)) {
             user.rubicMode = 1;
@@ -244,7 +243,6 @@ async function calculateWiningProbability(amount, target, operation, rubicMode, 
     }
 
     if (await checkWinningNumber(payoutMultiplier, amount, rubicHistory)) {
-        console.log("checkWinningNumber", payoutMultiplier, amount, "winningProbability", winningProbability);
         winningProbability = 0;
     }
 

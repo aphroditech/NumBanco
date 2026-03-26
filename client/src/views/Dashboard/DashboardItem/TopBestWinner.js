@@ -31,6 +31,8 @@ function TopBestWinner() {
     if (t === "numexa") return "#DD6B20";
     if (t === "pumping") return "#D53F8C";
     if (t === "gravity") return "#00B5D8";
+    if (t === "joker crash") return "#9F7AEA";
+    if (t === "card game") return "#ED8936";
     if (t === "deposit" || t === "withdraw") return "#3182CE";
     return "#4A5568";
   };

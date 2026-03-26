@@ -28,6 +28,8 @@ const HIGH_STRETCH_NORMAL = 1;
 const STEP10_MULT_EASY = 1.02;
 const STEP10_MULT_HARD = 0.98;
 const EPS = 1e-10;
+/** If cumulative multiplier exceeds this before a pick (steps 2–10), the next result is forced to bust (0). */
+const MAX_CUMULATIVE_BEFORE_FORCED_BUST = 10;
 /** Mid band draws in the open interval (MID_BAND_LO, MID_BAND_HI), not (0, 1). */
 const MID_BAND_LO = 0.1;
 const MID_BAND_HI = 1;
@@ -75,26 +77,54 @@ function step10FixedMultiplier(mode) {
 }
 
 /**
- * Create band assignment for 3 buttons of a step (steps 2–9).
- * Each button is independent:
- *  - "high" with probability = settings.highBandRate  -> (1, max)
- *  - remaining split equally:
- *      - "mid"  with probability = (1-highBandRate)/2 -> (0.1, 1)
- *      - "zero" with probability = (1-highBandRate)/2 -> bust (0)
+ * P(the letter the user clicked gets the high band) for steps 2–9.
+ * Uses `chosenLetterHighRate` when set; otherwise `highBandRate` (default ~1/3).
  */
-function randomBandPermutation(settings) {
+function getChosenLetterHighProbability(settings) {
+    const c = Number(settings?.chosenLetterHighRate);
+    if (Number.isFinite(c)) {
+        return Math.min(1, Math.max(0, c));
+    }
     const hb = Number(settings?.highBandRate);
-    const highBandRate = Number.isFinite(hb) ? Math.min(1, Math.max(0, hb)) : 1 / 3;
-    const midZeroRate = (1 - highBandRate) / 2;
+    if (Number.isFinite(hb)) {
+        return Math.min(1, Math.max(0, hb));
+    }
+    return 1 / 3;
+}
 
-    const drawBand = () => {
-        const u = Math.random();
-        if (u < highBandRate) return "high";
-        if (u < highBandRate + midZeroRate) return "mid";
-        return "zero";
+/**
+ * Assign zero / mid / high to the three letters of this step: each band exactly once.
+ * The clicked letter gets "high" with probability `pChosenHigh`; otherwise high goes to one of the other two (50/50).
+ */
+function assignBandsForThreeLetters(chosenLetter, allowed, pChosenHigh) {
+    if (allowed.length !== 3) {
+        throw new Error("assignBandsForThreeLetters: expected 3 letters");
+    }
+    const p = Math.min(1, Math.max(0, pChosenHigh));
+    const others = allowed.filter((L) => L !== chosenLetter);
+    if (others.length !== 2) {
+        throw new Error("assignBandsForThreeLetters: chosen letter not in allowed");
+    }
+    const [o1, o2] = others;
+
+    if (Math.random() < p) {
+        const midOnFirst = Math.random() < 0.5;
+        return {
+            [chosenLetter]: "high",
+            [o1]: midOnFirst ? "mid" : "zero",
+            [o2]: midOnFirst ? "zero" : "mid",
+        };
+    }
+
+    const highOnO1 = Math.random() < 0.5;
+    const highLetter = highOnO1 ? o1 : o2;
+    const otherNonChosen = highLetter === o1 ? o2 : o1;
+    const chosenGetsZero = Math.random() < 0.5;
+    return {
+        [highLetter]: "high",
+        [chosenLetter]: chosenGetsZero ? "zero" : "mid",
+        [otherNonChosen]: chosenGetsZero ? "mid" : "zero",
     };
-
-    return [drawBand(), drawBand(), drawBand()];
 }
 
 /**
@@ -139,6 +169,34 @@ function drawForBand(stepIndex, band, mode) {
     return r;
 }
 
+/**
+ * Step 10 (Z): if `zButtonHighRate` is configured (0–1), draw high / mid / zero with
+ * P(high)=rate → value in (1, max); remaining probability split evenly between mid and bust.
+ * If the setting is absent, use the legacy fixed Z multiplier.
+ */
+function resolveStep10Draw(settings, mode) {
+    const z = settings?.zButtonHighRate;
+    if (z === undefined || z === null || !Number.isFinite(Number(z))) {
+        return {
+            r: step10FixedMultiplier(mode),
+            band: "fixed",
+            lastDrawKind: "fixed_z",
+        };
+    }
+    const p = Math.min(1, Math.max(0, Number(z)));
+    const u = Math.random();
+    let bandKind;
+    if (u < p) {
+        bandKind = "high";
+    } else if (u < p + (1 - p) / 2) {
+        bandKind = "mid";
+    } else {
+        bandKind = "zero";
+    }
+    const r = Math.round(drawForBand(10, bandKind, mode) * 1e8) / 1e8;
+    return { r, band: bandKind, lastDrawKind: null };
+}
+
 async function broadcastAlphaTreeView(req) {
     await publishAlphaTreeViewFeed(req.app?.locals?.ably);
 }
@@ -154,6 +212,47 @@ async function loadUser(req) {
             country: 0,
         }
     );
+}
+
+async function finishAlphaTreeBust(req, res, user, userId, state, lastDrawPartial) {
+    const lostBet = state.betAmount;
+    const viewUserId = req.user?.userId || userId;
+
+    await AlphaTreeState.deleteOne({ userId });
+
+    user.alphaTreeHistory = user.alphaTreeHistory || [];
+    user.alphaTreeHistory.push({
+        betAmount: lostBet,
+        totalMultiplier: 0,
+        profit: 0,
+        busted: true,
+        createAt: new Date(),
+    });
+
+    updateAlphaTreeModeByTotalProfit(user);
+
+    await AlphaTreeView.create({
+        userId: viewUserId,
+        bet: lostBet,
+        win: 0,
+        result: 0,
+        isUser: Number(req.user?.partnerLevel) > 0 ? 1 : 0,
+    });
+
+    await user.save();
+
+    setTimeout(() => {
+        broadcastAlphaTreeView(req);
+    }, 3000);
+
+    return sendUserResponse(res, "", user, {
+        alphaTree: null,
+        lastDraw: {
+            ...lastDrawPartial,
+            busted: true,
+            lostBet,
+        },
+    });
 }
 
 /**
@@ -227,7 +326,9 @@ export const startGame = async (req, res) => {
 
 /**
  * POST /api/alpha-tree/pick
- * body: { letter } — steps 2–9: random assignment of bust / (0.1,1) / (1,max) to the 3 letters. Step 10: Z, fixed base×2^9.
+ * body: { letter } — steps 2–9: on click, server assigns zero/mid/high to the three letters (each once),
+ * with P(chosen gets high) from settings (`chosenLetterHighRate` or `highBandRate`), draws values, returns all three in `letterResults`.
+ * Step 10: Z — fixed base×2^9 unless `zButtonHighRate` is set (then random high/mid/zero with that P(high)).
  */
 export const pickLetter = async (req, res) => {
     try {
@@ -274,7 +375,7 @@ export const pickLetter = async (req, res) => {
             state.cumulativeMultiplier = round2(state.cumulativeMultiplier * baseMult);
             state.step = 2;
             state.phase = "playing";
-            state.bandPermutation = randomBandPermutation(settings);
+            state.bandPermutation = undefined;
             await state.save();
 
             return sendUserResponse(res, "", user, {
@@ -303,109 +404,116 @@ export const pickLetter = async (req, res) => {
             });
         }
 
-        const letterIndex = allowed.indexOf(letter);
         const stepIndex = state.step;
 
-        // Step 10: only Z — fixed base × 2^9 (no band permutation)
+        const cum = Number(state.cumulativeMultiplier);
+        if (Number.isFinite(cum) && cum > MAX_CUMULATIVE_BEFORE_FORCED_BUST) {
+            if (stepIndex === 10) {
+                return finishAlphaTreeBust(req, res, user, userId, state, {
+                    step: 10,
+                    value: 0,
+                    band: "zero",
+                    letter: "Z",
+                    letterResults: { Z: 0 },
+                });
+            }
+            const mode = normalizeAlphaTreeMode(user.alphaTreeMode);
+            const others = allowed.filter((L) => L !== letter);
+            const [o1, o2] = others;
+            const midOnFirst = Math.random() < 0.5;
+            const bandMap = {
+                [letter]: "zero",
+                [o1]: midOnFirst ? "mid" : "high",
+                [o2]: midOnFirst ? "high" : "mid",
+            };
+            const letterResults = {};
+            for (const L of allowed) {
+                letterResults[L] =
+                    Math.round(drawForBand(stepIndex, bandMap[L], mode) * 1e8) / 1e8;
+            }
+            const r = letterResults[letter];
+            return finishAlphaTreeBust(req, res, user, userId, state, {
+                step: stepIndex,
+                value: r,
+                band: "zero",
+                letter,
+                letterResults,
+            });
+        }
+
+        // Step 10: only Z — legacy fixed mult, or random bands when `zButtonHighRate` is configured
         if (stepIndex === 10) {
             const mode = normalizeAlphaTreeMode(user.alphaTreeMode);
-            const r = step10FixedMultiplier(mode);
+            const { r, band, lastDrawKind } = resolveStep10Draw(settings, mode);
+
+            if (r <= EPS) {
+                return finishAlphaTreeBust(req, res, user, userId, state, {
+                    step: 10,
+                    value: r,
+                    band: "zero",
+                    letter: "Z",
+                    letterResults: { Z: r },
+                });
+            }
+
             state.cumulativeMultiplier = round2(state.cumulativeMultiplier * r);
             state.step = 11;
             state.phase = "await_cashout";
             state.bandPermutation = undefined;
             await state.save();
 
+            const lastDraw = {
+                step: 10,
+                value: r,
+                band,
+                busted: false,
+                letter: "Z",
+                letterResults: { Z: r },
+            };
+            if (lastDrawKind) {
+                lastDraw.kind = lastDrawKind;
+            }
+
             return sendUserResponse(res, "", user, {
                 alphaTree: formatState(state.toObject()),
-                lastDraw: {
-                    step: 10,
-                    value: r,
-                    kind: "fixed_z",
-                    band: "fixed",
-                    busted: false,
-                    letter: "Z",
-                    letterResults: { Z: r },
-                },
+                lastDraw,
             });
         }
 
-        // Steps 2–9: each letter gets one of {bust, (0.1,1), (1,max)} — random permutation per step
-        let perm = state.bandPermutation;
-        if (!perm || perm.length !== 3) {
-            perm = randomBandPermutation(settings);
-            state.bandPermutation = perm;
-        }
+        // Steps 2–9: full permutation of bands on the three letters; bias P(chosen → high) from settings
         const mode = normalizeAlphaTreeMode(user.alphaTreeMode);
-        let band = perm[letterIndex];
-        if (mode === 0 && band === "zero" && Math.random() < EASY_BUST_REROLL_CHANCE) {
-            perm = randomBandPermutation(settings);
-            state.bandPermutation = perm;
-            band = perm[letterIndex];
+        const pHighChosen = getChosenLetterHighProbability(settings);
+        let bandMap = assignBandsForThreeLetters(letter, allowed, pHighChosen);
+        if (
+            mode === 0 &&
+            bandMap[letter] === "zero" &&
+            Math.random() < EASY_BUST_REROLL_CHANCE
+        ) {
+            bandMap = assignBandsForThreeLetters(letter, allowed, pHighChosen);
         }
 
-        /** All three outcomes this step (same permutation; independent draws per band). */
         const letterResults = {};
-        for (let i = 0; i < 3; i++) {
-            const b = perm[i];
-            letterResults[allowed[i]] =
+        for (const L of allowed) {
+            const b = bandMap[L];
+            letterResults[L] =
                 Math.round(drawForBand(stepIndex, b, mode) * 1e8) / 1e8;
         }
-
+        const band = bandMap[letter];
         const r = letterResults[letter];
 
         if (r <= EPS) {
-            const lostBet = state.betAmount;
-            const viewUserId = req.user?.userId || userId;
-
-            await AlphaTreeState.deleteOne({ userId });
-
-            user.alphaTreeHistory = user.alphaTreeHistory || [];
-            user.alphaTreeHistory.push({
-                betAmount: lostBet,
-                totalMultiplier: 0,
-                profit: 0,
-                busted: true,
-                createAt: new Date(),
-            });
-
-            updateAlphaTreeModeByTotalProfit(user);
-
-            await AlphaTreeView.create({
-                userId: viewUserId,
-                bet: lostBet,
-                win: 0,
-                result: 0,
-                isUser: Number(req.user?.partnerLevel) > 0 ? 1 : 0,
-            });
-
-            await user.save();
-
-            setTimeout(() => {
-                broadcastAlphaTreeView(req);
-            }, 3000);
-
-            return sendUserResponse(res, "", user, {
-                alphaTree: null,
-                lastDraw: {
-                    step: stepIndex,
-                    value: r,
-                    band: "zero",
-                    busted: true,
-                    lostBet,
-                    letter,
-                    letterResults,
-                },
+            return finishAlphaTreeBust(req, res, user, userId, state, {
+                step: stepIndex,
+                value: r,
+                band: "zero",
+                letter,
+                letterResults,
             });
         }
 
         state.cumulativeMultiplier = round2(state.cumulativeMultiplier * r);
         state.step = stepIndex + 1;
-        if (state.step >= 2 && state.step <= 9) {
-            state.bandPermutation = randomBandPermutation(settings);
-        } else {
-            state.bandPermutation = undefined;
-        }
+        state.bandPermutation = undefined;
 
         await state.save();
 
@@ -529,6 +637,12 @@ export const getState = async (req, res) => {
             baseMultiplier: round2(BASE_MULTIPLIER),
             settings: {
                 highBandRate: Number(settings.highBandRate),
+                ...(settings.chosenLetterHighRate !== undefined && {
+                    chosenLetterHighRate: Number(settings.chosenLetterHighRate),
+                }),
+                ...(settings.zButtonHighRate !== undefined && {
+                    zButtonHighRate: Number(settings.zButtonHighRate),
+                }),
             },
         });
     } catch (error) {

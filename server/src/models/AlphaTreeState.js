@@ -21,8 +21,7 @@ const AlphaTreeStateSchema = new mongoose.Schema(
         },
         active: { type: Boolean, default: true },
         /**
-         * Steps 2–9 only: random permutation of zero | mid | high, same order as
-         * ALPHA_TREE_STEP_LETTERS[step − 1] (e.g. [B,C,D] ↔ which letter gets bust / (0.1,1) / (1,max)).
+         * Legacy: unused. Outcomes for steps 2–9 are drawn only when the user picks a letter.
          */
         bandPermutation: {
             type: [String],

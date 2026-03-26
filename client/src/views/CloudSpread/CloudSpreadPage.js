@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Button, Grid, GridItem, HStack, Input, Text, VStack, useBreakpointValue } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -46,11 +46,18 @@ export default function CloudSpreadPage() {
   const roundIdRef = useRef(null);
   /** True while placing bet + ball flying — disables Play to prevent double bets. */
   const [playBusy, setPlayBusy] = useState(false);
+  /** True while cashing out — disables Cash Out to prevent double clicks. */
+  const [cashOutBusy, setCashOutBusy] = useState(false);
   const playBusyTimerRef = useRef(null);
   const { liveRows: liveFeedRows, isInitialLoading: isLiveFeedLoading } = useAblyCloudSpreadLive();
   const [showCashOutFireworks, setShowCashOutFireworks] = useState(false);
   const [cashOutFireworksAmount, setCashOutFireworksAmount] = useState("0.00");
   const cashOutFireworksTimeoutRef = useRef(null);
+  /** x0.00 after ball lands: "BANG" + shake overlay */
+  const [zeroBangActive, setZeroBangActive] = useState(false);
+  const zeroBangTimeoutRef = useRef(null);
+  /** Hide ball only after it lands on x0.00 (canvas calls onZeroMultiplierLand) */
+  const [hideBallAfterZero, setHideBallAfterZero] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -98,6 +105,10 @@ export default function CloudSpreadPage() {
         clearTimeout(cashOutFireworksTimeoutRef.current);
         cashOutFireworksTimeoutRef.current = null;
       }
+      if (zeroBangTimeoutRef.current) {
+        clearTimeout(zeroBangTimeoutRef.current);
+        zeroBangTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -106,6 +117,7 @@ export default function CloudSpreadPage() {
     if (rid == null) return;
     if (roundIdRef.current !== null && String(rid) !== String(roundIdRef.current)) {
       setSelectedCloudInfo(null);
+      setHideBallAfterZero(false);
     }
     roundIdRef.current = rid;
   }, [state?.roundId]);
@@ -146,6 +158,16 @@ export default function CloudSpreadPage() {
     return null;
   }, [selectedCloudInfo?.cloud, state?.selectedClouds]);
 
+  const handleZeroMultiplierLand = useCallback(() => {
+    setHideBallAfterZero(true);
+    setZeroBangActive(true);
+    if (zeroBangTimeoutRef.current) clearTimeout(zeroBangTimeoutRef.current);
+    zeroBangTimeoutRef.current = setTimeout(() => {
+      setZeroBangActive(false);
+      zeroBangTimeoutRef.current = null;
+    }, 1400);
+  }, []);
+
   const handleBet = async () => {
     if (playBusy) return;
     if (lastWasZeroMultiplier) {
@@ -153,6 +175,7 @@ export default function CloudSpreadPage() {
         const data = await cashOutCloudSpread(dispatch);
         if (data?.state) setState(data.state);
         setSelectedCloudInfo(null);
+        setHideBallAfterZero(false);
         toast.info("New bet is ready.");
       } catch (e) {
         toast.error(e?.response?.data?.message || "Failed to prepare new bet");
@@ -160,6 +183,7 @@ export default function CloudSpreadPage() {
       return;
     }
     setPlayBusy(true);
+    setHideBallAfterZero(false);
     try {
       const res = await placeCloudSpreadBet(
         {
@@ -175,16 +199,24 @@ export default function CloudSpreadPage() {
         rawCloudMult != null && rawCloudMult !== "" && Number.isFinite(Number(rawCloudMult))
           ? Number(rawCloudMult)
           : multiplierForStep(selectedCloudStep);
-      setSelectedCloudInfo({
+
+      const nextSelectedCloudInfo = {
         cloud: selectedCloud,
         step: selectedCloudStep,
         multiplier: selectedCloudMultiplier,
-      });
+      };
+
       try {
         const snap = await getCloudSpreadState();
-        if (snap) setState(snap);
+        if (snap) {
+          // Update both together to avoid multiple heavy renders right as animation starts
+          setState(snap);
+          setSelectedCloudInfo(nextSelectedCloudInfo);
+        } else {
+          setSelectedCloudInfo(nextSelectedCloudInfo);
+        }
       } catch {
-        /* ignore */
+        setSelectedCloudInfo(nextSelectedCloudInfo);
       }
       if (selectedCloudMultiplier === 0) {
         toast.warning(`Cloud #${selectedCloud} — x0.00. Play again!`);
@@ -207,10 +239,14 @@ export default function CloudSpreadPage() {
   };
 
   const handleCashOut = async () => {
+    if (cashOutBusy) return;
     const previewWin = Number(state?.cashOutPayoutPreview ?? 0);
+    setCashOutBusy(true);
     try {
       const data = await cashOutCloudSpread(dispatch);
       if (data?.state) setState(data.state);
+      setSelectedCloudInfo(null);
+      setHideBallAfterZero(false);
       if (data?.alreadySettled) {
         toast.info(data?.message || "Round already ended");
       } else {
@@ -232,6 +268,8 @@ export default function CloudSpreadPage() {
       }
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to cash out");
+    } finally {
+      setCashOutBusy(false);
     }
   };
 
@@ -256,13 +294,14 @@ export default function CloudSpreadPage() {
         maxW="100%"
         alignItems="stretch"
       >
-        <GridItem area="board" minW={0} maxW="100%">
+        <GridItem area="board" minW={0} maxW="100%" display="flex" flexDirection="column">
           <Card
+            h="100%"
             p={{ base: "14px", md: "18px" }}
             maxW="100%"
             border={S.panelBorder}
             borderRadius={S.radius}
-            boxShadow="0 8px 32px rgba(0,0,0,0.45)"
+            boxShadow="none"
           >
             <CardBody flexDirection="column" alignItems="stretch">
               <VStack align="start" spacing="3" mb="12px">
@@ -292,7 +331,26 @@ export default function CloudSpreadPage() {
                 borderRadius={S.radius}
                 overflow="hidden"
                 lineHeight={0}
+                position="relative"
               >
+                <style>{`
+                  @keyframes cloud-spread-zero-shake {
+                    0%, 100% { transform: translate(0, 0); }
+                    12% { transform: translate(-8px, 3px); }
+                    24% { transform: translate(8px, -3px); }
+                    36% { transform: translate(-6px, -2px); }
+                    48% { transform: translate(6px, 2px); }
+                    60% { transform: translate(-4px, 1px); }
+                    72% { transform: translate(4px, -1px); }
+                    84% { transform: translate(-2px, 0); }
+                  }
+                  @keyframes cloud-spread-bang-pop {
+                    0% { transform: translate(-50%, -50%) scale(0.35); opacity: 0; }
+                    18% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+                    55% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                    100% { transform: translate(-50%, -50%) scale(1.12); opacity: 0; }
+                  }
+                `}</style>
                 {isCloudsLoading ? (
                   <HStack
                     h={`${canvasHeight}px`}
@@ -307,15 +365,44 @@ export default function CloudSpreadPage() {
                     </Text>
                   </HStack>
                 ) : (
-                  <CloudSpreadCanvas
-                    currentStep={state?.currentStep || 0}
-                    totalSteps={state?.totalSteps || 8}
-                    cloudsPerStep={state?.cloudsPerStep || 10}
-                    selectedCloudIndex={selectedCloudIndexForCanvas}
-                    selectedCloudIndices={state?.selectedClouds || []}
-                    cloudMultipliers={state?.cloudMultipliers || []}
-                    height={canvasHeight}
-                  />
+                  <Box
+                    position="relative"
+                    animation={zeroBangActive ? "cloud-spread-zero-shake 0.55s ease-out" : undefined}
+                  >
+                    <CloudSpreadCanvas
+                      currentStep={state?.currentStep || 0}
+                      totalSteps={state?.totalSteps || 8}
+                      cloudsPerStep={state?.cloudsPerStep || 10}
+                      selectedCloudIndex={selectedCloudIndexForCanvas}
+                      selectedCloudIndices={state?.selectedClouds || []}
+                      cloudMultipliers={state?.cloudMultipliers || []}
+                      height={canvasHeight}
+                      hideBall={hideBallAfterZero}
+                      onZeroMultiplierLand={handleZeroMultiplierLand}
+                    />
+                    {zeroBangActive && (
+                      <Text
+                        position="absolute"
+                        left="50%"
+                        top="42%"
+                        transform="translate(-50%, -50%)"
+                        fontSize={{ base: "56px", md: "76px" }}
+                        fontWeight="900"
+                        letterSpacing="0.12em"
+                        color="#ff3b30"
+                        textShadow="0 0 28px rgba(255,59,48,0.85), 0 4px 0 rgba(0,0,0,0.5)"
+                        pointerEvents="none"
+                        zIndex={6}
+                        userSelect="none"
+                        sx={{
+                          animation: "cloud-spread-bang-pop 1.35s ease-out forwards",
+                          fontFamily: "Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif",
+                        }}
+                      >
+                        BANG
+                      </Text>
+                    )}
+                  </Box>
                 )}
               </Box>
 
@@ -447,7 +534,8 @@ export default function CloudSpreadPage() {
                         whiteSpace="nowrap"
                         _hover={{ bg: "#333333", borderColor: S.borderStrong }}
                         onClick={handleCashOut}
-                        isDisabled={!phaseBetting || lastWasZeroMultiplier}
+                        isDisabled={!phaseBetting || lastWasZeroMultiplier || cashOutBusy}
+                        isLoading={cashOutBusy}
                         title={
                           lastWasZeroMultiplier
                             ? "Cash out disabled after x0.00 — play again first"
@@ -486,11 +574,11 @@ export default function CloudSpreadPage() {
           {isLiveFeedLoading ? (
             <Card
               p="14px"
-              h={{ xl: "100%" }}
+              h="100%"
               minH={{ base: "180px", xl: "0" }}
               border={S.panelBorder}
               borderRadius="14px"
-              boxShadow="0 8px 24px rgba(0,0,0,0.35)"
+              boxShadow="none"
               bg="#2b2b2b"
               display="flex"
               alignItems="center"

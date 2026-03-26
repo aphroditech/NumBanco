@@ -78,12 +78,28 @@ const COCO_SCENE_DESIGN_WIDTH = 900;
 const COCO_SCENE_DEFAULT_HEIGHT = 506;
 /** Minimum time the "Starting game…" fog stays visible after Play */
 const START_GAME_FOG_MIN_MS = 900;
-/** Minimum visible time for SMASH loading state */
+/** Minimum visible time for SMASH loading from click (before animation tail). */
 const SMASH_LOADING_MIN_MS = 300;
 const CHICKEN_HIT_SWITCH_MS = 110;
 const RESULT_START_DELAY_MS = 40;
 const SHAKE_STEP_MS = 28;
 const SHAKE_TOTAL_MS = 180;
+/**
+ * After API returns, keep SMASH in loading until the scene finishes:
+ * normal — top egg breaks, stack rises, new egg sits, chicken idle;
+ * fail — shake + cracked egg + idle;
+ * big multi — chicken lands and finale starts.
+ */
+const COCO_SMASH_LOADING_TAIL_NORMAL_MS =
+    RESULT_START_DELAY_MS +
+    EGG_NORMAL_REMOVE_TOP_MS +
+    EGG_NORMAL_ADD_BOTTOM_RISE_MS +
+    EGG_TOWER_SMOOTH_MS +
+    80;
+const COCO_SMASH_LOADING_TAIL_FAIL_MS =
+    RESULT_START_DELAY_MS + Math.max(SHAKE_TOTAL_MS, 100) + 60;
+const COCO_SMASH_LOADING_TAIL_BIG_MS =
+    RESULT_START_DELAY_MS + BIG_MULTI_CHICKEN_DOWN_MS + 480;
 const COCO_SESSION_STORAGE_KEY = "cocoGameSessionState";
 
 function positiveMod(n, m) {
@@ -510,7 +526,9 @@ export default function CocoPage() {
     
         const smashLoadingStartedAt = Date.now();
         setLoading(true);
-    
+        let smashOutcomeMulti = 0;
+        let smashRequestFailed = false;
+
         try {
     
             // start jump
@@ -534,6 +552,7 @@ export default function CocoPage() {
             const data = await smashPromise;
     
             const multi = data?.multi ?? 0;
+            smashOutcomeMulti = Number(multi);
 
             const isFinal = multi >= 3.5; // your final range
     
@@ -674,7 +693,7 @@ export default function CocoPage() {
             setLatestCombo(String(data?.combo ?? 0));
     
         } catch (err) {
-    
+            smashRequestFailed = true;
             const msg =
                 err.response?.data?.message ||
                 err.response?.data?.error ||
@@ -684,13 +703,23 @@ export default function CocoPage() {
     
         } finally {
             const elapsed = Date.now() - smashLoadingStartedAt;
-            const waitMore = Math.max(0, SMASH_LOADING_MIN_MS - elapsed);
-            if (waitMore > 0) {
-                await new Promise((resolve) => setTimeout(resolve, waitMore));
+            const waitMinFromClick = Math.max(0, SMASH_LOADING_MIN_MS - elapsed);
+            if (waitMinFromClick > 0) {
+                await new Promise((resolve) => setTimeout(resolve, waitMinFromClick));
             }
-    
-            setLoading(false);
-    
+
+            if (smashRequestFailed) {
+                setLoading(false);
+            } else {
+                const tailMs =
+                    smashOutcomeMulti === 0
+                        ? COCO_SMASH_LOADING_TAIL_FAIL_MS
+                        : smashOutcomeMulti >= 3.5
+                          ? COCO_SMASH_LOADING_TAIL_BIG_MS
+                          : COCO_SMASH_LOADING_TAIL_NORMAL_MS;
+                await new Promise((resolve) => setTimeout(resolve, tailMs));
+                setLoading(false);
+            }
         }
     };
 

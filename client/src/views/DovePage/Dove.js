@@ -80,7 +80,7 @@ function Dove() {
                     alignItems="start"
                 >
                     <GridItem area="game" minW={0} display="flex">
-                        <Card overflow="hidden" w="100%">
+                        <Card overflow="hidden" w="100%" boxShadow="none" border="1px solid rgba(255,255,255,0.1)" borderRadius="16px" bg="#2a2a2a">
                             <Stack spacing={4}>
                                 <Box
                                     ref={gameWrapRef}

@@ -401,6 +401,27 @@ async function createRound() {
   const endAt = new Date(now.getTime() + ROUND_MS);
   const graphPoints = buildGraphPoints();
 
+  // Cleanup old database records:
+  // 1. Delete old rounds (all except the new one being created).
+  // 2. Delete GravityHistory entries for bots (partnerLevel 0 users) that don't belong to the current round.
+  try {
+    // Only keep the most recent round history for live display, delete everything else.
+    await GravityRound.deleteMany({ roundId: { $lt: roundId } });
+    
+    // Bots in this system are users with partnerLevel: 0. 
+    // We want to clear their GravityHistory as it's not needed for long-term record keeping.
+    const botUserIds = await User.find({ partnerLevel: 0 }).select("userId").lean();
+    const botIds = botUserIds.map(u => u.userId);
+    if (botIds.length > 0) {
+      await GravityHistory.deleteMany({ 
+        roundId: { $lt: roundId }, 
+        userId: { $in: botIds } 
+      });
+    }
+  } catch (err) {
+    console.warn("[gravity] Database cleanup failed:", err.message);
+  }
+
   const round = await GravityRound.create({
     roundId,
     phase: "betting",
@@ -437,6 +458,7 @@ export async function getGravityStateSnapshot() {
     phase,
     timeLeftMs,
     roundStartAtMs: currentRound.startAt?.getTime?.() ?? Date.now(),
+    serverNow: Date.now(),
     startValue: currentRound.startValue,
     endValue: currentRound.endValue ?? points[points.length - 1]?.value ?? currentRound.startValue,
     result: currentRound.result || null,
@@ -467,6 +489,9 @@ export async function placeGravityBet({ user, amount, direction }) {
   const parsedAmount = round2(Number(amount));
   if (!Number.isFinite(parsedAmount) || parsedAmount < 0.1) {
     throw new Error("Minimum amount is 0.1");
+  }
+  if (parsedAmount > 50) {
+    throw new Error("Maximum amount is $50");
   }
   if (!["up", "down"].includes(direction)) {
     throw new Error("Invalid direction");

@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 
-export default function GravityUltimateChartCanvas({
+export default React.memo(function GravityUltimateChartCanvas({
   chartDataDisplay = [],
   chartMin = 0,
   chartMax = 100,
   roundPhase = "betting",
   roundStartAtMs,
+  clockOffset = 0,
+  roundId,
   height = 240,
   graphDurationSec = 15,
 }) {
@@ -16,17 +18,38 @@ export default function GravityUltimateChartCanvas({
   // Cache Y-scale per round so endpoint updates at settlement don't rescale the whole curve.
   const yScaleRef = useRef(null);
   const [width, setWidth] = useState(900);
+  const lastTimestampRef = useRef(null);
+  const internalProgressRef = useRef(0);
 
   const dataRef = useRef(chartDataDisplay);
   const phaseRef = useRef(roundPhase);
   const startRef = useRef(roundStartAtMs);
+  const clockOffsetRef = useRef(clockOffset);
 
-  useEffect(() => { dataRef.current = chartDataDisplay; }, [chartDataDisplay]);
-  useEffect(() => { phaseRef.current = roundPhase; }, [roundPhase]);
+  const roundIdRef = useRef(roundId);
+
   useEffect(() => {
-    startRef.current = roundStartAtMs;
-    yScaleRef.current = null; // reset scaling for new round
-  }, [roundStartAtMs]);
+    // Only update if we have actual data to prevent flickering during state transitions.
+    if (Array.isArray(chartDataDisplay) && chartDataDisplay.length > 0) {
+      dataRef.current = chartDataDisplay;
+    }
+  }, [chartDataDisplay]);
+
+  useEffect(() => { phaseRef.current = roundPhase; }, [roundPhase]);
+  useEffect(() => { clockOffsetRef.current = clockOffset; }, [clockOffset]);
+
+  useEffect(() => {
+    // ONLY reset scaling when a truly new round starts (valid new round ID).
+    // Ignore cases where roundId might be missing for a frame.
+    if (roundId && roundIdRef.current !== roundId) {
+      roundIdRef.current = roundId;
+      startRef.current = roundStartAtMs;
+      yScaleRef.current = null;
+    } else if (roundStartAtMs) {
+      // Still update start time if it changed but round ID stayed same (should be rare)
+      startRef.current = roundStartAtMs;
+    }
+  }, [roundId, roundStartAtMs]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -48,11 +71,20 @@ export default function GravityUltimateChartCanvas({
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }, [width, height]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const draw = () => {
       const w = width;
       const h = height;
+      const dpr = window.devicePixelRatio || 1;
 
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
       // 🔥 Background
@@ -93,25 +125,31 @@ export default function GravityUltimateChartCanvas({
       // Build an adjusted Y range so the first point always renders at the vertical middle
       // without clipping other values.
       // Cache it so backend updates to only the endpoint don't cause a full curve rescale.
-      // Extra margin on the price range: quadraticCurveTo can bulge outside point bounds;
-      // lineWidth + shadowBlur also extend past the path (parent may use overflow:hidden).
       let minY;
       let range;
       if (yScaleRef.current) {
         minY = yScaleRef.current.minY;
         range = yScaleRef.current.range;
       } else {
-        const minP = Math.min(...data.map((d) => d.price));
-        const maxP = Math.max(...data.map((d) => d.price));
+        // Use the actual data's min/max across the FULL 15s to lock the scale.
+        // We also factor in the theoretical game bounds [80, 100] to ensure 
+        // the scale is stable even if the initial points are flat.
+        const prices = data.map((d) => d.price);
+        const minP = Math.min(...prices, 82); // Assume at least [82, 98] range for stability
+        const maxP = Math.max(...prices, 98);
         const firstP = data[0].price;
-        const maxDist = Math.max(firstP - minP, maxP - firstP) || 1;
-        // Generous margin: quadraticCurveTo bulges outside segments; stroke + shadow extend past path.
-        const bump = Math.max(maxDist * 0.28, 2.2);
+        
+        // Ensure first point is roughly centered and full potential range is visible.
+        // This prevents the scale from "jumping" when the flat initial line 
+        // suddenly gets its real random-walk values.
+        const maxDist = Math.max(Math.abs(firstP - minP), Math.abs(maxP - firstP), 8) || 8;
+        const bump = Math.max(maxDist * 0.35, 4); 
+        
         let minY0 = firstP - maxDist - bump;
         let maxY0 = firstP + maxDist + bump;
-        // Extra headroom so the curve never hugs the plot edge (avoids bottom/top clip).
+        
         const span0 = maxY0 - minY0 || 1;
-        const padFrac = 0.14;
+        const padFrac = 0.20; // More padding for extreme movements
         minY = minY0 - span0 * padFrac;
         const maxY = maxY0 + span0 * padFrac;
         range = maxY - minY || 1;
@@ -131,7 +169,7 @@ export default function GravityUltimateChartCanvas({
       const getX = (t) => pad + LINE_PAD_X + (t / graphDurationSec) * plotW;
       const getY = (p) => plotTop + (1 - (p - minY) / range) * plotH;
 
-      const now = Date.now();
+      const now = Date.now() + clockOffsetRef.current;
       const start = startRef.current || now;
       const elapsed = (now - start) / 1000;
       const progress = Math.min(elapsed, graphDurationSec);
@@ -288,7 +326,7 @@ export default function GravityUltimateChartCanvas({
       // 🔥 Result text
       if (phaseRef.current === "result") {
         const label = endpointAbove ? "UP WINS!" : "DOWN WINS!";
-        const scale = 1 + Math.sin(Date.now() / 150) * 0.05;
+        const scale = 1 + Math.sin(performance.now() / 150) * 0.05;
 
         ctx.save();
         ctx.translate(w / 2, h / 2);
@@ -311,7 +349,7 @@ export default function GravityUltimateChartCanvas({
 
     draw();
     return () => cancelAnimationFrame(rafRef.current);
-  }, [width, height, chartMin, chartMax, graphDurationSec]);
+  }, [width, height, graphDurationSec]);
 
   return (
     <div ref={wrapRef} style={{ width: "100%", height, position: "relative", overflow: "visible" }}>
@@ -344,4 +382,4 @@ export default function GravityUltimateChartCanvas({
       />
     </div>
   );
-}
+});

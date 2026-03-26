@@ -24,8 +24,8 @@ import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js
 import { minesBot } from "./services/mines/minesBot.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
-import {miningBot} from "./services/mining/miningBotService.js";
-import {rocketBot} from "./services/rocket/rocketBot.service.js";
+import { miningBot } from "./services/mining/miningBotService.js";
+import { rocketBot } from "./services/rocket/rocketBot.service.js";
 import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
@@ -70,7 +70,7 @@ connectDB()
         //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
 
         // });
-    
+
         ably.connection.once("connected", () => {
             console.log("✅ Ably connected");
             // confirmDepositEngine(ably);
@@ -78,21 +78,21 @@ connectDB()
             // startPartnerDepositCron(ably);
             // startWithdrawApprovalCron(ably);
             // getUserStatusChannel(ably);
-            cardGameBot(ably);
-            diceBot(ably);
-            pumpingBot(ably);
-            jokerCrashBot(ably);
+            // cardGameBot(ably);
+            // diceBot(ably);
+            // pumpingBot(ably);
+            // jokerCrashBot(ably);
             // rubicBot(ably);
             // miningBot(ably);
             // minesBot(ably);
             // rocketBot(ably);
             // aToZBot(ably);
             // fishingBot(ably);
-            // startGravityGameLoop(ably);
-            // setCloudSpreadAbly(ably);
-            // cloudSpreadBot().catch((err) => {
-            //     console.error("[cloud-spread] bot failed to start:", err);
-            // });
+            startGravityGameLoop(ably);
+            setCloudSpreadAbly(ably);
+            cloudSpreadBot().catch((err) => {
+                console.error("[cloud-spread] bot failed to start:", err);
+            });
             // cocoBot(ably);
             // alphaTreeBot(ably);
             // doveBot(ably);
@@ -129,4 +129,4 @@ connectDB()
         console.error("❌ Failed to start server (MongoDB or startup error):", err?.message || err);
         console.error("Check MONGO_URI in .env and that MongoDB is running.");
         process.exit(1);
-});
+    });

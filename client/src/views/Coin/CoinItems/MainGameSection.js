@@ -1,12 +1,14 @@
 import React, { useRef, useState, useCallback } from 'react';
 import Card from 'components/Card/Card.js';
-import { VStack, Text, Box, HStack, Image, Button, Flex, Input, IconButton } from '@chakra-ui/react';
+import { VStack, Text, Box, HStack, Image, Button, Flex, Input, IconButton, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 
 import CoinHeadImage from 'assets/img/Coin/head.png';
 import CoinTailImage from 'assets/img/Coin/tail.png';
+import backgroundImage from "assets/img/Coin/background.jpg";
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const MotionImage = motion(Image);
 const MotionBox = motion(Box);
@@ -43,6 +45,8 @@ export default function MainGameSection() {
     const [betAmount, setBetAmount] = useState(0.5);
     const [betFocused, setBetFocused] = useState(false);
     const [betDraft, setBetDraft] = useState('');
+
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
     const clampBet = useCallback((n) => {
         const v = Number(n);
@@ -88,12 +92,28 @@ export default function MainGameSection() {
             h="100%"
             display="flex"
             flexDirection="column"
-            bg="#03070f"
+            // bg="#03070f"
             border="1px solid rgba(0, 212, 255, 0.2)"
+            // backgroundImage={`url(${backgroundImage})`}
+            // backgroundSize="cover"
+            // backgroundPosition="center"
+            // backgroundRepeat="no-repeat"
             overflow="hidden"
         >
             <VStack align="stretch" spacing={0} h="100%">
                 <Box flex="1" minH="0" position="relative" py={{ base: 6, md: 8 }}>
+                    <IconButton
+                        aria-label="Help"
+                        position="absolute"
+                        top="5px"
+                        right="5px"
+                        icon={<HelpOutlineIcon style={{ fontSize: 22 }} />}
+                        size="sm"
+                        variant="ghost"
+                        color="#00d4ff"
+                        _hover={{ bg: 'rgba(255,255,255,0.08)', color: '#00D4FF' }}
+                        onClick={() => setIsHelpModalOpen(true)}
+                    />
                     <VStack spacing={{ base: 6, md: 10 }} h="100%" justify="space-between">
                         <HStack spacing={2}>
                             {['#13d8ff', '#13d8ff', '#13d8ff', '#ff3f76', '#13d8ff'].map((c, i) => (
@@ -149,7 +169,7 @@ export default function MainGameSection() {
                                         scale: [1, 0.98, 0.95, 0.98, 1],
                                         opacity: [1, 1, 1, 1, 0.7, 0],
                                     }}
-                                    transition={{ duration: 0.85, ease: 'easeInOut', times: [0, 0.18, 0.32, 0.5, 0.7, 1] }}
+                                    transition={{ duration: 1.2, ease: 'easeInOut', times: [0, 0.18, 0.32, 0.5, 0.7, 1] }}
                                     onAnimationComplete={() => {
                                         setCoinFace(pendingFaceRef.current);
                                         setIsTossing(false);
@@ -328,8 +348,8 @@ export default function MainGameSection() {
                                             }
                                             bg={
                                                 active
-                                                    ? 'linear-gradient(180deg, rgba(15,56,66,0.85) 0%, rgba(8,32,42,0.95) 100%)'
-                                                    : 'rgba(3, 8, 16, 0.75)'
+                                                    ? 'linear-gradient(180deg, rgba(15,56,66) 0%, rgba(8,32,42) 100%)'
+                                                    : 'rgba(3, 8, 16)'
                                             }
                                             boxShadow={
                                                 active
@@ -412,6 +432,40 @@ export default function MainGameSection() {
                     </VStack>
                 </Box>
             </VStack>
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+                <ModalOverlay bg="blackAlpha.700" />
+                <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
+                    <ModalHeader
+                        color="white"
+                        display="flex"
+                        alignItems="center"
+                    >
+                         How to Play Coin Flip
+                    </ModalHeader>
+
+                    <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
+
+                    <ModalBody py={4}>
+                        <VStack align="start" spacing={4} color="gray.200" fontSize="sm">
+
+                            <Box>
+                                <Text fontWeight="bold" color="#00D4FF" mb={2}>
+                                     Step into the action and test your luck in Coin Flip!
+                                </Text>
+                                <Text mb={1}>
+                                     -The coin will be tossed and the result will be displayed.
+                                </Text>
+                                <Text mb={1}>
+                                     -You can choose to bet on HEADS or TAILS.
+                                </Text>
+                                <Text mb={1}>
+                                     -if your choice is correct, earn 1.95× your bet instantly.
+                                </Text>
+                            </Box>
+                        </VStack>
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
         </Card>
     );
 }   
