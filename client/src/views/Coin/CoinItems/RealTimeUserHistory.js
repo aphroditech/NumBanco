@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Text, VStack, Flex, Avatar, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react';
 import Card from 'components/Card/Card.js';
 import { useAblyCoinFlipResult } from 'hooks/useAblyCoinFlipResult';
 import wolfnoavilable from 'assets/img/wolfnoavilable.png';
 import { getCoinFlipResults } from 'action/CoinActions';
 import { useHistory } from 'react-router-dom';
+import Loading from 'components/Loading/Loading';
 
 function fmtMoney(n) {
     const v = Number(n);
@@ -15,13 +16,19 @@ function fmtMoney(n) {
 export default function RealTimeUserHistory() {
     const { coinFlipResults, setCoinFlipResults } = useAblyCoinFlipResult();
     const history = useHistory();
+    const [isLoading, setIsLoading] = useState(true);
     useEffect(() => {
         (async () => {
             const results = await getCoinFlipResults(history);
             setCoinFlipResults(results || []);
+            setIsLoading(false);
         })();
     }, [history]);
 
+
+    if (isLoading) {
+        return <Loading />;
+    }
 
     return (
         <Card

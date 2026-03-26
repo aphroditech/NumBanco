@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 
-import CoinHeadImage from 'assets/img/Coin/head.png';
-import CoinTailImage from 'assets/img/Coin/tail.png';
-import backgroundImage from 'assets/img/Coin/background.jpg';
+const CoinHeadImage = '/img/Coin/head.png';
+const CoinTailImage = '/img/Coin/tail.png';
+const backgroundImage = '/img/Coin/background.jpg';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { useHistory } from 'react-router-dom';
 import { coinBet, coinSpinComplete, getCoinHistory } from 'action/CoinActions';

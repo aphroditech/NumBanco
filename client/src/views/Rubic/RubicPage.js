@@ -878,7 +878,7 @@ export default function RubicPage() {
                             )}
                         </AnimatePresence>
 
-                        <VStack position={'absolute'} bottom="42px" spacing="24px" align="center">
+                        <VStack position={'absolute'} zIndex={300} bottom="42px" spacing="24px" align="center">
                                     {/* Payout section (bc.game style) */}
                             {(() => {
                                 const payout = getPayoutInfo(parseInt(target, 10), operator);
