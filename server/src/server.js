@@ -154,7 +154,7 @@ connectDB()
             // startGravityGameLoop(ablyMiningGames);
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);
-            startDoubleGameLoop(ably);
+            startDoubleGameLoop(ablyMiningGames);
 
         });
 
@@ -164,11 +164,11 @@ connectDB()
     ========================================
     */
 
-        fundMergeEngine();
-        tankCheckEngine();
-        getWithdrawWallet();
+        // fundMergeEngine();
+        // tankCheckEngine();
+        // getWithdrawWallet();
 
-        startCronJobs();
+        // startCronJobs();
 
         try {
             await initMoralis();

@@ -362,6 +362,17 @@ const roundTo2 = (n) => {
   return Number.isFinite(num) ? Math.round(num * 100) / 100 : 0;
 };
 
+const buildLocalDoubleNotification = (message, userId) => ({
+  id: Date.now() + Math.floor(Math.random() * 1000),
+  notification: message,
+  status: "success",
+  from: "Double",
+  to: userId || "",
+  gameType: "double",
+  unread: true,
+  createdAt: new Date().toISOString(),
+});
+
 /** Matches server `deterministicPfpPath` — `client/public/avatars/pfp1..pfp15.png`. */
 function doubleLivePfpUrl(userKey) {
   const s = String(userKey || "bot");
@@ -385,6 +396,7 @@ const PHASE_UI_TICK_MS = 50;
 export default function DoublePage() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.user.userInfo) || {};
+  const myUserId = user?.userId;
   const balance = Number(user?.balance ?? 0);
   const amountMax = Math.min(AMOUNT_MAX_CAP, Math.max(AMOUNT_MIN, balance));
   const defer = (fn) => setTimeout(fn, 0);
@@ -407,6 +419,7 @@ export default function DoublePage() {
   const historyRequestRef = useRef(null);
   const lastHistoryFetchAtRef = useRef(0);
   const lastResultRoundIdRef = useRef(null);
+  const lastWinFxRoundIdRef = useRef(null);
   const lastSyncRoundIdRef = useRef(null);
   const recentOwnBetIdsRef = useRef(new Map());
   const lastAnimatedRoundRef = useRef(null);
@@ -566,10 +579,19 @@ export default function DoublePage() {
             : null;
           const winAmt = row ? Number(row.winAmount) : 0;
           if (winAmt > 0) {
+            // One win toast/notification/fireworks per round.
+            if (String(lastWinFxRoundIdRef.current) === String(data.roundId)) return next;
+            lastWinFxRoundIdRef.current = data.roundId;
             defer(() => {
               if (!mounted) return;
               setWinFireworksAmount(roundTo2(winAmt).toFixed(2));
               setShowWinFireworks(true);
+              const winMsg = `You won $${roundTo2(winAmt).toFixed(2)} on Double round ${data.roundId}`;
+              toast.success(winMsg);
+              dispatch({
+                type: "SET_NOTIFICATION",
+                payload: buildLocalDoubleNotification(winMsg, myUserId),
+              });
               if (winFireworksTimeoutRef.current) clearTimeout(winFireworksTimeoutRef.current);
               winFireworksTimeoutRef.current = setTimeout(() => {
                 setShowWinFireworks(false);
@@ -786,6 +808,12 @@ export default function DoublePage() {
         setLiveRows((prev) => dedupeLiveRows([optimisticRow, ...(Array.isArray(prev) ? prev : [])]));
         if (betId) recentOwnBetIdsRef.current.set(String(betId), Date.now());
         setMyHistory((prev) => prependMyDoubleBetRow(prev, res));
+        const betMsg = `You bet $${roundTo2(res?.betAmount ?? amount).toFixed(2)} on ${String(side).toUpperCase()} in Double round ${res?.roundId ?? state?.roundId ?? ""}`;
+        toast.success("Bet placed.");
+        dispatch({
+          type: "SET_NOTIFICATION",
+          payload: buildLocalDoubleNotification(betMsg, myUserId),
+        });
       });
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to place bet");
