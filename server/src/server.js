@@ -133,7 +133,7 @@ connectDB()
             coinFlipBot(ablyDiceGames);
             // cardGameBot(ablyDiceGames);
             // aToZBot(ablyDiceGames);
-            twistBot(ablyDiceGames);
+            // twistBot(ablyDiceGames);
         });
 
         /*
