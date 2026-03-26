@@ -112,7 +112,7 @@ connectDB()
 
             console.log("🎯 Crash Games Ably connected");
 
-            // rocketBot(ablyCrashGames);
+            rocketBot(ablyCrashGames);
             // jokerCrashBot(ablyCrashGames);
             // pumpingBot(ablyCrashGames);
 

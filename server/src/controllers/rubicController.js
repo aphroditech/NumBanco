@@ -297,7 +297,7 @@ export const truncateToTwo = (num) => {
 
 export const getUserRubicHistory = async (req, res) => {
     try {
-        const rubicHistory = await RubicResult.find({}).sort({ createAt: -1 }).limit(12);
+        const rubicHistory = await RubicResult.find({}).sort({ createAt: -1 }).limit(10);
         return res.status(200).json(rubicHistory);
     } catch (error) {
         console.error(error);

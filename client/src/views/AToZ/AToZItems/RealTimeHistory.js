@@ -33,7 +33,7 @@ function RealTimeHistory() {
         return <Loading />;
     }
 
-    const maxRows = 12;
+    const maxRows = 17;
     const rowsToRender = (Array.isArray(aToZResults) ? aToZResults : []).slice(0, maxRows);
 
     return (

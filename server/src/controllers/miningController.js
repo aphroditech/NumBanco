@@ -231,7 +231,7 @@ export const getMiningHistory = async (req, res) => {
 
 export const getMiningResult = async (req, res) => {
     try {
-        const results = await MiningResult.find({}).sort({ date: -1 }).limit(12);
+        const results = await MiningResult.find({}).sort({ date: -1 }).limit(10);
         return res.status(200).json(results);
     }
     catch (error) {
