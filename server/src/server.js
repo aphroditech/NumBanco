@@ -19,6 +19,7 @@ import { initializeDatabase } from "./database/index.js";
 import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
+import { startDoubleGameLoop } from "./services/double/doubleGame.service.js";
 import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSpread/cloudSpreadGame.service.js";
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 import { minesBot } from "./services/mines/minesBot.js";
@@ -29,12 +30,12 @@ import { rocketBot } from "./services/rocket/rocketBot.service.js";
 import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
-import { twistBot } from "./services/twist/twistBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
 import { cardGameBot } from "./services/cardGame/cardGameBot.service.js";
 import { diceBot } from "./services/dice/diceBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
 import { coinFlipBot } from "./services/coinFlip/coinFlipBot.service.js";
+import { twistBot } from "./services/twist/twistBot.service.js";
 
 
 dotenv.config();
@@ -63,9 +64,9 @@ connectDB()
         }
 
         // Cloud Spread game loop (per-user rounds). Live feed uses Ably after `setCloudSpreadAbly` on connect.
-        startCloudSpreadGameLoop().catch((err) => {
-            console.error("[cloud-spread] failed to start game loop:", err);
-        });
+        // startCloudSpreadGameLoop().catch((err) => {
+        //     console.error("[cloud-spread] failed to start game loop:", err);
+        // });
 
         // Load SSL certificates
         // const sslOptions = {
@@ -83,33 +84,6 @@ connectDB()
         // });
 
         ablyCore.connection.once("connected", () => {
-            console.log("✅ Ably connected");
-            // confirmDepositEngine(ablyCore);
-            // tronEngine(ablyCore);
-            // startPartnerDepositCron(ablyCore);
-            // startWithdrawApprovalCron(ablyCore);
-            // getUserStatusChannel(ablyCore);
-            // cardGameBot(ablyCore);
-            // pumpingBot(ablyCore);
-            // jokerCrashBot(ablyCore);
-            // rubicBot(ablyCore);
-            // miningBot(ablyCore);
-            // minesBot(ablyCore);
-            // rocketBot(ablyCore);
-            // aToZBot(ablyCore);
-            // fishingBot(ablyCore);
-            // startGravityGameLoop(ablyCore);
-            // setCloudSpreadAbly(ablyCore);
-            // cloudSpreadBot().catch((err) => {
-            //     console.error("[cloud-spread] bot failed to start:", err);
-            // });
-            // cocoBot(ablyCore);
-            // twistBot(ablyCore);
-            // alphaTreeBot(ablyCore);
-            // doveBot(ablyCore);
-            // fundMergeEngine();
-            // tankCheckEngine();
-            // getWithdrawWallet();
 
             console.log("✅ Core Ably connected");
 
@@ -159,7 +133,7 @@ connectDB()
             coinFlipBot(ablyDiceGames);
             // cardGameBot(ablyDiceGames);
             // aToZBot(ablyDiceGames);
-
+            twistBot(ablyDiceGames);
         });
 
         /*
@@ -181,6 +155,7 @@ connectDB()
             // startGravityGameLoop(ablyMiningGames);
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);
+            startDoubleGameLoop(ablyMiningGames);
 
         });
 
@@ -190,11 +165,11 @@ connectDB()
     ========================================
     */
 
-        fundMergeEngine();
-        tankCheckEngine();
-        getWithdrawWallet();
+        // fundMergeEngine();
+        // tankCheckEngine();
+        // getWithdrawWallet();
 
-        startCronJobs();
+        // startCronJobs();
 
         try {
             await initMoralis();
