@@ -17,6 +17,9 @@ const initialState = {
         alphaTreeUsers: 0,
         onlineUsers: 0,
         aToZUsers: 0,
+        twistUsers: 0,
+        jokerCrashUsers: 0,
+        cardGameUsers: 0,
         totalActiveUsers: 0
     },
     lootAvailable: false,

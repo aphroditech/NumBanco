@@ -18,13 +18,13 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import sky from 'assets/img/Coco/sky.png';
-import egg from 'assets/img/Coco/egg.png';
-import chicken from 'assets/img/Coco/chicken.png';
-import chickenHit from 'assets/img/Coco/chicken_hit.png';
-import chickenStand from 'assets/img/Coco/chicken_stand.png';
-import eggBreak from 'assets/img/Coco/broken_egg.png';
-import eggCrack from 'assets/img/Coco/cracked_egg.png';
+const sky = '/coco/sky.png';
+const egg = '/coco/egg.png';
+const chicken = '/coco/chicken.png';
+const chickenHit = '/coco/chicken_hit.png';
+const chickenStand = '/coco/chicken_stand.png';
+const eggBreak = '/coco/broken_egg.png';
+const eggCrack = '/coco/cracked_egg.png';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { cocoSmash, cocoRestart } from 'action/CocoActions';
 import { onlineUser, offlineUser } from 'action/BetActions';
@@ -32,64 +32,37 @@ import { getUserData } from 'action';
 import CocoRealView from './CocoItem/CocoRealView';
 import CocoBetHistory from './CocoItem/BetHistory';
 import PaidIcon from "@mui/icons-material/Paid";
-import cloud from 'assets/img/Coco/cloud.png';
-import sky1 from 'assets/img/Coco/sky1.png';
+const cloud = '/coco/cloud.png';
+const sky1 = '/coco/sky1.png';
 
-/** Chicken stays here except short jump on smash */
 const CHICKEN_BOTTOM_IDLE = 260;
-/** One vertical slot for eggs (width 100, overlap -16 between rows) */
 const EGG_SLOT_LIFT_PX = 48;
-/** How far clouds move up each normal break (can differ from egg slot) */
 const CLOUD_RISE_PER_BREAK_PX = 48;
 const EGG_TOWER_COUNT = 7;  
-/** egg1 breaks → remove egg1, egg2–egg7 rise (gap at old egg7 spot) → new egg fills bottom */
 const EGG_NORMAL_REMOVE_TOP_MS = 260;
-/** Pause so empty bottom slot is visible before new egg7 appears */
 const EGG_NORMAL_ADD_BOTTOM_RISE_MS = 110;
-/** Big multi (final): chicken lands here; eggs all break then cleared */
 const CHICKEN_LAND_BOTTOM = 22;
 const BIG_MULTI_BREAK_EACH_MS = 90;
 const BIG_MULTI_CLEAR_EGGS_MS = BIG_MULTI_BREAK_EACH_MS * EGG_TOWER_COUNT + 120;
 const BIG_MULTI_CHICKEN_DOWN_MS = 620;
-/**
- * One vertical loop (px). Taller than typical sky so each cycle has empty sky on top
- * and clouds only in the lower band — recycled clouds enter from bottom and rise.
- */
 const CLOUD_LOOP_PX = 520;
-/** Bottom of sky: clouds fade in while rising (emerge from land). Stops = opaque → soft → clear */
 const CLOUD_LAND_MASK =
     'linear-gradient(to bottom, #000 0%, #000 70%, rgba(0,0,0,0.35) 84%, transparent 100%)';
-/** Smooth motion for egg gap + cloud scroll */
 const EGG_TOWER_SMOOTH_MS = 120;
 const CLOUD_SCROLL_SMOOTH_MS = 260;
-/**
- * `top` is offset from each band’s start (0, CLOUD_LOOP_PX, …).
- * Keep values in the lower ~35% of the band so repeats rise from below, not mid-sky.
- */
 const CLOUD_SLOTS = [
     { left: '6%', top: 300, w: 88, opacity: 0.92 },
     { left: '42%', top: 355, w: 110, opacity: 0.88 },
     { left: '74%', top: 318, w: 76, opacity: 0.9 },
 ];
-
-/** All in-scene pixel positions/sizes are authored for this width; scene scales to fit container */
 const COCO_SCENE_DESIGN_WIDTH = 900;
-/** Fallback height until sky.png reports natural dimensions */
 const COCO_SCENE_DEFAULT_HEIGHT = 506;
-/** Minimum time the "Starting game…" fog stays visible after Play */
 const START_GAME_FOG_MIN_MS = 900;
-/** Minimum visible time for SMASH loading from click (before animation tail). */
 const SMASH_LOADING_MIN_MS = 300;
 const CHICKEN_HIT_SWITCH_MS = 110;
 const RESULT_START_DELAY_MS = 40;
 const SHAKE_STEP_MS = 28;
 const SHAKE_TOTAL_MS = 180;
-/**
- * After API returns, keep SMASH in loading until the scene finishes:
- * normal — top egg breaks, stack rises, new egg sits, chicken idle;
- * fail — shake + cracked egg + idle;
- * big multi — chicken lands and finale starts.
- */
 const COCO_SMASH_LOADING_TAIL_NORMAL_MS =
     RESULT_START_DELAY_MS +
     EGG_NORMAL_REMOVE_TOP_MS +
@@ -159,23 +132,15 @@ export default function CocoPage() {
 
     const [animState, setAnimState] = useState("idle");
     const [eggs, setEggs] = useState(() => Array(EGG_TOWER_COUNT).fill("normal"));
-    /** Stable keys so shift+push (recycle tower) doesn’t reuse wrong egg DOM */
     const eggKeySeqRef = useRef(EGG_TOWER_COUNT);
     const [eggRowKeys, setEggRowKeys] = useState(() =>
         Array.from({ length: EGG_TOWER_COUNT }, (_, i) => i)
     );
     const [towerOffset, setTowerOffset] = useState(0);
-    /** Clouds only: loops in sky layer */
     const [sceneRisePx, setSceneRisePx] = useState(0);
-    /**
-     * Legacy translate lift (big multi / edge cases). Normal hits use bottom gap instead.
-     */
     const [eggStackLiftPx, setEggStackLiftPx] = useState(0);
-    /** Empty slot height (px) under egg7 before new egg is pushed — keeps egg7 screen position */
     const [eggBottomGapPx, setEggBottomGapPx] = useState(0);
-    /** When true: padding-bottom snaps (no tween) so closing gap + new egg doesn’t move tower again */
     const [eggGapCloseInstant, setEggGapCloseInstant] = useState(false);
-    /** Cloud loop wrap: disable transform transition for one frame (avoid wrong tween across mod) */
     const [cloudInstantMove, setCloudInstantMove] = useState(false);
     const prevSceneRiseRef = useRef(0);
     const [shakeX, setShakeX] = useState(0);
@@ -233,15 +198,12 @@ export default function CocoPage() {
     const [latestWin, setLatestWin] = useState('0.00');
     const [latestMulti, setLatestMulti] = useState('0.00');
     const [latestCombo, setLatestCombo] = useState('0');
-    const [loading, setLoading] = useState(false);
-    /** Until true, SMASH is disabled — user must press Play game first (resets each visit). */
     const [gameSessionActive, setGameSessionActive] = useState(false);
-    /** Fog overlay while starting a round (after Play, before SMASH unlocks). */
+    const [loading, setLoading] = useState(false);
     const [startGameFogOn, setStartGameFogOn] = useState(false);
     const [playLoading, setPlayLoading] = useState(false);
     const [stopLoading, setStopLoading] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-    /** Same as Rocket Shot: stacked below 1800px, side‑by‑side at 1800px+ */
     const [isNarrowLayout] = useMediaQuery('(max-width: 1799px)');
     const sceneMeasureRef = useRef(null);
     const skyImgRef = useRef(null);
@@ -296,7 +258,6 @@ export default function CocoPage() {
         animState === "finalDown" ||
         animState === "finalStand" ||
         animState === "showMulti";
-    /** Big-multi finale: no SMASH until round ends and Play is used again. */
     const isBigMultiFinale =
         animState === "finalDown" ||
         animState === "finalStand" ||
@@ -339,12 +300,12 @@ export default function CocoPage() {
             setShakeX(i % 2 === 0 ? -6 : 6);
             i++;
     
-        }, SHAKE_STEP_MS); // speed of shake
+        }, SHAKE_STEP_MS);
     
         const timeoutId = setTimeout(() => {
             clearInterval(id);
             setShakeX(0);
-        }, SHAKE_TOTAL_MS); // duration of shake
+        }, SHAKE_TOTAL_MS);
     
         return () => {
             clearInterval(id);
@@ -531,24 +492,20 @@ export default function CocoPage() {
 
         try {
     
-            // start jump
             setAnimState("jump");
             setChickenBottom(CHICKEN_BOTTOM_IDLE + 80);
             
-            // call API at same time (important)
             const smashPromise = cocoSmash(
                 { betAmount },
                 dispatch,
                 history
             );
     
-            // go to hit quickly
             registerAnimTimeout(() => {
                 setAnimState("hit");
                 setChickenBottom(CHICKEN_BOTTOM_IDLE);
             }, CHICKEN_HIT_SWITCH_MS);
     
-            // wait result
             const data = await smashPromise;
     
             const multi = data?.multi ?? 0;
@@ -556,7 +513,6 @@ export default function CocoPage() {
 
             const isFinal = multi >= 3.5; // your final range
     
-            // start result immediately after hit
             registerAnimTimeout(() => {
     
                 if (multi === 0) {
@@ -579,13 +535,9 @@ export default function CocoPage() {
                 else {
 
                     if (multi >= 3.5) {
-                        // Big multi: chicken descends to land; every egg breaks then tower is cleared
                         setAnimState("finalDown");
-                        // Break eggs one-by-one as chicken moves down.
-                        // This makes it look like the chicken "passes" each egg.
                         setEggs((prev) => prev.map(() => "normal"));
                         let brokenCount = 0;
-                        // Start breaking right when chicken starts its descent.
                         registerAnimTimeout(() => {
                             const breakTimer = registerAnimInterval(() => {
                                 brokenCount += 1;
@@ -634,8 +586,6 @@ export default function CocoPage() {
                         }, BIG_MULTI_CHICKEN_DOWN_MS + 1200);
                     } else {
                 
-                        // normal hit
-                
                         setAnimState("break");
                 
                         setEggs((prev) => {
@@ -647,8 +597,6 @@ export default function CocoPage() {
                         registerAnimTimeout(() => {
                             setAnimState("remove");
                         }, 120);
-
-                        // 1) egg1 gone → egg2..egg7 rise (smooth gap open); tower stays there after this.
                         registerAnimTimeout(() => {
                             setEggGapCloseInstant(false);
                             setAnimState("idle");
@@ -668,7 +616,6 @@ export default function CocoPage() {
                             );
                         }, EGG_NORMAL_REMOVE_TOP_MS);
 
-                        // 2) New egg under egg7; snap gap shut (no padding animation) so e2–e7 don’t shift again.
                         registerAnimTimeout(() => {
                             setEggGapCloseInstant(true);
                             setEggs((prev) => [...prev, "normal"]);
@@ -723,7 +670,6 @@ export default function CocoPage() {
         }
     };
 
-    /** End round on server, reset scene, show end fog (big-multi auto-end or Stop). */
     const endRoundWithFog = async (successMessage) => {
         restartCalledRef.current = false;
         if (restartCoverOn) return;
@@ -782,8 +728,6 @@ export default function CocoPage() {
             handlePlayGame();
         }
     };
-
-    /** Single Play ↔ Stop control: disabled rules depend on current mode */
     const playStopDisabled = gameSessionActive
         ? Boolean(
               loading ||
@@ -803,7 +747,6 @@ export default function CocoPage() {
 
     return (
         <Box minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
-            {/* Same inset + grid behavior as Rocket Shot (game | realView) */}
             <Box px={{ base: '16px', md: '24px' }} w="100%" maxW="100%">
                 <Grid
                     templateAreas={
@@ -869,7 +812,6 @@ export default function CocoPage() {
                                             }
                                         `}
                                     </style>
-                                    {/* Start-game fog (after Play, before SMASH unlocks) */}
                                     <Box
                                         position="absolute"
                                         top={0}
@@ -928,7 +870,6 @@ export default function CocoPage() {
                                             Starting game…
                                         </div>
                                     </Box>
-                                    {/* End-of-round fog (after big multi — Play again, SMASH locked) */}
                                     <Box
                                         position="absolute"
                                         top={0}
@@ -969,7 +910,6 @@ export default function CocoPage() {
                                             }}
                                         />
                                     </Box>
-                                    {/* SKY IMAGE (crossfade to sky1 when chicken lands on big multi) */}
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <img
                                             ref={skyImgRef}
@@ -993,8 +933,6 @@ export default function CocoPage() {
                                             }}
                                         />
                                     </div>
-
-                                    {/* Clouds: scroll up with breaks; loop so clouds exit top and re-enter from bottom */}
                                     <div
                                         aria-hidden
                                         style={{
@@ -1047,8 +985,6 @@ export default function CocoPage() {
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* TOP BAR inside sky */}
                                     <div
                                         style={{
                                             position: 'absolute',
@@ -1061,40 +997,6 @@ export default function CocoPage() {
                                             alignItems: 'flex-start',
                                         }}
                                     >
-                                        {/* Profile LEFT */}
-                                        {/* <div
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 8,
-                                                background: '#fff',
-                                                border: '2px solid #000',
-                                                borderRadius: 8,
-                                                padding: '6px 10px',
-                                            }}
-                                        >
-                                            <img
-                                                src={user?.avatar || 'https://via.placeholder.com/40'}
-                                                alt=""
-                                                style={{
-                                                    width: 40,
-                                                    height: 40,
-                                                    borderRadius: '50%',
-                                                    objectFit: 'cover',
-                                                }}
-                                            />
-
-                                            <div>
-                                                <div style={{ fontSize: 12, fontWeight: 'bold' }}>
-                                                    {displayName}
-                                                </div>
-                                                <div style={{ fontSize: 12 }}>
-                                                    🪙 {balance.toLocaleString()}
-                                                </div>
-                                            </div>
-                                        </div> */}
-
-                                        {/* Help + Menu RIGHT */}
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             <IconButton
                                                 aria-label="Help"
@@ -1218,8 +1120,6 @@ export default function CocoPage() {
                                             {latestCombo}
                                         </div>
                                     </div>
-
-                                    {/* Eggs tower */}
                                     <div
                                         style={{
                                             position: "absolute",
@@ -1279,8 +1179,6 @@ export default function CocoPage() {
                                             })
                                         }
                                     </div>
-
-                                    {/* Chicken */}
                                     <img
                                         src={getChickenImg()}
                                         style={{
@@ -1300,8 +1198,6 @@ export default function CocoPage() {
                                             transform: "translateX(-50%)",
                                         }}
                                     />
-
-                                    {/* Big multi: glow + multiplier while finale plays; "Well done" when chicken has landed */}
                                     {isBigMultiFinale && (
                                         <div
                                             aria-live="polite"
@@ -1401,8 +1297,6 @@ export default function CocoPage() {
                                             </div>
                                         </div>
                                     )}
-
-                                    {/* Bottom controls inside sky image */}
                                     <div
                                         style={{
                                             position: 'absolute',
@@ -1517,7 +1411,6 @@ export default function CocoPage() {
                                             flexWrap="wrap"
                                             justifyContent="center"
                                         >
-                                            {/* Toggles: Play game (green) ↔ Stop (red) */}
                                             <button
                                                 type="button"
                                                 aria-label={
@@ -1606,24 +1499,6 @@ export default function CocoPage() {
                                                 {loading ? '...' : 'SMASH'}
                                             </button>
                                         </Flex>
-
-                                        {/* <button
-                                            onClick={handleRestart}
-                                            disabled={restartCoverOn}
-                                            style={{
-                                                padding: '8px 16px',
-                                                fontSize: 14,
-                                                fontWeight: 'bold',
-                                                color: '#000',
-                                                background: restartCoverOn ? '#ccc' : '#FFD700',
-                                                border: '2px solid #000',
-                                                borderRadius: 10,
-                                                cursor: restartCoverOn ? 'not-allowed' : 'pointer',
-                                                boxShadow: '2px 2px 0 #000',
-                                            }}
-                                        >
-                                            RESTART
-                                        </button> */}
                                     </div>
                                         </div>
                                     </div>
@@ -1651,8 +1526,6 @@ export default function CocoPage() {
                         </Box>
                     </GridItem>
                 </Grid>
-
-                {/* Coco Help Modal */}
                 <Modal
                     isOpen={isHelpModalOpen}
                     onClose={() => setIsHelpModalOpen(false)}

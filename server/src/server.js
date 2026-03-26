@@ -29,6 +29,7 @@ import { rocketBot } from "./services/rocket/rocketBot.service.js";
 import { aToZBot } from "./services/AtoZ/aToZBot.service.js";
 import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
+import { twistBot } from "./services/twist/twistBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
 import { cardGameBot } from "./services/cardGame/cardGameBot.service.js";
 import { diceBot } from "./services/dice/diceBot.service.js";
@@ -81,6 +82,33 @@ connectDB()
         // });
 
         ablyCore.connection.once("connected", () => {
+            console.log("✅ Ably connected");
+            // confirmDepositEngine(ablyCore);
+            // tronEngine(ablyCore);
+            // startPartnerDepositCron(ablyCore);
+            // startWithdrawApprovalCron(ablyCore);
+            // getUserStatusChannel(ablyCore);
+            // cardGameBot(ablyCore);
+            // pumpingBot(ablyCore);
+            // jokerCrashBot(ablyCore);
+            // rubicBot(ablyCore);
+            // miningBot(ablyCore);
+            // minesBot(ablyCore);
+            // rocketBot(ablyCore);
+            // aToZBot(ablyCore);
+            // fishingBot(ablyCore);
+            // startGravityGameLoop(ablyCore);
+            // setCloudSpreadAbly(ablyCore);
+            // cloudSpreadBot().catch((err) => {
+            //     console.error("[cloud-spread] bot failed to start:", err);
+            // });
+            // cocoBot(ablyCore);
+            // twistBot(ablyCore);
+            // alphaTreeBot(ablyCore);
+            // doveBot(ablyCore);
+            // fundMergeEngine();
+            // tankCheckEngine();
+            // getWithdrawWallet();
 
             console.log("✅ Core Ably connected");
 

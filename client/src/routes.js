@@ -65,7 +65,8 @@ import AToZPage from "views/AToZ/AToZ";
 import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-
+import TwistPage from "views/Twist/TwistPage";
+import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 
 import {
   DocumentIcon,
@@ -238,6 +239,14 @@ var dashRoutes = [
     name: "ALPHA TREE",
     icon: <ForestIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: AlphaTreePage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/twist",
+    name: "TWIST",
+    icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwistPage,
     layout: "/game",
   },
   {

@@ -40,6 +40,8 @@ import TrafficIcon from '@mui/icons-material/Traffic';
 import { FaDice } from 'react-icons/fa';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CoinPage from "views/Coin/CoinPage";
+import TwistPage from "views/Twist/TwistPage";
+import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import DicePage from "views/Dice/DicePage";
 
 export const TierA = {
@@ -213,5 +215,13 @@ export const Coin = {
     name: "COIN FLIP",
     icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: CoinPage,
+    layout: "/game",
+}
+
+export const Twist = {
+    path: "/twist",
+    name: "TWIST",
+    icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwistPage,
     layout: "/game",
 }

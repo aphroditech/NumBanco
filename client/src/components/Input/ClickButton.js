@@ -22,8 +22,8 @@ function ClickButton(props) {
             h="46px"
             w={width || "100%"}
             maxW="350px"
-            mt={mt || "18px"}
-            mb={mb || "18px"}
+            mt={mt ?? "18px"}
+            mb={mb ?? "18px"}
             alignSelf="center"
 
             color="#fff"

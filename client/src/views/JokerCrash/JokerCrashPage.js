@@ -41,6 +41,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import { toast } from 'react-toastify';
+import { onlineUser, offlineUser } from 'action/BetActions';
 import WinFireworksEffect from 'components/Effects/WinFireworksEffect';
 import BangBurstEffect from 'components/Effects/BangBurstEffect';
 
@@ -258,6 +259,13 @@ export default function JokerCrashPage() {
     });
     /** Avoid syncing visible card from Redux on every user tick (breaks flip); hydrate once when history is available. */
     const pendingCardHydratedRef = useRef(false);
+
+    useEffect(() => {
+        onlineUser(16);
+        return () => {
+            offlineUser(16);
+        };
+    }, []);
 
     useEffect(() => {
         innerRotateRef.current = innerRotate;
