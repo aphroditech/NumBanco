@@ -47,38 +47,200 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { FaDice } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { diceBet, getDiceView } from 'action/DiceActions';
+import WinFireworksEffect from 'components/Effects/WinFireworksEffect';
+import BangBurstEffect from 'components/Effects/BangBurstEffect';
 
 const MIN_AMOUNT = 0.1;
+/** Must stay in sync with roll animation duration in `DiceCanvas3D` (~3200ms). */
+const DICE_ROLL_ANIM_MS = 3400;
+const AUTO_BET_GAP_MS = 250;
+const WIN_FIREWORKS_MS = 2200;
+const BANG_EFFECT_MS = 1000;
 
 export default function DicePage() {
     const dispatch = useDispatch();
     const history = useHistory();
     const [isLoading, setIsLoading] = useState(true);
     const [lastRoll, setLastRoll] = useState(null);
+    const [isBetting, setIsBetting] = useState(false);
+    /** After a manual BET, keep buttons disabled until the dice animation finishes. */
+    const [isRollCooldown, setIsRollCooldown] = useState(false);
     const [isMultiBetActive, setMultiBetActive] = useState(false);
     /** 1~3, 4~6, even, odd, random = betting options */
     const [targetTop, setTargetTop] = useState(/** @type {string} */ (0));
     const [amount, setAmount] = useState('0.1');
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const diceRef = useRef(null);
-    
+    const isBettingRef = useRef(false);
+    const isAutoBetRef = useRef(false);
+    const rollCooldownTimerRef = useRef(null);
+    const diceFxAnchorRef = useRef(null);
+    /** Set when a bet succeeds and a roll starts; consumed in `onRollComplete`. */
+    const pendingOutcomeRef = useRef(null);
+    const winFxTimeoutRef = useRef(null);
+    const bangFxTimeoutRef = useRef(null);
+
+    const [winFx, setWinFx] = useState({
+        visible: false,
+        totalEarn: '0',
+        anchorRect: null,
+    });
+    const [bangFxVisible, setBangFxVisible] = useState(false);
+
+    const placeBetRef = useRef(
+        /** @returns {Promise<boolean>} */
+        async () => false
+    );
+
     // Mock user balance - in real app this would come from Redux/store
     const balance = 100;
     const maxAmount = Math.max(MIN_AMOUNT, Math.min(20, balance));
 
-    const handleRoll = useCallback(async () => {
-        const data = {
-            targetTop,
-            amount
-        };
-        const res = await diceBet(data, dispatch, history);
-        console.log(res?.data);
-        diceRef.current?.roll(res?.data?.dice);
-    }, [targetTop]);
-
-    const onRollComplete = useCallback((pair) => {
-        setLastRoll(pair);
+    const clearRollCooldownTimer = useCallback(() => {
+        if (rollCooldownTimerRef.current != null) {
+            clearTimeout(rollCooldownTimerRef.current);
+            rollCooldownTimerRef.current = null;
+        }
     }, []);
+
+    useEffect(() => () => clearRollCooldownTimer(), [clearRollCooldownTimer]);
+
+    const clearWinBangTimers = useCallback(() => {
+        if (winFxTimeoutRef.current != null) {
+            clearTimeout(winFxTimeoutRef.current);
+            winFxTimeoutRef.current = null;
+        }
+        if (bangFxTimeoutRef.current != null) {
+            clearTimeout(bangFxTimeoutRef.current);
+            bangFxTimeoutRef.current = null;
+        }
+    }, []);
+
+    useEffect(
+        () => () => {
+            clearWinBangTimers();
+        },
+        [clearWinBangTimers]
+    );
+
+    const placeBet = useCallback(async () => {
+        if (isBettingRef.current) return false;
+        isBettingRef.current = true;
+        setIsBetting(true);
+        try {
+            const res = await diceBet({ targetTop, amount }, dispatch, history);
+            if (!res || res.error === 409) {
+                return false;
+            }
+            const diceVal = res?.data?.dice;
+            if (diceVal != null) {
+                const winRaw = Number(res?.data?.win ?? 0);
+                pendingOutcomeRef.current = {
+                    win: Number.isFinite(winRaw) ? winRaw : 0,
+                };
+                diceRef.current?.roll(diceVal);
+                if (!isAutoBetRef.current) {
+                    clearRollCooldownTimer();
+                    setIsRollCooldown(true);
+                    rollCooldownTimerRef.current = setTimeout(() => {
+                        rollCooldownTimerRef.current = null;
+                        setIsRollCooldown(false);
+                    }, DICE_ROLL_ANIM_MS + AUTO_BET_GAP_MS);
+                }
+            } else {
+                pendingOutcomeRef.current = null;
+            }
+            return true;
+        } catch {
+            pendingOutcomeRef.current = null;
+            return false;
+        } finally {
+            isBettingRef.current = false;
+            setIsBetting(false);
+        }
+    }, [targetTop, amount, dispatch, history, clearRollCooldownTimer]);
+
+    placeBetRef.current = placeBet;
+
+    const handleRoll = useCallback(() => {
+        void placeBet();
+    }, [placeBet]);
+
+    const startMultiBet = useCallback(() => {
+        isAutoBetRef.current = true;
+        setMultiBetActive(true);
+    }, []);
+
+    const stopMultiBet = useCallback(() => {
+        isAutoBetRef.current = false;
+        setMultiBetActive(false);
+        clearRollCooldownTimer();
+        setIsRollCooldown(false);
+        clearWinBangTimers();
+        setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+        setBangFxVisible(false);
+        pendingOutcomeRef.current = null;
+    }, [clearRollCooldownTimer, clearWinBangTimers]);
+
+    useEffect(() => {
+        isAutoBetRef.current = isMultiBetActive;
+    }, [isMultiBetActive]);
+
+    useEffect(() => {
+        if (!isMultiBetActive) return undefined;
+
+        let cancelled = false;
+
+        const run = async () => {
+            while (!cancelled && isAutoBetRef.current) {
+                const ok = await placeBetRef.current();
+                if (cancelled || !isAutoBetRef.current) break;
+                if (!ok) {
+                    stopMultiBet();
+                    break;
+                }
+                await new Promise((r) => setTimeout(r, DICE_ROLL_ANIM_MS + AUTO_BET_GAP_MS));
+            }
+        };
+
+        void run();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isMultiBetActive, stopMultiBet]);
+
+    const onRollComplete = useCallback(
+        (pair) => {
+            setLastRoll(pair);
+            const pending = pendingOutcomeRef.current;
+            pendingOutcomeRef.current = null;
+            if (!pending) return;
+
+            const win = pending.win;
+
+            clearWinBangTimers();
+
+            if (win > 0) {
+                const anchorEl = diceFxAnchorRef.current;
+                const anchorRect = anchorEl?.getBoundingClientRect?.() ?? null;
+                const label = Number(win).toFixed(2);
+                setWinFx({ visible: true, totalEarn: label, anchorRect });
+                winFxTimeoutRef.current = setTimeout(() => {
+                    winFxTimeoutRef.current = null;
+                    setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
+                }, WIN_FIREWORKS_MS);
+            } else {
+                // Full-viewport BANG (omit anchorRect — matches Pumping-style coverage)
+                setBangFxVisible(true);
+                bangFxTimeoutRef.current = setTimeout(() => {
+                    bangFxTimeoutRef.current = null;
+                    setBangFxVisible(false);
+                }, BANG_EFFECT_MS);
+            }
+        },
+        [clearWinBangTimers]
+    );
 
     const handleAmountChange = (e) => {
         const value = e.target.value;
@@ -411,7 +573,7 @@ export default function DicePage() {
                                         Bet Type
                                     </FormLabel>
                                     <Wrap spacing="8px">
-                                        {['1~3', '4~6', 'even', 'odd'].map((option, index) => (
+                                        {['1~3', '4~6', 'Even', 'Odd'].map((option, index) => (
                                             <Button
                                                 key={option}
                                                 size="sm"
@@ -461,6 +623,7 @@ export default function DicePage() {
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
+                                            disabled={isBetting || isMultiBetActive || isRollCooldown}
                                             onClick={handleRoll}
                                             label="BET"
                                         />
@@ -481,6 +644,7 @@ export default function DicePage() {
                                             _active={{
                                                 transform: "translateY(0)"
                                             }}
+                                            disabled={!isMultiBetActive && (isBetting || isRollCooldown)}
                                             onClick={
                                                 () => {
                                                     if (isMultiBetActive) {
@@ -519,7 +683,7 @@ export default function DicePage() {
                             align="center"
                             gap="12px"
                         >
-                            <Box w="100%" maxW="100%" minW={0}>
+                            <Box ref={diceFxAnchorRef} w="100%" maxW="100%" minW={0} position="relative">
                                 <DiceCanvas3D
                                     ref={diceRef}
                                     height={diceCanvasHeight}
@@ -533,6 +697,20 @@ export default function DicePage() {
                     <RealView />
                 </GridItem>
             </Grid>
+
+            <WinFireworksEffect
+                isVisible={winFx.visible}
+                totalEarn={winFx.totalEarn}
+                duration={WIN_FIREWORKS_MS}
+                zIndex={10000}
+                anchorRect={winFx.anchorRect ?? undefined}
+            />
+            <BangBurstEffect
+                isVisible={bangFxVisible}
+                duration={BANG_EFFECT_MS}
+                zIndex={10050}
+            />
+
             <Box w="100%" maxW="100%" minW={0} overflowX="auto">
                 <History />
             </Box>

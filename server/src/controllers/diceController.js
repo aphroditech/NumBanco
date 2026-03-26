@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import DiceView from "../models/DiceView.js";
+import Setting from "../models/Setting.js";
 
 const trimRecent = (arr, max = 30) => {
     if (!Array.isArray(arr)) return arr;
@@ -30,19 +31,26 @@ const generateDiceNumbers = async () => {
     return Math.floor(Math.random() * 6) + 1;
 }
 
+const DEFAULT_DICE_WIN_MULTIPLIER = 1.97;
+
 const calculateWin = async (dice, targetTop) => {
-    console.log("dice", dice, "targetTop", targetTop);
+    const settingDoc = await Setting.findOne({}).lean();
+    const diceWinMultipler =
+        typeof settingDoc?.diceWinMultipler === "number"
+            ? settingDoc.diceWinMultipler
+            : DEFAULT_DICE_WIN_MULTIPLIER;
+
     if(targetTop === 0) {
-        if ( dice === 1 || dice === 2 || dice === 3) return 1.97;
+        if ( dice === 1 || dice === 2 || dice === 3) return diceWinMultipler;
         else return 0;
     } else if(targetTop === 1) {
-        if ( dice === 4 || dice === 5 || dice === 6) return 1.97;
+        if ( dice === 4 || dice === 5 || dice === 6) return diceWinMultipler;
         else return 0;
     } else if(targetTop === 2) {
-        if ( dice === 2 || dice === 4 || dice === 6) return 1.97;
+        if ( dice === 2 || dice === 4 || dice === 6) return diceWinMultipler;
         else return 0;
     } else {
-        if ( dice === 1 || dice === 3 || dice === 5) return 1.97;
+        if ( dice === 1 || dice === 3 || dice === 5) return diceWinMultipler;
         else return 0;
     }
 }
