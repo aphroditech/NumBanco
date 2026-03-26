@@ -42,8 +42,6 @@ import { toast } from 'react-toastify';
 
 import jackalImage from "assets/img/Jackal/jackal.png"
 
-import backgroundImage from "assets/img/Jackal/background.png"
-
 
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;

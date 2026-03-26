@@ -146,7 +146,7 @@ function TopBestWinner() {
             ) : winners && winners.map((row, index, arr) => {
               const isLast = index === arr.length - 1;
               return (
-                <Tr key={row._id || `${row.username}-${row.level}-${index}`}>
+                <Tr key={index}>
                   <Td textAlign="left" border={isLast ? "none" : null} borderBottomColor='#56577A'>
                     <Text fontSize='sm' color='#fff' fontWeight='normal'>
                       {index + 1}
