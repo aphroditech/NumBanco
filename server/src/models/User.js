@@ -672,6 +672,45 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  diceHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        dice: {
+          type: Number,
+          required: true
+        },
+        type: {
+          type: Number,
+          required: true,
+        },
+        win: {
+          type: Number,
+          required: true
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        diceBalance: {
+          type: Number,
+          default: 0
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
   rubicHistory: {
     type: [
       {

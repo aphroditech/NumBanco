@@ -13,7 +13,6 @@ export function useAblyCardGameUpdates() {
         const channel = ablyClient.channels.get("cardGame");
 
         const handleMessage = (message) => {
-            console.log("🚀 CardGame view updated", message.data.updatedData);
             setCardGameView(message.data.updatedData);
         };
 

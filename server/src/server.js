@@ -31,6 +31,7 @@ import { cocoBot } from "./services/coco/cocoBot.service.js";
 import { alphaTreeBot } from "./services/alphaTree/alphaTreeBot.service.js";
 import { doveBot } from "./services/dove/doveBot.service.js";
 import { cardGameBot } from "./services/cardGame/cardGameBot.service.js";
+import { diceBot } from "./services/dice/diceBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
 
 
@@ -78,6 +79,7 @@ connectDB()
             // startWithdrawApprovalCron(ably);
             // getUserStatusChannel(ably);
             cardGameBot(ably);
+            diceBot(ably);
             pumpingBot(ably);
             jokerCrashBot(ably);
             // rubicBot(ably);

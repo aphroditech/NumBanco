@@ -35,6 +35,8 @@ import cloudSpreadRoutes from "./routes/cloudSpreadRoutes.js";
 import alphaTreeRoutes from "./routes/alphaTreeRoutes.js";
 import moralisWebhook from "./webhooks/moralisWebhook.js";
 import aToZRoutes from "./routes/aToZRoutes.js";
+import diceRoutes from "./routes/diceRoutes.js";
+
 dotenv.config();
 
 /** Dev often uses localhost OR 127.0.0.1 — both must be allowed or the browser blocks API calls. */
@@ -92,6 +94,7 @@ app.use("/api/gravity", gravityRoutes);
 app.use("/api/jokerCrash", jokerCrashRoutes);
 app.use("/api/cloud-spread", cloudSpreadRoutes);
 app.use("/api/aToZ", aToZRoutes);
+app.use("/api/dice", diceRoutes);
 app.use("/api/alpha-tree", alphaTreeRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
