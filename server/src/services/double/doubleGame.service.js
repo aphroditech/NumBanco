@@ -46,6 +46,9 @@ let lastBroadcastPhase = null;
 /** @type {{ roundId: number; slot: number; color: string }[]} */
 let recentResults = [];
 
+/** Avoid Ably message-limit bursts by throttling mid–betting state updates. */
+const MID_BETTING_STATE_THROTTLE_MS = 2000;
+
 let cachedDoubleBotSettings = null;
 let lastDoubleBotSettingsFetch = 0;
 /** Per-round bot placement plan (targets + counts). */
@@ -220,8 +223,18 @@ function payoutMultiplier(winningColor) {
 
 async function publish(ably, event, data) {
   if (!ably) return;
+  const connState = ably.connection?.state;
+  // When Ably is blocked/failed, skip publishing to avoid hammering and noisy errors.
+  if (connState !== "connected") return;
   const channel = ably.channels.get(CHANNEL_NAME);
-  await channel.publish(event, data);
+  try {
+    await channel.publish(event, data);
+  } catch (err) {
+    // Intentionally swallow publish errors (e.g. auth blocked) to keep loops stable.
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("[double] ably publish failed:", err?.code || err?.statusCode || err?.message || err);
+    }
+  }
 }
 
 function getPhase(elapsedMs) {
@@ -281,8 +294,9 @@ async function settleRound(ably) {
       });
 
       if (bet.betId && mongoose.isValidObjectId(bet.betId)) {
+        const betOid = new mongoose.Types.ObjectId(bet.betId);
         await DoubleHistory.updateOne(
-          { _id: bet.betId, userId: String(bet.userId) },
+          { _id: betOid, userId: String(bet.userId) },
           {
             $set: {
               winAmount,
@@ -291,6 +305,12 @@ async function settleRound(ably) {
             },
           }
         );
+        const dhSub = user.doubleHistory?.id?.(betOid);
+        if (dhSub) {
+          dhSub.winAmount = winAmount;
+          dhSub.winningColor = winningColor;
+          dhSub.winningSlot = winningSlot;
+        }
       }
       await user.save();
     }
@@ -445,6 +465,7 @@ export async function placeDoubleBet({ user, amount, side }) {
     storedBetId = String(buildBetId());
   } else {
     const entryId = new mongoose.Types.ObjectId();
+    const betPlacedAt = new Date();
     await DoubleHistory.create({
       _id: entryId,
       userId: String(user.userId),
@@ -454,7 +475,7 @@ export async function placeDoubleBet({ user, amount, side }) {
       side,
       betAmount: parsedAmount,
       winAmount: 0,
-      createAt: new Date(),
+      createAt: betPlacedAt,
     });
     try {
       const up = await User.updateOne(
@@ -470,6 +491,16 @@ export async function placeDoubleBet({ user, amount, side }) {
               amount: -parsedAmount,
               date: new Date(),
               type: "double",
+            },
+            doubleHistory: {
+              _id: entryId,
+              roundId: currentRound.roundId,
+              userName: user.altas || "",
+              avatar: user.avatar || "",
+              side,
+              betAmount: parsedAmount,
+              winAmount: 0,
+              createAt: betPlacedAt,
             },
             notification: buildUserNotification(
               `You bet $${parsedAmount.toFixed(2)} on ${side} in Double round ${currentRound.roundId}`,
@@ -546,16 +577,26 @@ export async function placeDoubleBet({ user, amount, side }) {
   return { row, round: currentRound, betId: storedBetId, betAmount: parsedAmount };
 }
 
-export async function getDoubleUserHistory(userId, limit = 50) {
+export async function getDoubleUserHistory(userId, limit = 50, options = {}) {
   const cap = Math.min(Math.max(1, Number(limit) || 50), 200);
-  const rows = await DoubleHistory.find({ userId: String(userId) })
-    .sort({ createAt: -1 })
-    .limit(cap)
-    .lean();
-  return rows.map((e) => ({
+  const uid = String(userId);
+  let list;
+  if (Array.isArray(options.embedded)) {
+    list = [...options.embedded];
+  } else {
+    const user = await User.findOne({ userId: uid }).select("doubleHistory").lean();
+    list = Array.isArray(user?.doubleHistory) ? [...user.doubleHistory] : [];
+  }
+  list.sort((a, b) => {
+    const ta = new Date(a.createAt ?? a.createdAt ?? 0).getTime();
+    const tb = new Date(b.createAt ?? b.createdAt ?? 0).getTime();
+    return tb - ta;
+  });
+  return list.slice(0, cap).map((e) => ({
     ...e,
     _id: e._id,
-    createdAt: e.createAt,
+    userId: uid,
+    createdAt: e.createAt ?? e.createdAt,
   }));
 }
 
@@ -576,7 +617,7 @@ export async function getDoubleRoundHistory(limit = 40) {
     winAmount: e.winAmount,
     winningColor: e.winningColor,
     winningSlot: e.winningSlot,
-    createdAt: e.createAt,
+    createdAt: e.createAt ?? e.createdAt,
   }));
 }
 
@@ -746,9 +787,6 @@ export async function startDoubleGameLoop(ably) {
       if (phaseChanged) {
         lastBroadcastPhase = nextPhase;
         await publish(ably, EVENT_STATE, await getDoubleStateSnapshot());
-      } else if (phase === "betting") {
-        // Keep live feed (incl. bot rows) in sync over Ably — phase-only broadcasts miss mid–betting window.
-        await publish(ably, EVENT_STATE, await getDoubleStateSnapshot());
       }
 
       if (phase === "betting") {
@@ -775,7 +813,7 @@ export async function startDoubleGameLoop(ably) {
           const s = cachedDoubleBotSettings;
           /** Same order as UI columns; round-robin so all sides fill together (not one side to target first). */
           const SIDE_PLACE_ORDER = ["red", "green", "black"];
-          const MAX_BOTS_PER_TICK = 14;
+          const MAX_BOTS_PER_TICK = 8;
           let placedThisTick = 0;
 
           while (placedThisTick < MAX_BOTS_PER_TICK) {
