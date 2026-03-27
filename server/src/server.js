@@ -88,9 +88,9 @@ connectDB()
             console.log("✅ Core Ably connected");
 
             // getUserStatusChannel(ablyCore);
-            // startBetEngine(ablyCore, 0);
-            // startBetEngine(ablyCore, 1);
-            // startBetEngine(ablyCore, 2);
+            startBetEngine(ablyCore, 0);
+            startBetEngine(ablyCore, 1);
+            startBetEngine(ablyCore, 2);
 
         });
         ablyFinance.connection.once("connected", () => {

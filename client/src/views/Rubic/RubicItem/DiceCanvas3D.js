@@ -364,7 +364,7 @@ const DiceCanvas3D = forwardRef(function DiceCanvas3D(
         const h = height;
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x141016);
+        scene.background = new THREE.Color(0x0b1420);
         sceneRef.current = scene;
 
         const camera = new THREE.PerspectiveCamera(40, width / h, 0.1, 100);
@@ -387,7 +387,7 @@ const DiceCanvas3D = forwardRef(function DiceCanvas3D(
         scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
         pmrem.dispose();
 
-        const hemi = new THREE.HemisphereLight(0x4a4555, 0x1a1018, 0.55);
+        const hemi = new THREE.HemisphereLight(0x2f5a86, 0x0a1220, 0.58);
         scene.add(hemi);
         const dir = new THREE.DirectionalLight(0xffffff, 1.05);
         dir.position.set(4.5, 9, 5);
@@ -397,12 +397,12 @@ const DiceCanvas3D = forwardRef(function DiceCanvas3D(
         dir.shadow.camera.far = 30;
         dir.shadow.bias = -0.00025;
         scene.add(dir);
-        const rim = new THREE.SpotLight(0xffccd0, 2.2, 24, Math.PI / 5, 0.45, 1);
+        const rim = new THREE.SpotLight(0x8ed6ff, 2.0, 24, Math.PI / 5, 0.45, 1);
         rim.position.set(-4, 6, 2);
         rim.target.position.set(0, DIE_CENTER_REST_Y, 0);
         scene.add(rim);
         scene.add(rim.target);
-        const fill = new THREE.PointLight(0xff3048, 0.55, 22);
+        const fill = new THREE.PointLight(0x24b4ff, 0.62, 22);
         fill.position.set(3, 1.8, 4);
         scene.add(fill);
 
@@ -410,12 +410,12 @@ const DiceCanvas3D = forwardRef(function DiceCanvas3D(
         const floor = new THREE.Mesh(
             floorGeom,
             new THREE.MeshPhysicalMaterial({
-                color: 0x0c0a10,
+                color: 0x0b2f5a,
                 roughness: 0.35,
-                metalness: 0.45,
-                clearcoat: 0.85,
-                clearcoatRoughness: 0.28,
-                envMapIntensity: 0.85,
+                metalness: 0.52,
+                clearcoat: 0.95,
+                clearcoatRoughness: 0.18,
+                envMapIntensity: 1.05,
             })
         );
         floor.position.y = FLOOR_SURFACE_Y;
@@ -489,8 +489,8 @@ const DiceCanvas3D = forwardRef(function DiceCanvas3D(
                 borderRadius: 14,
                 overflow: 'hidden',
                 background:
-                    'radial-gradient(ellipse 85% 70% at 50% 42%, rgba(90,18,32,0.35) 0%, transparent 55%), linear-gradient(165deg, #121018 0%, #0e0c12 50%, #0a090e 100%)',
-                border: '1px solid rgba(180,40,58,0.45)',
+                    'radial-gradient(ellipse 85% 70% at 50% 42%, rgba(40,140,220,0.28) 0%, transparent 55%), linear-gradient(165deg, #0d1b2a 0%, #0a1522 50%, #08111a 100%)',
+                border: '1px solid rgba(64, 164, 255, 0.42)',
                 boxShadow: 'inset 0 0 80px rgba(0,0,0,0.45)',
             }}
         />
