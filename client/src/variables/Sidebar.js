@@ -192,8 +192,6 @@ export const CocoGame = {
     layout: "/game",
 }
 
-
-
 export const AToZGame = {
     path: "/digits",
     name: "DIGITS SLOT",

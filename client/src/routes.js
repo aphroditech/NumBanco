@@ -30,7 +30,6 @@ import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
 import CloudDownloadRoundedIcon from '@mui/icons-material/CloudDownloadRounded';
 import CasinoIcon from '@mui/icons-material/Casino';
 import TwitterIcon from '@mui/icons-material/Twitter';
-import PlinkoPage from "views/Plinko/Plinko";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import DiamondIcon from '@mui/icons-material/Diamond';
