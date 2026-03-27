@@ -5,7 +5,8 @@ import {
     VIEW_LIMIT,
     publishTwistViewFeed,
 } from "../services/twist/twistViewFeed.js";
-import { resolveTwistSpin, twistTotalMultiplierSum } from "../services/twist/twistPlayLogic.js";
+import { pickTwistSymbol, resolveTwistSpin, twistTotalMultiplierSum } from "../services/twist/twistPlayLogic.js";
+import { getTwistRatesForMode, getTwistSettingsMerged } from "../services/twist/twistSettings.service.js";
 
 const MIN_BET = 0.5;
 const MAX_BET = 20;
@@ -35,10 +36,35 @@ const twistUserProjection = {
     twistPurpleMultIndex: 1,
     twistLastBetAmount: 1,
     twistHistory: 1,
+    twistMode: 1,
     avatar: 1,
     altas: 1,
     membership: 1,
 };
+
+function normalizeTwistMode(raw) {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return 1;
+    if (n < 0) return 0;
+    if (n > 2) return 2;
+    return n;
+}
+
+function updateTwistModeByTotalProfit(user) {
+    const history = Array.isArray(user?.twistHistory) ? user.twistHistory : [];
+    const totalProfit = history.reduce((acc, item) => {
+        const p = Number(item?.profit);
+        return acc + (Number.isFinite(p) ? p : 0);
+    }, 0);
+    const totalBet = history.reduce((acc, item) => {
+        const b = Number(item?.betAmount);
+        return acc + (Number.isFinite(b) ? b : 0);
+    }, 0);
+    const netProfit = totalProfit - totalBet;
+    if (netProfit > 100) user.twistMode = 2;
+    else if (netProfit < -10) user.twistMode = 0;
+    else user.twistMode = normalizeTwistMode(user.twistMode);
+}
 
 function buildTwistCompactUser(user, overrides = {}) {
     const raw = typeof user?.toObject === "function" ? user.toObject() : { ...user };
@@ -55,6 +81,7 @@ function buildTwistCompactUser(user, overrides = {}) {
         twistOrangeMultIndex: overrides.twistOrangeMultIndex ?? raw.twistOrangeMultIndex ?? 0,
         twistPurpleMultIndex: overrides.twistPurpleMultIndex ?? raw.twistPurpleMultIndex ?? 0,
         twistLastBetAmount: overrides.twistLastBetAmount ?? raw.twistLastBetAmount ?? 0,
+        twistMode: overrides.twistMode ?? normalizeTwistMode(raw.twistMode),
         twistHistory: history,
         avatar: raw.avatar,
         altas: raw.altas,
@@ -95,11 +122,21 @@ export const postTwistBet = async (req, res) => {
             return res.status(400).json({ error: "You don't have enough balance to bet" });
         }
 
+        const twistSettings = await getTwistSettingsMerged();
+        const modeRates = getTwistRatesForMode(twistSettings, user.twistMode);
+        const symbol = pickTwistSymbol({
+            purple: modeRates.pRate,
+            orange: modeRates.oRate,
+            green: modeRates.gRate,
+            stone: modeRates.stoneRate,
+            mouse: modeRates.mouseRate,
+        });
+
         const spin = resolveTwistSpin({
             twistGreenMultIndex: user.twistGreenMultIndex,
             twistOrangeMultIndex: user.twistOrangeMultIndex,
             twistPurpleMultIndex: user.twistPurpleMultIndex,
-        });
+        }, symbol);
 
         const multiplier = round2(spin.multiplier);
         const payout = round2(numBet * multiplier);
@@ -120,6 +157,15 @@ export const postTwistBet = async (req, res) => {
                     twistOrangeMultIndex: spin.twistOrangeMultIndex,
                     twistPurpleMultIndex: spin.twistPurpleMultIndex,
                     twistLastBetAmount: numBet,
+                },
+                $push: {
+                    twistHistory: {
+                        betAmount: numBet,
+                        totalMultiplier: 0,
+                        profit: 0,
+                        busted: false,
+                        createAt: new Date(),
+                    },
                 },
             }
         );
@@ -144,6 +190,16 @@ export const postTwistBet = async (req, res) => {
                 totalBet: toNumberOrZero(user.totalBet) + numBet,
                 refreshBet: toNumberOrZero(user.refreshBet) + numBet,
                 lotterybet: toNumberOrZero(user.lotterybet) + numBet,
+                twistHistory: [
+                    ...(Array.isArray(user.twistHistory) ? user.twistHistory : []),
+                    {
+                        betAmount: numBet,
+                        totalMultiplier: 0,
+                        profit: 0,
+                        busted: false,
+                        createAt: new Date(),
+                    },
+                ],
                 twistGreenMultIndex: spin.twistGreenMultIndex,
                 twistOrangeMultIndex: spin.twistOrangeMultIndex,
                 twistPurpleMultIndex: spin.twistPurpleMultIndex,
@@ -191,7 +247,7 @@ export const postTwistCashOut = async (req, res) => {
         if (base > 0) {
             updateOps.$push = {
                 twistHistory: {
-                    betAmount: base,
+                    betAmount: 0,
                     totalMultiplier: resultSum,
                     profit: win,
                     busted: false,
@@ -208,6 +264,20 @@ export const postTwistCashOut = async (req, res) => {
 
         if (!updatedUser) {
             return res.status(409).json({ error: "Twist cash out failed" });
+        }
+
+        if (base > 0) {
+            const modeHolder = {
+                twistHistory: updatedUser.twistHistory,
+                twistMode: updatedUser.twistMode,
+            };
+            updateTwistModeByTotalProfit(modeHolder);
+            if (modeHolder.twistMode !== normalizeTwistMode(updatedUser.twistMode)) {
+                await User.updateOne({ userId }, { $set: { twistMode: modeHolder.twistMode } });
+                updatedUser.twistMode = modeHolder.twistMode;
+            } else {
+                updatedUser.twistMode = normalizeTwistMode(updatedUser.twistMode);
+            }
         }
 
         /** RealView: result = sum of ladder multipliers at p,o,g; win = lastBet × result. */

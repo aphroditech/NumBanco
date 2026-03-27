@@ -223,9 +223,11 @@ async function scheduleCreditAndBroadcast(app) {
     if (ably) {
         const views = await DiceView.find().sort({ time: -1 }).limit(12).lean();
         const data = await enrichDiceViewsWithUser(views);
-        ably.channels.get("diceGame").publish("diceUpdate", { updatedData: data }).catch((err) => {
-            console.error("❌ [diceController] Ably publish error:", err);
-        });
+        setTimeout(() => {
+            ably.channels.get("diceGame").publish("diceUpdate", { updatedData: data }).catch((err) => {
+                console.error("❌ [diceController] Ably publish error:", err);
+            });
+        }, 2000);
     }
 }
 

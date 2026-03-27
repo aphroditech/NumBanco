@@ -766,6 +766,10 @@ export async function startDoubleGameLoop(ably) {
     botUserIds = await User.find({ partnerLevel: 0 }).select("userId").lean();
   } catch {}
   let lastBotUserRefreshAt = 0;
+  // Throttle Ably state snapshots to avoid hitting Ably message limits.
+  // Betting phase currently runs frequently; without throttling it can publish every tick.
+  let lastStateBroadcastAt = 0;
+  const STATE_BROADCAST_MIN_GAP_MS = 2500;
 
   timer = setInterval(async () => {
     if (loopInFlight) return;
@@ -858,5 +862,5 @@ export async function startDoubleGameLoop(ably) {
     } finally {
       loopInFlight = false;
     }
-  }, 1000);
+  }, 2000);
 }

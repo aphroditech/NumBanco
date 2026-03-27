@@ -152,10 +152,10 @@ connectDB()
             // cocoBot(ablyMiningGames);
             // alphaTreeBot(ablyMiningGames);
             // doveBot(ablyMiningGames);
-            startGravityGameLoop(ablyMiningGames);
-            setCloudSpreadAbly(ablyMiningGames);
-            cloudSpreadBot().catch(console.error);
-            startDoubleGameLoop(ablyMiningGames);
+            // startGravityGameLoop(ablyMiningGames);
+            // setCloudSpreadAbly(ablyMiningGames);
+            // cloudSpreadBot().catch(console.error);
+            // startDoubleGameLoop(ablyMiningGames);
 
         });
 

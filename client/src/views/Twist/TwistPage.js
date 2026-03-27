@@ -68,10 +68,11 @@ export default function TwistPage() {
         Math.round(lastTwistBet * resultMultiplierSum * 100) / 100;
     /** After a successful Bet, server sets twistLastBetAmount; cash out clears it. */
     const canCashOut = lastTwistBet > 1e-9;
-
     const [centerSymbol, setCenterSymbol] = useState(randomTwistSymbol);
     const [isBetting, setIsBetting] = useState(false);
     const [isCashOutLoading, setIsCashOutLoading] = useState(false);
+    /** Lock amount while a round is active; unlock after cash out resets the round. */
+    const amountLocked = canCashOut || isBetting || isCashOutLoading;
     /** Wheel sector glow per ring: index into that ring’s labels (null = no glow). */
     const [ringHighlights, setRingHighlights] = useState({ p: null, o: null, g: null });
     /** Forward sweep starts after this segment index (null = from ring start). */
@@ -611,6 +612,7 @@ export default function TwistPage() {
                                             borderRadius="8px"
                                             _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
                                             onClick={() => commitNumericAmount(MIN_AMOUNT)}
+                                            isDisabled={amountLocked}
                                         >
                                             Min
                                         </Button>
@@ -634,7 +636,7 @@ export default function TwistPage() {
                                                 borderRadius="6px"
                                                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
                                                 onClick={decreaseByStep}
-                                                isDisabled={getNumericAmount() <= MIN_AMOUNT + 1e-9}
+                                                isDisabled={amountLocked || getNumericAmount() <= MIN_AMOUNT + 1e-9}
                                             />
                                             <Input
                                                 name="amount"
@@ -657,6 +659,7 @@ export default function TwistPage() {
                                                 placeholder={String(MIN_AMOUNT)}
                                                 _focus={{ boxShadow: 'none' }}
                                                 flex="1"
+                                                isDisabled={amountLocked}
                                             />
                                             <IconButton
                                                 aria-label="Increase bet"
@@ -670,7 +673,7 @@ export default function TwistPage() {
                                                 borderRadius="6px"
                                                 _hover={{ bg: 'rgba(255,255,255,0.1)' }}
                                                 onClick={increaseByStep}
-                                                isDisabled={getNumericAmount() + AMOUNT_STEP > maxBet + 1e-9}
+                                                isDisabled={amountLocked || getNumericAmount() + AMOUNT_STEP > maxBet + 1e-9}
                                             />
                                         </HStack>
                                         <Button
@@ -686,6 +689,7 @@ export default function TwistPage() {
                                             borderRadius="8px"
                                             _hover={{ bg: 'rgba(0, 212, 255, 0.3)' }}
                                             onClick={() => commitNumericAmount(maxBet)}
+                                            isDisabled={amountLocked}
                                         >
                                             Max
                                         </Button>

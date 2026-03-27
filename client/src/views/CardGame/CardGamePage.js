@@ -1135,16 +1135,281 @@ export default function CardGamePage() {
 
             <History />
 
-            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="md" isCentered>
-                <ModalOverlay bg="blackAlpha.700" />
-                <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
-                    <ModalHeader color="white">Card game</ModalHeader>
-                    <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
-                    <ModalBody pb="6">
-                        <Text fontSize="sm" color="rgba(255,255,255,0.85)">
-                            Pick &lt;, =, or &gt;, choose Amount (with /2, ×2, or Min/Max in the dropdown), then tap
-                            BET when you are ready.
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+                <ModalOverlay
+                    bg="rgba(0,0,0,0.72)"
+                    sx={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+                />
+                <ModalContent
+                    bg="linear-gradient(180deg, rgba(32,36,40,0.98) 0%, rgba(20,22,26,0.98) 100%)"
+                    border="1px solid rgba(0, 212, 255, 0.22)"
+                    borderRadius="16px"
+                    boxShadow="0 24px 80px rgba(0,0,0,0.65)"
+                    overflow="hidden"
+                >
+                    <Box
+                        px="6"
+                        pt="5"
+                        pb="4"
+                        bg="linear-gradient(90deg, rgba(0,212,255,0.10) 0%, rgba(0,212,255,0.00) 60%)"
+                        borderBottom="1px solid rgba(255,255,255,0.06)"
+                    >
+                        <ModalHeader p="0" color="white" fontSize="lg" fontWeight="800" letterSpacing="0.2px">
+                            How to play
+                        </ModalHeader>
+                        <Text mt="2" fontSize="sm" color="rgba(255,255,255,0.75)">
+                            Guess the result between two revealed cards and get paid on a correct prediction.
                         </Text>
+                    </Box>
+
+                    <ModalCloseButton
+                        color="rgba(255,255,255,0.85)"
+                        _hover={{ color: '#00D4FF' }}
+                        mt="2"
+                        mr="2"
+                        borderRadius="10px"
+                    />
+
+                    <ModalBody px="6" pt="5" pb="6">
+                        <VStack align="stretch" spacing="4">
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.04)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" color="rgba(255,255,255,0.88)" lineHeight="1.55">
+                                    The <b>left</b> card is a rank from <b>A to K</b>, and the <b>right</b> card is a rank from{' '}
+                                    <b>A to B</b>. When you bet, both cards flip from back to front to reveal the result.
+                                </Text>
+                            </Box>
+
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.03)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                    Steps
+                                </Text>
+                                <VStack align="stretch" spacing="2">
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            1
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Enter your bet amount (you can use <b>/2</b>, <b>×2</b>, <b>Min</b>/<b>Max</b>).
+                                        </Text>
+                                    </HStack>
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            2
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Choose one arrow: <b>&lt;</b>, <b>=</b>, or <b>&gt;</b>.
+                                        </Text>
+                                    </HStack>
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            3
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Press <b>BET</b>. The cards flip and reveal the final result.
+                                        </Text>
+                                    </HStack>
+                                </VStack>
+                            </Box>
+
+                            <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap="4">
+                                <Box
+                                    p="4"
+                                    borderRadius="14px"
+                                    bg="rgba(255,255,255,0.03)"
+                                    border="1px solid rgba(255,255,255,0.06)"
+                                >
+                                    <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                        Win conditions
+                                    </Text>
+                                    <VStack align="stretch" spacing="2">
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)">
+                                            <b>&gt;</b> — right card is higher than the left.
+                                        </Text>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)">
+                                            <b>=</b> — both cards are the same rank.
+                                        </Text>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)">
+                                            <b>&lt;</b> — right card is lower than the left.
+                                        </Text>
+                                        <Box
+                                            mt="1"
+                                            p="2.5"
+                                            borderRadius="12px"
+                                            bg="rgba(245,101,101,0.10)"
+                                            border="1px solid rgba(245,101,101,0.22)"
+                                        >
+                                            <Text fontSize="sm" color="rgba(255,255,255,0.86)">
+                                                Wrong prediction = <b>BANG</b>.
+                                            </Text>
+                                        </Box>
+                                    </VStack>
+                                </Box>
+
+                                <Box
+                                    p="4"
+                                    borderRadius="14px"
+                                    bg="rgba(255,255,255,0.03)"
+                                    border="1px solid rgba(255,255,255,0.06)"
+                                >
+                                    <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                        Payout multipliers
+                                    </Text>
+                                    <VStack align="stretch" spacing="2">
+                                        <HStack justify="space-between">
+                                            <HStack spacing="2">
+                                                <Box
+                                                    px="2.5"
+                                                    py="1"
+                                                    borderRadius="999px"
+                                                    bg="rgba(255,255,255,0.06)"
+                                                    border="1px solid rgba(255,255,255,0.10)"
+                                                    fontSize="sm"
+                                                    fontWeight="800"
+                                                    color="white"
+                                                >
+                                                    &gt;
+                                                </Box>
+                                                <Text fontSize="sm" color="rgba(255,255,255,0.8)">
+                                                    correct
+                                                </Text>
+                                            </HStack>
+                                            <Box
+                                                px="3"
+                                                py="1"
+                                                borderRadius="999px"
+                                                bg="rgba(72,187,120,0.12)"
+                                                border="1px solid rgba(72,187,120,0.25)"
+                                                color="rgba(255,255,255,0.92)"
+                                                fontSize="sm"
+                                                fontWeight="800"
+                                            >
+                                                1.2×
+                                            </Box>
+                                        </HStack>
+
+                                        <HStack justify="space-between">
+                                            <HStack spacing="2">
+                                                <Box
+                                                    px="2.5"
+                                                    py="1"
+                                                    borderRadius="999px"
+                                                    bg="rgba(255,255,255,0.06)"
+                                                    border="1px solid rgba(255,255,255,0.10)"
+                                                    fontSize="sm"
+                                                    fontWeight="800"
+                                                    color="white"
+                                                >
+                                                    =
+                                                </Box>
+                                                <Text fontSize="sm" color="rgba(255,255,255,0.8)">
+                                                    correct
+                                                </Text>
+                                            </HStack>
+                                            <Box
+                                                px="3"
+                                                py="1"
+                                                borderRadius="999px"
+                                                bg="rgba(0,212,255,0.12)"
+                                                border="1px solid rgba(0,212,255,0.28)"
+                                                color="rgba(255,255,255,0.92)"
+                                                fontSize="sm"
+                                                fontWeight="800"
+                                            >
+                                                5×
+                                            </Box>
+                                        </HStack>
+
+                                        <HStack justify="space-between">
+                                            <HStack spacing="2">
+                                                <Box
+                                                    px="2.5"
+                                                    py="1"
+                                                    borderRadius="999px"
+                                                    bg="rgba(255,255,255,0.06)"
+                                                    border="1px solid rgba(255,255,255,0.10)"
+                                                    fontSize="sm"
+                                                    fontWeight="800"
+                                                    color="white"
+                                                >
+                                                    &lt;
+                                                </Box>
+                                                <Text fontSize="sm" color="rgba(255,255,255,0.8)">
+                                                    correct
+                                                </Text>
+                                            </HStack>
+                                            <Box
+                                                px="3"
+                                                py="1"
+                                                borderRadius="999px"
+                                                bg="rgba(237,137,54,0.12)"
+                                                border="1px solid rgba(237,137,54,0.24)"
+                                                color="rgba(255,255,255,0.92)"
+                                                fontSize="sm"
+                                                fontWeight="800"
+                                            >
+                                                3×
+                                            </Box>
+                                        </HStack>
+                                    </VStack>
+
+                                    <Text mt="3" fontSize="xs" color="rgba(255,255,255,0.6)">
+                                        Win amount = Bet × Multiplier (only on correct prediction).
+                                    </Text>
+                                </Box>
+                            </Grid>
+                        </VStack>
                     </ModalBody>
                 </ModalContent>
             </Modal>

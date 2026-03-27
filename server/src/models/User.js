@@ -407,6 +407,12 @@ const userSchema = new mongoose.Schema({
     ],
     default: [],
   },
+  twistMode: {
+    type: Number,
+    default: 1, // 0=easy, 1=normal, 2=hard
+    min: 0,
+    max: 2
+  },
   alphaTreeMode: {
     type: Number,
     default: 1, // 0=easy, 1=normal, 2=hard
