@@ -522,7 +522,9 @@ export default function JokerCrashPage() {
         if (pending) {
             setAmount(String(pending.bet ?? MIN_AMOUNT));
             setBet(true);
-            setInfo(pending.info ?? []);
+            setTimeout(() => {
+                setInfo(pending.info ?? []);
+            }, 1500);
             const last = pending.info?.length
                 ? pending.info[pending.info.length - 1]
                 : null;
@@ -1221,16 +1223,212 @@ export default function JokerCrashPage() {
 
             <History />
 
-            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="md" isCentered>
-                <ModalOverlay bg="blackAlpha.700" />
-                <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
-                    <ModalHeader color="white">Joker Crash</ModalHeader>
-                    <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
-                    <ModalBody pb="6">
-                        <Text fontSize="sm" color="rgba(255,255,255,0.85)">
-                            Pick &lt;, =, or &gt;, set your bet (with /2, ×2, or Min/Max in the dropdown), then tap BET
-                            when you are ready.
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+                <ModalOverlay
+                    bg="rgba(0,0,0,0.72)"
+                    sx={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+                />
+                <ModalContent
+                    bg="linear-gradient(180deg, rgba(32,36,40,0.98) 0%, rgba(20,22,26,0.98) 100%)"
+                    border="1px solid rgba(0, 212, 255, 0.22)"
+                    borderRadius="16px"
+                    boxShadow="0 24px 80px rgba(0,0,0,0.65)"
+                    overflow="hidden"
+                >
+                    <Box
+                        px="6"
+                        pt="5"
+                        pb="4"
+                        bg="linear-gradient(90deg, rgba(0,212,255,0.10) 0%, rgba(0,212,255,0.00) 60%)"
+                        borderBottom="1px solid rgba(255,255,255,0.06)"
+                    >
+                        <ModalHeader p="0" color="white" fontSize="lg" fontWeight="800" letterSpacing="0.2px">
+                            How to play
+                        </ModalHeader>
+                        <Text mt="2" fontSize="sm" color="rgba(255,255,255,0.75)">
+                            Take steps, build multiplier, and cash out before the crash.
                         </Text>
+                    </Box>
+
+                    <ModalCloseButton
+                        color="rgba(255,255,255,0.85)"
+                        _hover={{ color: '#00D4FF' }}
+                        mt="2"
+                        mr="2"
+                        borderRadius="10px"
+                    />
+
+                    <ModalBody px="6" pt="5" pb="6">
+                        <VStack align="stretch" spacing="4">
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.04)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" color="rgba(255,255,255,0.88)" lineHeight="1.55">
+                                    Joker Crash is a fast prediction + cash-out game. After you bet, you can press the operator
+                                    buttons (<b>&lt;</b>, <b>=</b>, <b>&gt;</b>) to take steps and increase your potential
+                                    payout. Cash out anytime to lock in your win.
+                                </Text>
+                            </Box>
+
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.03)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                    Steps
+                                </Text>
+                                <VStack align="stretch" spacing="2">
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            1
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Enter your bet amount (you can use <b>/2</b>, <b>×2</b>, <b>Min</b>/<b>Max</b>).
+                                        </Text>
+                                    </HStack>
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            2
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Press <b>BET</b> to start the round.
+                                        </Text>
+                                    </HStack>
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            3
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Use the operator buttons (<b>&lt;</b>, <b>=</b>, <b>&gt;</b>) to take steps and
+                                            build your multiplier.
+                                        </Text>
+                                    </HStack>
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            4
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Press <b>CASH OUT</b> anytime to lock your winnings.
+                                        </Text>
+                                    </HStack>
+                                </VStack>
+                            </Box>
+
+                            <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap="4">
+                                <Box
+                                    p="4"
+                                    borderRadius="14px"
+                                    bg="rgba(255,255,255,0.03)"
+                                    border="1px solid rgba(255,255,255,0.06)"
+                                >
+                                    <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                        Win / Lose
+                                    </Text>
+                                    <VStack align="stretch" spacing="2">
+                                        <Box
+                                            p="2.5"
+                                            borderRadius="12px"
+                                            bg="rgba(72,187,120,0.10)"
+                                            border="1px solid rgba(72,187,120,0.22)"
+                                        >
+                                            <Text fontSize="sm" color="rgba(255,255,255,0.86)">
+                                                Cash out before the crash to <b>WIN</b>.
+                                            </Text>
+                                        </Box>
+                                        <Box
+                                            p="2.5"
+                                            borderRadius="12px"
+                                            bg="rgba(245,101,101,0.10)"
+                                            border="1px solid rgba(245,101,101,0.22)"
+                                        >
+                                            <Text fontSize="sm" color="rgba(255,255,255,0.86)">
+                                                If the round busts before you cash out, it’s a <b>BANG</b>.
+                                            </Text>
+                                        </Box>
+                                    </VStack>
+                                </Box>
+
+                                <Box
+                                    p="4"
+                                    borderRadius="14px"
+                                    bg="rgba(255,255,255,0.03)"
+                                    border="1px solid rgba(255,255,255,0.06)"
+                                >
+                                    <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                        Payout
+                                    </Text>
+                                    <VStack align="stretch" spacing="2">
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)">
+                                            Your cash out uses the current multiplier shown in the round.
+                                        </Text>
+                                        <Text fontSize="xs" color="rgba(255,255,255,0.6)">
+                                            Win amount = Bet × Multiplier (only when you cash out).
+                                        </Text>
+                                    </VStack>
+                                </Box>
+                            </Grid>
+                        </VStack>
                     </ModalBody>
                 </ModalContent>
             </Modal>
