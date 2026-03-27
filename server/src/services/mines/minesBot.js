@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
-import MinesResult from "../../models/MinesResult.js";
-import MinesSetting from "../../models/MinesSetting.js";
+import MinesResult from "../../models/mines/MinesResult.js";
+import MinesSetting from "../../models/mines/MinesSetting.js";
 import { getMultiplierForRevealed, GRID_SIZE, MODES } from "./minesGame.service.js";
 
 // Bet amount ranges (min, max) and their probability (0–1). Clamp to Mines max bet ($20).

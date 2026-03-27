@@ -35,8 +35,8 @@ function pickWeightedSymbol(weights) {
     return entries[entries.length - 1][0];
 }
 
-export function pickTwistSymbol() {
-    return pickWeightedSymbol(TWIST_SYMBOL_WEIGHTS);
+export function pickTwistSymbol(weights = TWIST_SYMBOL_WEIGHTS) {
+    return pickWeightedSymbol(weights);
 }
 
 function decClamp(n) {
@@ -63,8 +63,8 @@ export function twistTotalMultiplierSum(purpleCount, orangeCount, greenCount) {
  * @param {object} state — twistGreenMultIndex, twistOrangeMultIndex, twistPurpleMultIndex (non-negative ints)
  * @returns {{ symbol: string, multiplier: number, twistGreenMultIndex: number, twistOrangeMultIndex: number, twistPurpleMultIndex: number }}
  */
-export function resolveTwistSpin(state) {
-    const symbol = pickTwistSymbol();
+export function resolveTwistSpin(state, symbolOverride = null) {
+    const symbol = symbolOverride || pickTwistSymbol();
     let g = Number(state.twistGreenMultIndex) || 0;
     let o = Number(state.twistOrangeMultIndex) || 0;
     let p = Number(state.twistPurpleMultIndex) || 0;

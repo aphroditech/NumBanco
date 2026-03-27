@@ -14,11 +14,10 @@ import {
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { NavLink as RouterLink } from "react-router-dom";
-import LandingAD1 from "assets/img/LandingAD/1.png";
-import LandingAD2 from "assets/img/LandingAD/2.png";
-import LandingAD3 from "assets/img/LandingAD/3.png";
-import LandingAD4 from "assets/img/LandingAD/4.png";
-import LandingAD5 from "assets/img/LandingAD/5.png";
+import LandingAD1 from "assets/img/LandingAD/1.jpg";
+import LandingAD2 from "assets/img/LandingAD/2.jpg";
+import LandingAD3 from "assets/img/LandingAD/3.jpg";
+import LandingAD4 from "assets/img/LandingAD/4.jpg";
 
 const SEGMENT_DURATION_MS = 7000;
 const SLIDE_DURATION_S = 0.6;

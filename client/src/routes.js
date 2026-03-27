@@ -45,6 +45,7 @@ import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
 import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
+import DoublePage from "views/Double/DoublePage"
 import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import FishingPage from "views/Fishing/FishingPage";
 import CardGamePage from "views/CardGame/CardGamePage";
@@ -174,6 +175,14 @@ var dashRoutes = [
     name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: GravityPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/double",
+    name: "DOUBLE",
+    icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: DoublePage,
     layout: "/game",
   },
   {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import ablyClient from "../ably/ablyClient";
 import { getMinesResults } from "action/MinesActions";
 
-const MAX_ROWS = 15;
+const MAX_ROWS = 12;
 
 export function useAblyMinesResult() {
   const [minesResults, setMinesResults] = useState([]);
