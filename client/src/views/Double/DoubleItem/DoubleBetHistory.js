@@ -110,9 +110,16 @@ export default function DoubleBetHistory({ results = [] }) {
   };
 
   const rowTime = (row) => {
-    const d = row.createdAt || row.createAt;
+    const d =
+      row?.createdAt ||
+      row?.createAt ||
+      row?.created_at ||
+      row?.date ||
+      row?.updatedAt ||
+      row?.updateAt;
     if (!d) return "—";
     const dt = new Date(d);
+    if (!Number.isFinite(dt.getTime())) return "—";
     return `${dt.toLocaleDateString()}, ${dt.toLocaleTimeString()}`;
   };
 

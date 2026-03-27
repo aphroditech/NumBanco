@@ -147,7 +147,7 @@ connectDB()
             console.log("⛏️ Mining Games Ably connected");
 
             // miningBot(ablyMiningGames);
-            // minesBot(ablyMiningGames);
+            minesBot(ablyMiningGames);
             // fishingBot(ablyMiningGames);
             // cocoBot(ablyMiningGames);
             // alphaTreeBot(ablyMiningGames);

@@ -606,8 +606,28 @@ export default function DoublePage() {
     channel.subscribe("DOUBLE_STATE", onState);
     channel.subscribe("DOUBLE_NEW_BET", onBet);
     channel.subscribe("DOUBLE_RESULT", onResult);
+
+    // Catch-up: if we refreshed mid–betting, we may miss some DOUBLE_NEW_BET events
+    // between the initial REST load and Ably subscription attach. Pull one snapshot.
+    let catchUpTimer = setTimeout(async () => {
+      try {
+        const snap = await getDoubleState();
+        if (!mounted || !snap) return;
+        // Only apply within the same round; this is specifically to fill missing liveUsers.
+        if (snap.roundId != null && String(snap.roundId) === String(lastSyncRoundIdRef.current)) {
+          if (Array.isArray(snap.liveUsers)) setLiveRows(dedupeLiveRows(snap.liveUsers));
+          setState((prev) => ({ ...(prev || {}), ...snap }));
+        }
+      } catch {
+        // ignore
+      }
+    }, 1000);
     return () => {
       mounted = false;
+      if (catchUpTimer) {
+        clearTimeout(catchUpTimer);
+        catchUpTimer = null;
+      }
       if (winFireworksTimeoutRef.current) {
         clearTimeout(winFireworksTimeoutRef.current);
         winFireworksTimeoutRef.current = null;
