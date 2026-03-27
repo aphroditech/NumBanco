@@ -725,6 +725,10 @@ export async function startDoubleGameLoop(ably) {
     botUserIds = await User.find({ partnerLevel: 0 }).select("userId").lean();
   } catch {}
   let lastBotUserRefreshAt = 0;
+  // Throttle Ably state snapshots to avoid hitting Ably message limits.
+  // Betting phase currently runs frequently; without throttling it can publish every tick.
+  let lastStateBroadcastAt = 0;
+  const STATE_BROADCAST_MIN_GAP_MS = 2500;
 
   timer = setInterval(async () => {
     if (loopInFlight) return;
@@ -746,9 +750,13 @@ export async function startDoubleGameLoop(ably) {
       if (phaseChanged) {
         lastBroadcastPhase = nextPhase;
         await publish(ably, EVENT_STATE, await getDoubleStateSnapshot());
+        lastStateBroadcastAt = Date.now();
       } else if (phase === "betting") {
-        // Keep live feed (incl. bot rows) in sync over Ably — phase-only broadcasts miss mid–betting window.
-        await publish(ably, EVENT_STATE, await getDoubleStateSnapshot());
+        // Keep live feed in sync, but throttle to avoid excessive Ably messages.
+        if (Date.now() - lastStateBroadcastAt >= STATE_BROADCAST_MIN_GAP_MS) {
+          await publish(ably, EVENT_STATE, await getDoubleStateSnapshot());
+          lastStateBroadcastAt = Date.now();
+        }
       }
 
       if (phase === "betting") {
@@ -820,5 +828,5 @@ export async function startDoubleGameLoop(ably) {
     } finally {
       loopInFlight = false;
     }
-  }, 1000);
+  }, 2000);
 }

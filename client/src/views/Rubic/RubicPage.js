@@ -319,7 +319,7 @@ export default function RubicPage() {
             },
             4: {
                 '<': { winRate: 50, multiplier: 1.95 },
-                '>': { winRate: 66.7, multiplier: 2.5 },
+                '>': { winRate: 33.3, multiplier: 2.5 },
                 '=': { winRate: 16.7, multiplier: 10 }
             },
             5: {
@@ -366,9 +366,9 @@ export default function RubicPage() {
                     '1550px': '"panel game empty"'
                 }}
                 templateColumns={{
-                    sm: '1fr',
-                    md: '1fr 1fr',
-                    '1550px': '3fr 6fr 2fr'
+                    sm: 'minmax(0, 1fr)',
+                    md: 'minmax(0, 1fr) minmax(0, 1fr)',
+                    '1550px': 'minmax(0, 3fr) minmax(0, 6fr) minmax(0, 2fr)'
                 }}
                 templateRows={{
                     base: 'auto auto auto',
@@ -377,6 +377,8 @@ export default function RubicPage() {
                 }}
                 gap={{ base: '16px', md: '24px' }}
                 w="100%"
+                maxW="100%"
+                minW={0}
             >
                 {/* Betting Side - Controls */}
                 <GridItem area="panel" minW={"350px"}>

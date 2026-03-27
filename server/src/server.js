@@ -113,7 +113,7 @@ connectDB()
 
             console.log("🎯 Crash Games Ably connected");
 
-            rocketBot(ablyCrashGames);
+            // rocketBot(ablyCrashGames);
             // jokerCrashBot(ablyCrashGames);
             // pumpingBot(ablyCrashGames);
 
@@ -129,7 +129,7 @@ connectDB()
             console.log("🎲 Dice Games Ably connected");
 
             // rubicBot(ablyDiceGames);
-            coinFlipBot(ablyDiceGames);
+            // coinFlipBot(ablyDiceGames);
             // cardGameBot(ablyDiceGames);
             // aToZBot(ablyDiceGames);
 
@@ -154,7 +154,7 @@ connectDB()
             // startGravityGameLoop(ablyMiningGames);
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);
-            startDoubleGameLoop(ablyMiningGames);
+            // startDoubleGameLoop(ablyMiningGames);
 
         });
 

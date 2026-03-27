@@ -22,6 +22,26 @@ const RECENT_COUNT = 5;
 /** Toss animation: longer duration + more degrees/sec than before. */
 const COIN_SPIN_DURATION_SEC = 2;
 
+function buildSpinProfile() {
+    const flips = 10 + Math.floor(Math.random() * 5); // 10..14 full flips
+    const totalRotate = flips * 360;
+    const peakLift = -36 - Math.random() * 16;
+    const wobble = 7 + Math.random() * 5;
+    const tilt = (Math.random() - 0.5) * 16;
+    const duration = COIN_SPIN_DURATION_SEC + (Math.random() - 0.5) * 0.22;
+    return {
+        rotateY: [0, totalRotate * 0.42, totalRotate * 0.74, totalRotate],
+        scaleX: [1, 0.08, 1, 0.1, 1],
+        y: [0, peakLift, -8, 0],
+        rotateZ: [0, tilt, -tilt * 0.65, 0],
+        scale: [1, 0.95, 1.02, 1],
+        opacity: [1, 1, 0.92, 0.12],
+        duration: Math.max(1.75, duration),
+        times: [0, 0.34, 0.74, 1],
+        ease: [0.2, 0.75, 0.18, 1],
+    };
+}
+
 /** 1 = win, 0 = lose — matches server `M1uXj3sZpU`. */
 function buildConfettiSpecs(seed, count = 16) {
     const out = [];
@@ -96,6 +116,9 @@ export default function MainGameSection() {
     const [outcomeCode, setOutcomeCode] = useState(null);
     /** Bumps when the toss animation finishes — drives one-shot FX (confetti / shake). */
     const [outcomeBurstId, setOutcomeBurstId] = useState(0);
+    /** Win FX visibility (auto hidden after 1.5s). */
+    const [showWinFx, setShowWinFx] = useState(false);
+    const winFxTimerRef = useRef(null);
     const [winPayoutDisplay, setWinPayoutDisplay] = useState(0);
     const dispatch = useDispatch();
     const coinHistoryRaw = useSelector((state) => state.histories?.coinHistory) || [];
@@ -112,6 +135,18 @@ export default function MainGameSection() {
 
     const confettiSpecs = useMemo(() => buildConfettiSpecs(outcomeBurstId), [outcomeBurstId]);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+    const [spinProfile, setSpinProfile] = useState(() => buildSpinProfile());
+
+    const clearWinFxTimer = useCallback(() => {
+        if (winFxTimerRef.current != null) {
+            window.clearTimeout(winFxTimerRef.current);
+            winFxTimerRef.current = null;
+        }
+    }, []);
+
+    useEffect(() => {
+        return () => clearWinFxTimer();
+    }, [clearWinFxTimer]);
 
     const clampBet = useCallback((n) => {
         const v = Number(n);
@@ -145,7 +180,10 @@ export default function MainGameSection() {
 
     const handleThrowCoin = async (choice) => {
         if (isTossing) return;
+        clearWinFxTimer();
+        setShowWinFx(false);
         setOutcomeCode(null);
+        setSpinProfile(buildSpinProfile());
         setIsTossing(true);
         const data = {
             flip: choice,
@@ -285,7 +323,7 @@ export default function MainGameSection() {
                             overflow="visible"
                         >
                             <AnimatePresence>
-                                {!isTossing && outcomeCode === 1 && outcomeBurstId > 0 && (
+                                {!isTossing && outcomeCode === 1 && outcomeBurstId > 0 && showWinFx && (
                                     <MotionBox
                                         key={`win-glow-${outcomeBurstId}`}
                                         position="absolute"
@@ -318,7 +356,7 @@ export default function MainGameSection() {
                                 )}
                             </AnimatePresence>
 
-                            {!isTossing && outcomeCode === 1 && outcomeBurstId > 0 && (
+                            {!isTossing && outcomeCode === 1 && outcomeBurstId > 0 && showWinFx && (
                                 <Box position="absolute" inset={0} pointerEvents="none" zIndex={2} overflow="visible">
                                     {confettiSpecs.map((p) => (
                                         <MotionBox
@@ -347,6 +385,100 @@ export default function MainGameSection() {
                                     ))}
                                 </Box>
                             )}
+
+                            <AnimatePresence>
+                                {!isTossing && outcomeCode === 1 && outcomeBurstId > 0 && showWinFx && (
+                                    <MotionBox
+                                        key={`win-overlay-${outcomeBurstId}`}
+                                        position="absolute"
+                                        inset={0}
+                                        zIndex={3}
+                                        pointerEvents="none"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.28 }}
+                                    >
+                                        {/* Impact flash */}
+                                        <MotionBox
+                                            position="absolute"
+                                            inset="-8%"
+                                            borderRadius="full"
+                                            bg="radial-gradient(circle at 50% 50%, rgba(255,255,255,0.58) 0%, rgba(85,255,210,0.2) 34%, transparent 68%)"
+                                            initial={{ opacity: 0.92, scale: 0.55 }}
+                                            animate={{ opacity: 0, scale: 1.28 }}
+                                            transition={{ duration: 0.42, ease: 'easeOut' }}
+                                        />
+
+                                        {/* Expanding rings */}
+                                        {[0, 1].map((ring) => (
+                                            <MotionBox
+                                                key={`ring-${ring}`}
+                                                position="absolute"
+                                                left="50%"
+                                                top="50%"
+                                                w="90px"
+                                                h="90px"
+                                                marginLeft="-45px"
+                                                marginTop="-45px"
+                                                borderRadius="full"
+                                                border="2px solid rgba(95,255,225,0.55)"
+                                                boxShadow="0 0 26px rgba(95,255,225,0.35)"
+                                                initial={{ scale: 0.35, opacity: 0.9 }}
+                                                animate={{ scale: 2.9 + ring * 0.45, opacity: 0 }}
+                                                transition={{
+                                                    duration: 0.72,
+                                                    delay: ring * 0.08,
+                                                    ease: [0.12, 0.8, 0.22, 1],
+                                                }}
+                                            />
+                                        ))}
+
+                                        {/* Win badge */}
+                                        <MotionBox
+                                            position="absolute"
+                                            left="50%"
+                                            top="50%"
+                                            transform="translate(-50%, -50%)"
+                                            px={{ base: 4, md: 5 }}
+                                            py={{ base: 3, md: 3.5 }}
+                                            borderRadius="14px"
+                                            bg="rgba(6, 16, 24, 0.84)"
+                                            border="1px solid rgba(95,255,225,0.45)"
+                                            boxShadow="0 0 0 1px rgba(255,255,255,0.08), 0 0 36px rgba(74,222,128,0.35), inset 0 0 16px rgba(95,255,225,0.12)"
+                                            initial={{ opacity: 0, scale: 0.72, y: 6 }}
+                                            animate={{ opacity: 1, scale: [0.72, 1.1, 1], y: 0 }}
+                                            transition={{ duration: 0.45, times: [0, 0.62, 1], ease: [0.2, 0.95, 0.25, 1] }}
+                                        >
+                                            <Text
+                                                fontSize="10px"
+                                                letterSpacing="0.22em"
+                                                textAlign="center"
+                                                color="rgba(160,255,235,0.92)"
+                                                fontWeight="800"
+                                                mb={1}
+                                            >
+                                                JACKPOT WIN
+                                            </Text>
+                                            <Text
+                                                fontSize={{ base: '28px', md: '34px' }}
+                                                fontWeight="900"
+                                                textAlign="center"
+                                                lineHeight="1"
+                                                sx={{
+                                                    background: 'linear-gradient(120deg, #ffffff 0%, #7effd7 45%, #4ade80 100%)',
+                                                    WebkitBackgroundClip: 'text',
+                                                    WebkitTextFillColor: 'transparent',
+                                                    backgroundClip: 'text',
+                                                    filter: 'drop-shadow(0 0 16px rgba(74,222,128,0.55))',
+                                                }}
+                                            >
+                                                +${Number(winPayoutDisplay || 0).toFixed(2)}
+                                            </Text>
+                                        </MotionBox>
+                                    </MotionBox>
+                                )}
+                            </AnimatePresence>
 
                             {!isTossing && (
                                 <MotionBox
@@ -397,16 +529,17 @@ export default function MainGameSection() {
                                     style={{ transformStyle: 'preserve-3d' }}
                                     initial={{ opacity: 1, rotateY: 0, scaleX: 1, scale: 1 }}
                                     animate={{
-                                        // 4320° = 12 full flips (was 1800° / 5 flips in 1.2s)
-                                        rotateY: [0, 720, 1440, 2160, 2880, 3600, 4320],
-                                        scaleX: [1, 0.11, 1, 0.11, 1, 0.09, 1],
-                                        scale: [1, 0.97, 0.94, 0.97, 0.95, 0.98, 1],
-                                        opacity: [1, 1, 1, 1, 1, 0.75, 0],
+                                        rotateY: spinProfile.rotateY,
+                                        scaleX: spinProfile.scaleX,
+                                        y: spinProfile.y,
+                                        rotateZ: spinProfile.rotateZ,
+                                        scale: spinProfile.scale,
+                                        opacity: spinProfile.opacity,
                                     }}
                                     transition={{
-                                        duration: COIN_SPIN_DURATION_SEC,
-                                        ease: 'easeInOut',
-                                        times: [0, 0.14, 0.28, 0.42, 0.56, 0.72, 1],
+                                        duration: spinProfile.duration,
+                                        ease: spinProfile.ease,
+                                        times: spinProfile.times,
                                     }}
                                     onAnimationComplete={() => {
                                         // Must match API outcome (pendingFaceRef was never set before).
@@ -415,6 +548,14 @@ export default function MainGameSection() {
                                         completeToss();
                                         setRevealKey((v) => v + 1);
                                         setOutcomeBurstId((v) => v + 1);
+                                        if (tossOutcomeRef.current.isWin) {
+                                            clearWinFxTimer();
+                                            setShowWinFx(true);
+                                            winFxTimerRef.current = window.setTimeout(() => {
+                                                setShowWinFx(false);
+                                                winFxTimerRef.current = null;
+                                            }, 1500);
+                                        }
                                     }}
                                 />
                             )}
