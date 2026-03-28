@@ -58,9 +58,9 @@ export async function createDoubleBet(req, res) {
 
 export async function getMyDoubleHistory(req, res) {
   try {
-    const user = await User.findOne({ userAuthId: req.user.userAuthId });
+    const user = await User.findOne({ userAuthId: req.user.userAuthId }).select("userId doubleHistory");
     if (!user) return res.status(404).json({ message: "User not found" });
-    const data = await getDoubleUserHistory(user.userId, 50);
+    const data = await getDoubleUserHistory(user.userId, 50, { embedded: user.doubleHistory });
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);

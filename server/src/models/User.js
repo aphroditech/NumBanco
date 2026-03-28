@@ -904,6 +904,35 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  /** Double — one entry per real-user bet (mirrors DoubleHistory collection). */
+  doubleHistory: {
+    type: [
+      {
+        _id: { type: mongoose.Schema.Types.ObjectId },
+        roundId: { type: Number, required: true },
+        userName: { type: String, default: "" },
+        avatar: { type: String, default: "" },
+        side: {
+          type: String,
+          required: true,
+          enum: ["red", "black", "green"],
+        },
+        betAmount: { type: Number, required: true },
+        winAmount: { type: Number, default: 0 },
+        winningColor: {
+          type: String,
+          enum: ["red", "black", "green"],
+        },
+        winningSlot: { type: Number },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
   /** Cloud Spread — round summaries (like rubicHistory / pumpingHistory). */
   cloudSpreadHistory: {
     type: [

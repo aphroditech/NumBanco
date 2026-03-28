@@ -10,7 +10,6 @@ const USER_BET_SELECT =
 
 export const bet = async (req, res) => {
     try {
-        console.log('bet', req.body);
         const { betAmount, flip } = req.body;
         const betNum = Number(betAmount);
         if (!Number.isFinite(betNum) || betNum <= 0) {
@@ -37,7 +36,6 @@ export const bet = async (req, res) => {
         const tempNumbers = coinSettings.multiple?.find(
             (item) => betNum >= item.min && betNum <= item.max
         );
-        console.log('tempNumbers', tempNumbers);
         if (!tempNumbers) {
             return res.status(400).json({ message: 'Invalid bet amount', error: 'Invalid bet amount' });
         }
