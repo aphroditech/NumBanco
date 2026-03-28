@@ -37,6 +37,7 @@ import climb from "assets/img/Games/climb.jpg"
 import dice from "assets/img/Games/dice.jpg"
 import coinImage from "assets/img/Games/coin.jpg"
 import doubleGame from "assets/img/Games/double.jpg"
+import wheel from "assets/img/Games/wheel.jpg"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -56,6 +57,7 @@ const DASHBOARD_GAMES = [
     { img: dove, name: "LUCKY HOP", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: dice, name: "Dice", path: "/game/dice", reduxKey: "diceUsers", tickMs: 5200 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
+    { img: wheel, name: "Wheel", path: "/game/wheel", reduxKey: "wheelUsers", tickMs: 4600 },
     { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 3600 },
     { img: jackal, name: "Jackal", path: "/game/jackal", reduxKey: "jackalUsers", tickMs: 2600 },
     { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4900 },

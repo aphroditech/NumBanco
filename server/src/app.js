@@ -39,6 +39,7 @@ import aToZRoutes from "./routes/aToZRoutes.js";
 import twistRoutes from "./routes/twistRoutes.js";
 import diceRoutes from "./routes/diceRoutes.js";
 import coinRoutes from "./routes/coinRoutes.js";
+import wheelRoutes from "./routes/wheelRoutes.js";
 import climbRoutes from "./routes/climbRoutes.js";
 dotenv.config();
 
@@ -102,6 +103,7 @@ app.use("/api/dice", diceRoutes);
 app.use("/api/alpha-tree", alphaTreeRoutes);
 app.use("/api/twist", twistRoutes);
 app.use("/api/coin", coinRoutes);
+app.use("/api/wheel", wheelRoutes);
 app.use("/api/climb", climbRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
