@@ -28,10 +28,6 @@ const jokerCrashUserProjection = {
     canWithdraw: 0,
 };
 
-const getJokerCrashUser = async (userId) => {
-    return User.findOne({ userId }, jokerCrashUserProjection);
-};
-
 const trimRecent = (arr, max = 30) => {
     if (!Array.isArray(arr)) return arr;
     if (arr.length <= max) return arr;

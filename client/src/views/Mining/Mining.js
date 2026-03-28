@@ -49,7 +49,7 @@ const TOTAL_TILES = 16;
 const MIN_TURNS = 1;
 const MAX_TURNS = 8;
 /** Each safe flip reduces payout: mult = maxMult * DECAY_BASE^(turn - 1) */
-const MULTIPLIER_DECAY = 0.8;
+const MULTIPLIER_DECAY = 0.9;
 const OUTCOME_FX_MS = 1500;
 const INITIAL_RESULT_MESSAGE = 'Good luck! Play your best!';
 
@@ -904,23 +904,6 @@ export default function Mining() {
                                     <sup>(flip − 1)</sup>).
                                 </Text>
                             </Box>
-
-                            
-
-                            {/* <Box>
-                                <Text fontWeight="bold" color="#00D4FF" mb={2}>
-                                    🏆 Partner Levels
-                                </Text>
-                                <UnorderedList pl={5}>
-                                    <ListItem>Level increases based on referral performance.</ListItem>
-                                    <ListItem>Higher levels may unlock better earning benefits.</ListItem>
-                                    <ListItem>Regional Officers have extended privileges.</ListItem>
-                                </UnorderedList>
-                            </Box> */}
-
-                            {/* <Text fontSize="xs" color="gray.400">
-                                ⚠️ Earnings must be greater than $0 to convert.
-                            </Text> */}
 
                         </VStack>
                     </ModalBody>

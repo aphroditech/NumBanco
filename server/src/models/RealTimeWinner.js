@@ -24,6 +24,10 @@ const realTimeWinnerSchema = new mongoose.Schema({
     },
     time: {
         type: Number
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
 }, { timestamps: true });
 export default mongoose.model("realtime_winners", realTimeWinnerSchema);

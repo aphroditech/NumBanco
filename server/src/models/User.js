@@ -373,6 +373,14 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  wheelAmount: {
+    type: Number,
+    default: 0
+  },
+  wheelWinAmount: {
+    type: Number,
+    default: 0
+  },
   /** Twist multiplier ladder positions (persisted per user). */
   twistGreenMultIndex: {
     type: Number,
@@ -410,6 +418,13 @@ const userSchema = new mongoose.Schema({
   twistMode: {
     type: Number,
     default: 1, // 0=easy, 1=normal, 2=hard
+    min: 0,
+    max: 2
+  },
+  /** Ban-rate tier for Climb only (0 → low ban, 2 → high ban); not the round grid mode. */
+  climbMode: {
+    type: Number,
+    default: 1,
     min: 0,
     max: 2
   },
@@ -755,6 +770,54 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  kenoMode: {
+    type: String,
+    default: 1
+  },
+
+  kenoHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        type: {
+          type: Number,
+          default: 0
+        },
+        numbersLength: {
+          type: Number,
+          default: 0
+        },
+        winLength: {
+            type: Number,
+            default: 0
+        },
+        win: {
+          type: Number,
+          default: 0
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        kenoBalance: {
+          type: Number,
+          default: 0
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
   rubicHistory: {
     type: [
       {
@@ -834,6 +897,21 @@ const userSchema = new mongoose.Schema({
   },
 
   alphaTreeHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+  climbHistory: {
     type: [
       {
         betAmount: { type: Number, required: true },

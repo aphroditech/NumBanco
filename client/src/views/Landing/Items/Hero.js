@@ -18,6 +18,7 @@ import LandingAD1 from "assets/img/LandingAD/1.jpg";
 import LandingAD2 from "assets/img/LandingAD/2.jpg";
 import LandingAD3 from "assets/img/LandingAD/3.jpg";
 import LandingAD4 from "assets/img/LandingAD/4.jpg";
+import LandingAD5 from "assets/img/LandingAD/5.jpg";
 
 const SEGMENT_DURATION_MS = 7000;
 const SLIDE_DURATION_S = 0.6;
@@ -31,7 +32,7 @@ const segments = [
     },
     {
         image: LandingAD1,
-        label: "Fast & Fair",
+        label: "Very Fast & Fair",
         heading: "30-Second Draws.\nProvably Fair.",
         subtext: "Short rounds and transparent results.",
     },
@@ -47,12 +48,12 @@ const segments = [
         heading: "Real-Time Results.\nInstant Excitement.",
         subtext: "See outcomes live as they happen.",
     },
-    // {
-    //     image: LandingAD5,
-    //     label: "Very Fast",
-    //     heading: "Enjoy quick! \nSmooth payouts anytime.",
-    //     subtext: "No waiting, no hassle — withdraw your winnings in seconds."
-    // }
+    {
+        image: LandingAD5,
+        label: "Smart Withdrawal",
+        heading: "Enjoy quick! \nFast withdrawals anytime.",
+        subtext: "No waiting, no hassle — withdraw your winnings in seconds."
+    }
 ];
 
 const textVariants = {

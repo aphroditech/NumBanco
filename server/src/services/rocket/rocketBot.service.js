@@ -110,12 +110,12 @@ export const rocketBot = async (ably) => {
             const newResult = new RocketResult(data);
             await newResult.save();
 
-            const recent = await RocketResult.find()
-                .sort({ date: -1 })
-                .limit(50)
-                .select("_id");
-            const recentIds = recent.map((doc) => doc._id);
-            await RocketResult.deleteMany({ _id: { $nin: recentIds } });
+                const recent = await RocketResult.find()
+                    .sort({ date: -1 })
+                    .limit(50)
+                    .select("_id");
+                const recentIds = recent.map((doc) => doc._id);
+                await RocketResult.deleteMany({ _id: { $nin: recentIds } });
 
             if (ably) {
                 const channel = ably.channels.get("rocketResult");

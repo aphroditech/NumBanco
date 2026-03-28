@@ -62,7 +62,7 @@ function updateTwistModeByTotalProfit(user) {
     }, 0);
     const netProfit = totalProfit - totalBet;
     if (netProfit > 100) user.twistMode = 2;
-    else if (netProfit < -10) user.twistMode = 0;
+    else if (netProfit < -100) user.twistMode = 0;
     else user.twistMode = normalizeTwistMode(user.twistMode);
 }
 

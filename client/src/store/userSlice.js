@@ -20,6 +20,7 @@ const initialState = {
         onlineUsers: 0,
         aToZUsers: 0,
         twistUsers: 0,
+        climbUsers: 0,
         jokerCrashUsers: 0,
         cardGameUsers: 0,
         totalActiveUsers: 0

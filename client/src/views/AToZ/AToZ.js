@@ -1003,7 +1003,7 @@ export default function AToZPage() {
                                     <Tr>
                                         <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">Two Unordered</Td>
                                         <Td color="gray.300" borderColor="rgba(255,255,255,0.08)">Exactly 2 digits match but positions differ</Td>
-                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x7.5</Td>
+                                        <Td color="#bdf9ff" borderColor="rgba(255,255,255,0.08)" isNumeric fontWeight="700">x7.2</Td>
                                     </Tr>
                                     <Tr>
                                         <Td color="gray.100" borderColor="rgba(255,255,255,0.08)">One Ordered</Td>

@@ -33,6 +33,7 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import StyleIcon from '@mui/icons-material/Style';
+import AppsIcon from '@mui/icons-material/Apps';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
@@ -45,7 +46,11 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import DicePage from "views/Dice/DicePage";
-import PlinkoPage from "views/Plinko/PlinkoPage";
+import KenoPage from "views/Keno/KenoPage";
+import WheelPage from "views/Wheel/Wheel";
+import AttractionsIcon from '@mui/icons-material/Attractions';
+import ClimbPage from "views/Climb/ClimbPage";
+import StarIcon from '@mui/icons-material/Star';
 
 export const TierA = {
     path: "/tierA",
@@ -99,6 +104,14 @@ export const Dice = {
     layout: "/game",
 }
 
+export const Keno = {
+    path: "/keno",
+    name: "KENO",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: KenoPage,
+    layout: "/game",
+}
+
 export const Jackal = {
     path: "/jackal",
     name: "JACKAL",
@@ -106,6 +119,7 @@ export const Jackal = {
     component: Mining,
     layout: "/game",
 }
+
 
 export const Mines = {
     path: "/mine",
@@ -134,7 +148,7 @@ export const Rubic = {
 export const Pumping = {
     path: "/pumping",
     name: "PUMPING",
-    icon: <GavelIcon style={{ fontSize: "24px", color: "#00D4FF" }} />, 
+    icon: <GavelIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PumpingPage,
     layout: "/game",
 }
@@ -240,5 +254,20 @@ export const Plinko = {
     name: "PLINKO",
     icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PlinkoPage,
+}
+
+export const Wheel = {
+    path: "/wheel",
+    name: "WHEEL",
+    icon: <AttractionsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: WheelPage,
+    layout: "/game",
+}
+
+export const Climb = {
+    path: "/climb",
+    name: "CLIMB",
+    icon: <StarIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: ClimbPage,
     layout: "/game",
 }

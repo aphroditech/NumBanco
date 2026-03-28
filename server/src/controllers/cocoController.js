@@ -109,7 +109,7 @@ function applyCocoResultAndUpdateMode(user, betAmount, profitAmount) {
 
     // Mode changes only at extremes; otherwise keep current mode.
     if (netProfit > 100) user.cocoMode = 2;
-    else if (netProfit < -10) user.cocoMode = 0;
+    else if (netProfit < -100) user.cocoMode = 0;
 }
 
 let cocoRateCache = null;

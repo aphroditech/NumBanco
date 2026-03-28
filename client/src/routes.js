@@ -40,6 +40,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import DangerousIcon from '@mui/icons-material/Dangerous';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import StyleIcon from '@mui/icons-material/Style';
+import AppsIcon from '@mui/icons-material/Apps';
 
 import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
@@ -58,9 +59,11 @@ import CoinPage from "views/Coin/CoinPage";
 import DicePage from "views/Dice/DicePage";
 import PlinkoPage from "views/Plinko/PlinkoPage";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
+import KenoPage from "views/Keno/KenoPage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
+import AttractionsIcon from '@mui/icons-material/Attractions';
 import Coco from "views/Coco/CocoPage";
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import AToZPage from "views/AToZ/AToZ";
@@ -69,6 +72,8 @@ import Filter9Icon from '@mui/icons-material/Filter9';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
+import WheelPage from "views/Wheel/Wheel";
+import ClimbPage from "views/Climb/ClimbPage";
 
 import {
   DocumentIcon,
@@ -117,10 +122,26 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/wheel",
+    name: "WHEEL",
+    icon: <AttractionsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: WheelPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/dice",
     name: "DICE",
     icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DicePage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/keno",
+    name: "KENO",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: KenoPage,
     layout: "/game",
   },
   {
@@ -151,7 +172,7 @@ var dashRoutes = [
     redirect: true,
     path: "/fishing",
     name: "Fishing",
-    icon: <GiFishingHook  style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    icon: <GiFishingHook style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: FishingPage,
     layout: "/game",
   },
@@ -159,7 +180,7 @@ var dashRoutes = [
     redirect: true,
     path: "/card-game",
     name: "CARD GAME",
-    icon: <StyleIcon  style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    icon: <StyleIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: CardGamePage,
     layout: "/game",
   },
@@ -167,7 +188,7 @@ var dashRoutes = [
     redirect: true,
     path: "/joker-crash",
     name: "JOKER CRASH",
-    icon: <WhatshotIcon  style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: JokerCrashPage,
     layout: "/game",
   },
@@ -265,6 +286,14 @@ var dashRoutes = [
     name: "TWIST",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: TwistPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/climb",
+    name: "CLIMB",
+    icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: ClimbPage,
     layout: "/game",
   },
   {

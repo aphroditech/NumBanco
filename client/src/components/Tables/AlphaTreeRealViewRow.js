@@ -65,6 +65,9 @@ function AlphaTreeRealViewRow(props) {
     const isWin = win > 0;
     const rowColor = isWin ? "#68d391" : "#f56565";
     const displayName = altas || "—";
+    const resultNum = Number(result);
+    const showZeroWin = (win === null || win === undefined || win === "") && Number.isFinite(resultNum) && resultNum <= 0;
+    const displayWin = showZeroWin ? 0 : win;
 
     return (
     <Tr className={props.isNew ? "realtime-new" : undefined} borderBottom="1px solid rgba(255,255,255,0.06)" _last={{ borderBottom: "none" }}>
@@ -95,7 +98,7 @@ function AlphaTreeRealViewRow(props) {
             )}
             <Tooltip label={altas || ""} placement="top" hasArrow>
                 <Text color={rowColor} fontSize="13px" fontWeight="700">
-                {displayName}
+                {displayName.length > 6 ? `${displayName.slice(0, 6)}...` : displayName}
                 </Text>
             </Tooltip>
             </HStack>
@@ -120,7 +123,7 @@ function AlphaTreeRealViewRow(props) {
         overflow="visible"
         >
         <Text fontSize="13px" color={rowColor} fontWeight="700" textAlign="right" whiteSpace="nowrap" sx={{ fontVariantNumeric: "tabular-nums" }}>
-            ${truncateToTwo(win)}
+            ${truncateToTwo(displayWin)}
         </Text>
         </Td>
     </Tr>

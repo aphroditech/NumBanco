@@ -26,6 +26,10 @@ import { initializeCocoRates } from './initCocoRates.js';
 import { initCoinSettings } from './initCoinSettings.js';
 import { initDoubleBotSettings } from './initDoubleBotSettings.js';
 import { initializeTwistSettings } from './initTwistSettings.js';
+import { initializeKenoControls } from './kenoContrl.js';
+import { initializeKenoLimits } from './kenoLimits.js';
+import { initializeClimbSettings } from './initClimbSettings.js';
+import { initWheelSettings } from './initWheelSettings.js';
 import { initializePlinkoRateSettings } from './initPlinkoRateSettings.js';
 import { initializePlinkoBotSettings } from './initPlinkoBotSettings.js';
 
@@ -55,6 +59,7 @@ export const initializeDatabase = async () => {
     await initializeTwistSettings();
     await initializePlinkoRateSettings();
     await initializePlinkoBotSettings();
+    await initializeClimbSettings();
     await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();
@@ -64,5 +69,8 @@ export const initializeDatabase = async () => {
     await initializeJokerCrashIncreases();
     await initializeJokerCrashCards();
     await initializeJokerCrashPercentages();
+    await initializeKenoControls();
+    await initializeKenoLimits();
+    await initWheelSettings();
     console.log('✅ Database initialization complete');
 };
