@@ -14,6 +14,10 @@ const CalendarWheelSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    level: {
+        type: String,
+        required: true
+    },
     winAmount: {
         type: Number,
         required: true,

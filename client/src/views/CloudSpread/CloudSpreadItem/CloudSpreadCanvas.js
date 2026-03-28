@@ -565,7 +565,7 @@ export default function CloudSpreadCanvas({
         selNum > 0;
 
       if (pickedSet.size > 0) {
-        ctx.fillStyle = "rgba(20, 35, 65, 0.98)";
+        ctx.fillStyle = "#0000e6";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.shadowColor = "rgba(41, 38, 38, 0.6)";
@@ -722,18 +722,13 @@ export default function CloudSpreadCanvas({
           if (ring > 0.2) {
             ctx.beginPath();
             ctx.arc(0, 0, 11 * layoutScale + ring, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(255, 50, 50, ${0.4 * pulse})`; // Red pulse ring
+            ctx.strokeStyle = `rgba(0, 0, 230, ${0.22 * pulse})`;
             ctx.lineWidth = 2;
             ctx.stroke();
           }
 
-          ctx.shadowColor = `rgba(255, 0, 0, ${0.3 + 0.6 * pulse})`; // Red glow shadow
-          ctx.shadowBlur = 6 + 12 * pulse;
-          ctx.fillStyle = "rgba(28, 43, 71, 0.98)";
+          ctx.fillStyle = "#0000e6";
           ctx.fillText(label, 0, 0);
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = `rgba(255, 150, 150, ${0.2 * pulse})`; // Reddish inner text highlight
-          ctx.fillText(label, -0.4 * pulse, -0.4 * pulse);
 
           ctx.restore();
         }

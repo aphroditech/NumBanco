@@ -23,6 +23,7 @@ import { startDoubleGameLoop } from "./services/double/doubleGame.service.js";
 import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSpread/cloudSpreadGame.service.js";
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 import { minesBot } from "./services/mines/minesBot.js";
+import { plinkoBot } from "./services/plinko/plinkoBot.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import { miningBot } from "./services/mining/miningBotService.js";
@@ -36,6 +37,7 @@ import { diceBot } from "./services/dice/diceBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
 import { coinFlipBot } from "./services/coinFlip/coinFlipBot.service.js";
 import { twistBot } from "./services/twist/twistBot.service.js";
+import { kenoBot } from "./services/keno/kenoBot.service.js";
 import { wheelBot } from "./services/wheel/wheelBot.service.js";
 import { climbBot } from "./services/climb/climbBot.service.js";
 
@@ -139,6 +141,7 @@ connectDB()
             // cardGameBot(ablyDiceGames);
             // aToZBot(ablyDiceGames);
             // twistBot(ablyDiceGames);
+            // kenoBot(ablyDiceGames);
         });
 
         /*
@@ -152,15 +155,16 @@ connectDB()
             console.log("⛏️ Mining Games Ably connected");
 
             // miningBot(ablyMiningGames);
-            // minesBot(ablyMiningGames);
             // fishingBot(ablyMiningGames);
             // cocoBot(ablyMiningGames);
             // alphaTreeBot(ablyMiningGames);
             // doveBot(ablyMiningGames);
-            // startGravityGameLoop(ablyMiningGames);
-            // setCloudSpreadAbly(ablyMiningGames);
-            // cloudSpreadBot().catch(console.error);
-            // startDoubleGameLoop(ablyMiningGames);
+            minesBot(ablyMiningGames);
+            plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
+            startGravityGameLoop(ablyMiningGames);
+            setCloudSpreadAbly(ablyMiningGames);
+            cloudSpreadBot().catch(console.error);
+            startDoubleGameLoop(ablyMiningGames);
 
         });
 

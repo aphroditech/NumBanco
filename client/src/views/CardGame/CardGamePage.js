@@ -52,8 +52,6 @@ import { cardGameBet } from 'action/CardGameActions';
 
 const MIN_AMOUNT = 0.1;
 const FLIP_MS = 800;
-
-const AUTO_BET_SPIN_MS = 1400;
 const ARROW_OVERLAY_HOLD_MS = 2600;
 const ARROW_OVERLAY_FADE_MS = 700;
 const WIN_FIREWORKS_MS = 2200;
@@ -143,19 +141,16 @@ export default function CardGamePage() {
     const [isFlipping, setIsFlipping] = useState(false);
     const [isAutoBetActive, setIsAutoBetActive] = useState(false);
     const flipEndHandledRef = useRef(false);
-    /** 180 = manual or auto first half; 360 = auto second half. */
     const flipTargetDegRef = useRef(180);
-    /** Auto spin: `to180` then `to360` so we never swap front textures while the user still sees the front face. */
-    const autoSpinPhaseRef = useRef(null);
-    const pendingAutoFacesRef = useRef(null);
+    /** Each full bet uses two CSS flip segments (180° + 180°); chain auto only after the 2nd completes. */
+    const betFlipSegmentRef = useRef(0);
+    const handleBetRef = useRef(async () => {});
 
     const isAutoBetActiveRef = useRef(isAutoBetActive);
     const isFlippingRef = useRef(isFlipping);
     const betRef = useRef(bet);
     const amountRef = useRef(amount);
     const operatorRef = useRef(operator);
-    const autoBetLoopRunningRef = useRef(false);
-    const autoBetLoopTimeoutRef = useRef(null);
     /** Filled when a bet succeeds; shown only after the card flip fully reveals. */
     const pendingOutcomeRef = useRef(null);
     const cardFxAnchorRef = useRef(null);
@@ -168,8 +163,6 @@ export default function CardGamePage() {
         anchorRect: null,
     });
     const [bangFx, setBangFx] = useState({ visible: false, anchorRect: null });
-
-    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
     const clearWinBangTimers = useCallback(() => {
         if (winFxTimeoutRef.current != null) {
@@ -207,7 +200,8 @@ export default function CardGamePage() {
                     setWinFx({ visible: false, totalEarn: '0', anchorRect: null });
                 }, WIN_FIREWORKS_MS);
             } else {
-                setBangFx({ visible: true, anchorRect });
+                // Full-viewport bang (no anchorRect — see BangBurstEffect defaults).
+                setBangFx({ visible: true, anchorRect: null });
                 bangFxTimeoutRef.current = setTimeout(() => {
                     bangFxTimeoutRef.current = null;
                     setBangFx({ visible: false, anchorRect: null });
@@ -268,12 +262,6 @@ export default function CardGamePage() {
     }, [operator]);
 
     useEffect(() => {
-        return () => {
-            if (autoBetLoopTimeoutRef.current) clearTimeout(autoBetLoopTimeoutRef.current);
-        };
-    }, []);
-
-    useEffect(() => {
         cardFacesRef.current = {
             leftF: leftColFront,
             leftB: leftColBack,
@@ -305,18 +293,10 @@ export default function CardGamePage() {
         };
     }, [arrow, arrowTick]);
 
-    const startAutoBet = () => {
-        setIsAutoBetActive(true);
-    };
-
-    const stopAutoBet = () => {
-        setIsAutoBetActive(false);
-    };
-
-    const handleBet = async (data) => {
-        if (isFlipping) return;
-        const useAutoFullSpin = isAutoBetActiveRef.current;
+    const handleBet = async () => {
+        if (isFlipping || isFlippingRef.current) return;
         setBet(true);
+        betFlipSegmentRef.current = 0;
         const res = await cardGameBet(
             { amount: amountRef.current, operator: operatorRef.current },
             dispatch,
@@ -338,87 +318,52 @@ export default function CardGamePage() {
             const rightFace = '/CardGame/spades/(' + res.right + ').svg';
 
             setIsFlipping(true);
+            isFlippingRef.current = true;
             setFlipTransitionEnabled(true);
             setLeftColBack(leftFace);
             setRightColBack(rightFace);
 
-            if (useAutoFullSpin) {
-                const halfMs = Math.max(350, Math.round(AUTO_BET_SPIN_MS / 2));
-                pendingAutoFacesRef.current = { leftSrc: leftFace, rightSrc: rightFace };
-                autoSpinPhaseRef.current = 'to180';
-                flipTargetDegRef.current = 180;
-                setFlipDurationMs(halfMs);
-                // Keep current fronts through 0→180; only backs are default — new faces apply at 180° (backs visible).
-                setLeftColBack(leftCard);
-                setRightColBack(rightCard);
+            flipTargetDegRef.current = 180;
+            setFlipDurationMs(FLIP_MS);
+
+            setTimeout(() => {
                 requestAnimationFrame(() => {
                     setInnerRotate(180);
+                    setTimeout(() => {
+                        setLeftColBack(leftCard);
+                        setRightColBack(rightCard);
+                        requestAnimationFrame(() => {
+                            setIsFlipping(true);
+                            isFlippingRef.current = true;
+                            setInnerRotate(180);
+                        });
+                        setBet(false);
+                    }, 1000);
                 });
-                setBet(false);
-            } else {
-                flipTargetDegRef.current = 180;
-                setFlipDurationMs(FLIP_MS);
-                // Manual: hidden backs become result faces; classic 180° flip + second pass after delay.
+            }, 1000);
 
-
-                setTimeout(() => {
-                    requestAnimationFrame(() => {
-                        setInnerRotate(180);
-                        setTimeout(() => {
-                            setLeftColBack(leftCard);
-                            setRightColBack(rightCard);
-                            requestAnimationFrame(() => {
-                                setInnerRotate(180);
-                            });
-                            setBet(false);
-                        }, 1000);
-                    });
-                }, 1000);
-            }
             return res;
-        } else {
-            pendingOutcomeRef.current = null;
-            toast.error("Bet failed");
-            setBet(false);
-            return null;
         }
+        pendingOutcomeRef.current = null;
+        toast.error("Bet failed");
+        setBet(false);
+        isAutoBetActiveRef.current = false;
+        setIsAutoBetActive(false);
+        return null;
     };
 
-    // Auto-bet loop (frontend-only)
-    useEffect(() => {
-        if (!isAutoBetActive) return;
-        if (autoBetLoopRunningRef.current) return;
+    handleBetRef.current = handleBet;
 
-        autoBetLoopRunningRef.current = true;
+    const startAutoBet = () => {
+        isAutoBetActiveRef.current = true;
+        setIsAutoBetActive(true);
+        void handleBet();
+    };
 
-        (async () => {
-            try {
-                while (isAutoBetActiveRef.current) {
-                    // Wait until the current flip is done before placing another bet.
-                    while (isAutoBetActiveRef.current && (isFlippingRef.current || betRef.current)) {
-                        await sleep(120);
-                    }
-                    if (!isAutoBetActiveRef.current) break;
-
-                    const res = await handleBet( { auto: true } );
-                    // If server call fails, stop the auto loop to avoid spam.
-                    if (!res) {
-                        setIsAutoBetActive(false);
-                        break;
-                    }
-
-                    // Wait until flip completes (isFlipping toggles off in handleFlipTransitionEnd).
-                    while (isAutoBetActiveRef.current && isFlippingRef.current) {
-                        await sleep(120);
-                    }
-                    // Small delay to avoid immediate retrigger.
-                    await sleep(80);
-                }
-            } finally {
-                autoBetLoopRunningRef.current = false;
-            }
-        })();
-    }, [isAutoBetActive]);
+    const stopAutoBet = () => {
+        isAutoBetActiveRef.current = false;
+        setIsAutoBetActive(false);
+    };
 
     const handleFlipTransitionEnd = (e) => {
         if (e.propertyName !== 'transform') return;
@@ -426,48 +371,6 @@ export default function CardGamePage() {
         if (innerRotateRef.current !== targetDeg) return;
         if (flipEndHandledRef.current) return;
         flipEndHandledRef.current = true;
-
-        // Auto-bet: end of 0→180 — user sees default backs; swap in result faces invisibly, then 180→360.
-        if (autoSpinPhaseRef.current === 'to180' && targetDeg === 180) {
-            const pending = pendingAutoFacesRef.current;
-            if (pending) {
-                setLeftColFront(pending.leftSrc);
-                setRightColFront(pending.rightSrc);
-            }
-            setLeftColBack(leftCard);
-            setRightColBack(rightCard);
-            autoSpinPhaseRef.current = 'to360';
-            flipTargetDegRef.current = 360;
-            const halfMs = Math.max(350, Math.round(AUTO_BET_SPIN_MS / 2));
-            setFlipDurationMs(halfMs);
-            setFlipTransitionEnabled(false);
-            requestAnimationFrame(() => {
-                setFlipTransitionEnabled(true);
-                flipEndHandledRef.current = false;
-                requestAnimationFrame(() => {
-                    setInnerRotate(360);
-                });
-            });
-            return;
-        }
-
-        if (targetDeg === 360) {
-            autoSpinPhaseRef.current = null;
-            pendingAutoFacesRef.current = null;
-            setFlipTransitionEnabled(false);
-            setInnerRotate(0);
-            flipTargetDegRef.current = 180;
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setFlipDurationMs(FLIP_MS);
-                    setFlipTransitionEnabled(true);
-                    setIsFlipping(false);
-                    flipEndHandledRef.current = false;
-                    flushPendingOutcomeAfterReveal();
-                });
-            });
-            return;
-        }
 
         const { leftF, leftB, rightF, rightB } = cardFacesRef.current;
 
@@ -483,8 +386,20 @@ export default function CardGamePage() {
             requestAnimationFrame(() => {
                 setFlipTransitionEnabled(true);
                 setIsFlipping(false);
+                isFlippingRef.current = false;
                 flipEndHandledRef.current = false;
                 flushPendingOutcomeAfterReveal();
+                betFlipSegmentRef.current += 1;
+                if (betFlipSegmentRef.current >= 2) {
+                    betFlipSegmentRef.current = 0;
+                    if (isAutoBetActiveRef.current) {
+                        window.setTimeout(() => {
+                            if (!isAutoBetActiveRef.current) return;
+                            if (isFlippingRef.current || betRef.current) return;
+                            void handleBetRef.current?.();
+                        }, 120);
+                    }
+                }
             });
         });
     };
@@ -829,7 +744,7 @@ export default function CardGamePage() {
                                 </FormControl>
 
                                 <FormControl w="100%" maxW={{ base: "100%", sm: "300px" }} mt="5">
-                                    <Grid templateColumns="1fr" gap="8px">
+                                    <Grid templateColumns="1fr 1fr" gap="8px">
                                         <ClickButton
                                             w="100%"
                                             h="46px"
@@ -850,10 +765,10 @@ export default function CardGamePage() {
                                                 parseFloat(amount) < MIN_AMOUNT ||
                                                 balance < parseFloat(amount || '0')
                                             }
-                                            onClick={() => handleBet({ auto: false })}
+                                            onClick={() => handleBet()}
                                             label="BET"
                                         />
-                                        {/* <ClickButton
+                                        <ClickButton
                                             w="100%"
                                             h="46px"
                                             fontSize={{ base: 'md', sm: 'md' }}
@@ -881,7 +796,7 @@ export default function CardGamePage() {
                                                 }
                                             }
                                             label={isAutoBetActive ? "STOP" : "Auto BET"}
-                                        /> */}
+                                        />
                                     </Grid>
                                 </FormControl>
                             </VStack>
@@ -970,7 +885,7 @@ export default function CardGamePage() {
                                     </Text>
                                     <Box
                                         alignSelf="center"
-                                        w="100%"
+                                        w="220px"
                                         h="100%"
                                         sx={{ perspective: '1000px' }}
                                         position="relative"
@@ -1129,8 +1044,7 @@ export default function CardGamePage() {
             <BangBurstEffect
                 isVisible={bangFx.visible}
                 duration={BANG_EFFECT_MS}
-                zIndex={9999}
-                anchorRect={bangFx.anchorRect ?? undefined}
+                zIndex={10050}
             />
 
             <History />

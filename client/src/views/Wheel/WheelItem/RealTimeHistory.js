@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GridItem, Box, Table, Thead, Tbody, Tr, Th, Td, Text, Flex, Tooltip, HStack } from '@chakra-ui/react';
+import { Box, Table, Thead, Tbody, Tr, Th, Td, Text, Flex, Tooltip, HStack } from '@chakra-ui/react';
 import Card from 'components/Card/Card';
 import { useAblyWheelResults } from 'hooks/useAblyWheelResults';
 import { getWheelResult } from 'action/wheelActions';
@@ -59,13 +59,13 @@ export default function RealTimeHistory() {
     }
 
     return (
-        <GridItem area="empty" display="flex" flexDirection="column" h="100%" minH="0">
+        <Box display="flex" flexDirection="column" h="100%" minH="0" w="100%" flex="1">
             {isLoading && <Loading />}
             <Box
                 w="100%"
                 maxW="100%"
                 h="100%"
-                minH="450px"
+                minH={{ base: '280px', sm: '360px', md: '450px' }}
                 flex={1}
                 bg="#2a2d2e"
                 borderRadius="14px"
@@ -194,6 +194,6 @@ export default function RealTimeHistory() {
                     </Table>
                 </Box>
             </Box>
-        </GridItem>
+        </Box>
     );
 }

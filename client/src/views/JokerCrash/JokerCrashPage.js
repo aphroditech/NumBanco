@@ -124,6 +124,11 @@ export default function JokerCrashPage() {
     });
     const [bangFx, setBangFx] = useState({ visible: false, anchorRect: null });
 
+    const isFlippingRef = useRef(false);
+    const handleBetRef = useRef(async () => {});
+    const handleCashOutRef = useRef(async () => {});
+    const handleOperatorRef = useRef(async () => {});
+
     const clearWinBangTimers = useCallback(() => {
         if (winFxTimeoutRef.current != null) {
             clearTimeout(winFxTimeoutRef.current);
@@ -270,6 +275,10 @@ export default function JokerCrashPage() {
     useEffect(() => {
         innerRotateRef.current = innerRotate;
     }, [innerRotate]);
+
+    useEffect(() => {
+        isFlippingRef.current = isFlipping;
+    }, [isFlipping]);
 
     useEffect(() => {
         cardFacesRef.current = {
@@ -506,6 +515,64 @@ export default function JokerCrashPage() {
             setAmount(num.toFixed(2));
         }
     };
+
+    handleBetRef.current = handleBet;
+    handleCashOutRef.current = handleCashOut;
+    handleOperatorRef.current = handleOperator;
+
+    useEffect(() => {
+        const typingTarget = (target) => {
+            if (!(target instanceof HTMLElement)) return false;
+            const tag = target.tagName;
+            return (
+                tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+            );
+        };
+
+        const onKeyDown = (e) => {
+            if (isLoading || isHelpModalOpen) return;
+            if (typingTarget(e.target)) return;
+            if (e.repeat) return;
+
+            const key = e.key.toLowerCase();
+
+            if (key === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                if (!bet || isFlippingRef.current) return;
+                e.preventDefault();
+                setOperator('<');
+                void handleOperatorRef.current('<');
+                return;
+            }
+            if (key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                if (!bet || isFlippingRef.current) return;
+                e.preventDefault();
+                setOperator('=');
+                void handleOperatorRef.current('=');
+                return;
+            }
+            if (key === 'd' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                if (!bet || isFlippingRef.current) return;
+                e.preventDefault();
+                setOperator('>');
+                void handleOperatorRef.current('>');
+                return;
+            }
+            if ((e.key === ' ' || e.code === 'Space') && !e.shiftKey) {
+                if (isFlippingRef.current) return;
+                e.preventDefault();
+                if (bet) {
+                    void handleCashOutRef.current();
+                } else {
+                    const amt = parseFloat(amount || '0');
+                    if (!amount || amt < MIN_AMOUNT || balance < amt) return;
+                    void handleBetRef.current();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isLoading, isHelpModalOpen, bet, amount, balance]);
 
     useEffect(() => {
         const loadingTime = (Math.floor(Math.random() * 10) + 1) * 100;
@@ -1373,6 +1440,22 @@ export default function JokerCrashPage() {
                                         </Text>
                                     </HStack>
                                 </VStack>
+                            </Box>
+
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.03)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                    Keyboard
+                                </Text>
+                                <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.55">
+                                    <b>Space</b> — <b>BET</b> before a round, or <b>CASH OUT</b> while playing &nbsp;·&nbsp;{' '}
+                                    <b>A</b> — <b>&lt;</b> &nbsp;·&nbsp; <b>S</b> — <b>=</b> &nbsp;·&nbsp; <b>D</b> —{' '}
+                                    <b>&gt;</b> (operators only after you have bet). Shortcuts are off while typing in a field.
+                                </Text>
                             </Box>
 
                             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap="4">

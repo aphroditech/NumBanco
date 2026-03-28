@@ -81,18 +81,18 @@ export const betWheel = async (req, res) => {
                 },
                 $push: { totalhistory: historyEntry },
             },
-            { new: true, select: "balance" },
+            { new: true, select: "balance wheelAmount wheelWinAmount" },
         );
 
         if (!updated) {
             return res.status(400).json({ message: "Bet amount must be greater than 0 and less than your balance" });
         }
 
-        const multiplier = getMultiplier(levelSettings);
+        const multiplier = getMultiplier(levelSettings, updated.wheelAmount, updated.wheelWinAmount);
         const isValid = checkIsValid(multiplier, levelSettings, historyList, level);
+        console.log("wheel result", multiplier, "isValid", isValid);
         const result = isValid ? multiplier : 0;
 
-        console.log("wheel result", result);
         return res.json({ result, balance: -bet });
     } catch (error) {
         console.error("betWheel:", error);
@@ -100,7 +100,12 @@ export const betWheel = async (req, res) => {
     }
 };
 
-function getMultiplier(settings) {
+function getMultiplier(settings, amount, winAmount) {
+    if(winAmount >= amount * 1.1) {
+        console.log("Hello world!");
+        return 0;
+    }
+
     const totalWeight = settings.reduce((sum, m) => sum + (Number(m.probability) || 0), 0);
     if (totalWeight <= 0 || !settings.length) {
         return 0;
@@ -121,7 +126,7 @@ function getMultiplier(settings) {
 }
 
 function checkIsValid(multiplier, levelSettings, history, levelKey) {
-    if (!history?.length) {
+    if (!history?.length || multiplier === 0) {
         return true;
     }
 
@@ -133,19 +138,21 @@ function checkIsValid(multiplier, levelSettings, history, levelKey) {
     const totalNumber = Math.max(0, Number(tempNumbers.totalNumber) || 0);
     const canWinNumber = Number(tempNumbers.canWinNumber) || 0;
 
-    const totalNumberHistory = history.filter(
-        (h) => h.level === levelKey && multEq(h.multiplier, multiplier),
-    ).length;
+    const totalHistory = history?.filter(
+        (h) => h.level === levelKey
+    );
+    const totalNumberHistory = totalHistory?.length || 0;
 
     const recentCount =
         totalNumber > 0 && totalNumberHistory ? totalNumberHistory % totalNumber : 0;
     const lastN =
         recentCount > 0
-            ? history.slice(-recentCount)
-            : history.slice(-totalNumberHistory);
+            ? totalHistory?.slice(-recentCount)
+            : totalHistory?.slice(-totalNumber);
 
-    const wins = lastN.filter((h) => h.isWin === true).length;
-    return canWinNumber >= wins;
+    const wins = lastN?.filter((h) => h.isWin === true && h.multiplier === multiplier)?.length || 0;
+    console.log("wins", wins, "canWinNumber", canWinNumber, "multiplier", multiplier, "totalNumberHistory", totalNumberHistory, "recentCount", recentCount, "totalNumber", totalNumber);
+    return canWinNumber > wins;
 }
 
 /**
@@ -169,7 +176,7 @@ export const completeWheelSpin = async (req, res) => {
         const isWin = winAmount > 0;
 
         const updateOps = {};
-        if (winAmount > 0) {
+        if (winAmount > 0 && isWin === true) {
             updateOps.$inc = {
                 balance: winAmount,
                 wheelWinAmount: winAmount,
@@ -203,6 +210,7 @@ export const completeWheelSpin = async (req, res) => {
             userName: updated.altas,
             isWin,
             betAmount: bet,
+            level: level || "low",
             winAmount,
             date: new Date(),
         });

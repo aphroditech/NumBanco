@@ -24,6 +24,9 @@ import {
     ModalCloseButton,
     ModalBody,
     VStack,
+    useBreakpointValue,
+    SimpleGrid,
+    Image,
 } from '@chakra-ui/react';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
@@ -37,8 +40,40 @@ import { useHistory } from 'react-router-dom';
 import RealTimeHistory from './WheelItem/RealTimeHistory';
 import WheelHistory from './WheelItem/WheelHistory';
 import AttractionsIcon from '@mui/icons-material/Attractions';
+import { toast } from 'react-toastify';
+import keyboardImage from 'assets/img/Wheel/keyboard.jpg';
 
 const MotionBox = motion(Box);
+
+/** On-panel / help legend: key cap + colored label (matches keyboard shortcut styling). */
+function HotkeyLegendCell({ keyLabel, caption, glow, minW }) {
+    return (
+        <VStack spacing="6px" align="center">
+            <Box
+                as="kbd"
+                display="inline-flex"
+                alignItems="center"
+                justifyContent="center"
+                minW={minW || '40px'}
+                h="28px"
+                px="8px"
+                fontSize="xs"
+                fontWeight="bold"
+                color="#fff"
+                bg="linear-gradient(180deg, #4a4d50 0%, #2d2f31 100%)"
+                border="1px solid #1a1b1c"
+                borderRadius="6px"
+                // boxShadow={`0 0 14px ${glow}, 0 2px 0 #1a1b1c, inset 0 1px 0 rgba(255,255,255,0.1)`}
+                fontFamily="monospace"
+            >
+                {keyLabel}
+            </Box>
+            <Text fontSize="10px" fontWeight="800" color={glow} textShadow={`0 0 10px ${glow}`} letterSpacing="0.04em">
+                {caption}
+            </Text>
+        </VStack>
+    );
+}
 
 const SEGMENT_COUNT = 30;
 const MIN_AMOUNT = 0.5;
@@ -73,8 +108,8 @@ const LEVEL_CONFIG = {
         label: 'HARD',
         edgeColor: '#f1f5f9',
         payouts: [
-            { label: '0.00x', color: '#f1f5f9', count: 29 },
-            { label: '29.40x', color: '#ef4444', count: 1 },
+            { label: '0.00x', color: '#f1f5f9', count: 27 },
+            { label: '9.4x', color: '#ef4444', count: 3 },
         ],
     },
 };
@@ -266,6 +301,9 @@ function formatMultiplierLabel(m) {
 }
 
 export default function WheelPage() {
+    const helpModalSize = useBreakpointValue({ base: 'full', md: 'lg' }) || 'lg';
+    const wheelRimPx = useBreakpointValue({ base: '7px', md: '10px' }) || '10px';
+
     const user = useSelector((state) => state.user.userInfo) || {};
     const balance = Number(user?.balance ?? 0);
     const maxAmount = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, balance || MAX_AMOUNT));
@@ -368,9 +406,17 @@ export default function WheelPage() {
     }, [wheelControls]);
 
     const spinDemo = async () => {
+
         if (isSpinning) return;
         const bet = clampBetAmount(amount);
-        if (bet > balance) return;
+        if (bet > balance) {
+            toast.error("Insufficient balance");
+            return;
+        }
+        if (bet < MIN_AMOUNT) {
+            toast.error("Minimum bet is 0.50");
+            return;
+        }
 
         const data = {
             betAmount: bet,
@@ -437,12 +483,82 @@ export default function WheelPage() {
         }
     };
 
+    const spinDemoRef = useRef(spinDemo);
+    spinDemoRef.current = spinDemo;
+
+    useEffect(() => {
+        const isTypingContext = (el) => {
+            if (!el || el.nodeType !== 1) return false;
+            const tag = el.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+            return Boolean(el.isContentEditable);
+        };
+
+        const onKeyDown = (e) => {
+            if (isHelpModalOpen) return;
+            if (isTypingContext(e.target)) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (isSpinning) return;
+                const current = parseFloat(amount || String(MIN_AMOUNT));
+                const base = Number.isFinite(current) ? current : MIN_AMOUNT;
+                setAmount(Math.max(MIN_AMOUNT, base / 2).toFixed(2));
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (isSpinning) return;
+                const current = parseFloat(amount || String(MIN_AMOUNT));
+                const base = Number.isFinite(current) ? current : MIN_AMOUNT;
+                const next = Math.min(maxAmount, base * 2);
+                setAmount(next.toFixed(2));
+                return;
+            }
+
+            const k = e.key.length === 1 ? e.key.toLowerCase() : '';
+            if (k === 'a') {
+                e.preventDefault();
+                if (!isSpinning) setLevel('low');
+                return;
+            }
+            if (k === 's') {
+                e.preventDefault();
+                if (!isSpinning) setLevel('medium');
+                return;
+            }
+            if (k === 'd') {
+                e.preventDefault();
+                if (!isSpinning) setLevel('hard');
+                return;
+            }
+
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                if (e.repeat) return;
+                spinDemoRef.current();
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown, true);
+        return () => window.removeEventListener('keydown', onKeyDown, true);
+    }, [isHelpModalOpen, isSpinning, amount, maxAmount]);
+
     return (
-        <Box px={{ base: '16px', md: '24px' }} minH="100vh" bg="transparent" mt="100px" w="100%" maxW="100%">
+        <Box
+            px={{ base: '12px', sm: '16px', md: '24px' }}
+            minH="100vh"
+            bg="transparent"
+            mt={{ base: '72px', md: '100px' }}
+            pt={{ base: '8px', md: 0 }}
+            w="100%"
+            maxW="100%"
+            overflowX="hidden"
+        >
             <Grid
                 templateAreas={{
-                    sm: '"panel" "game" "live"',
-                    md: '"panel live" "game game"',
+                    sm: '"game" "panel" "live"',
+                    md: '"game game" "panel live"',
                     '1550px': '"panel game live"',
                 }}
                 templateColumns={{
@@ -453,18 +569,24 @@ export default function WheelPage() {
                 templateRows={{
                     base: 'auto auto auto',
                     md: 'auto auto',
-                    '1550px': 'minmax(500px, auto)',
+                    '1550px': 'auto',
                 }}
                 gap={{ base: '16px', md: '24px' }}
                 w="100%"
                 alignItems="stretch"
             >
-                <GridItem area="panel" minW="320px" display="flex" flexDirection="column" minH="0">
+                <GridItem
+                    area="panel"
+                    minW={{ base: 0, md: 0, '1550px': 'min(100%, 320px)' }}
+                    display="flex"
+                    flexDirection="column"
+                    minH="0"
+                >
                     <Card
-                        pt="30px"
-                        pb="22px"
-                        px="22px"
-                        minH="500px"
+                        pt={{ base: '22px', md: '30px' }}
+                        pb={{ base: '18px', md: '22px' }}
+                        px={{ base: '16px', md: '22px' }}
+                        minH={{ base: 'auto', md: '450px' }}
                         h="100%"
                         display="flex"
                         flexDirection="column"
@@ -491,7 +613,7 @@ export default function WheelPage() {
                                     onClick={() => setIsHelpModalOpen(true)}
                                 />
                             </Box>
-                            <VStack spacing="20px" align="stretch" w="100%" maxW="320px">
+                            <VStack spacing="20px" align="stretch" w="100%" maxW={{ base: '100%', sm: '320px' }} mx="auto">
                                 <Box display="flex" alignItems="center" gap="8px">
                                     <AttractionsIcon style={{ fontSize: 22, color: '#00D4FF' }} />
                                     <Text fontSize="sm" color="#fff" fontWeight="700">Wheel</Text>
@@ -649,30 +771,40 @@ export default function WheelPage() {
                                     </HStack>
                                 </Box>
 
+                                {/* <SimpleGrid columns={3} spacing="10px" w="100%" maxW={{ base: '100%', sm: '320px' }} mx="auto" pt="2px">
+                                    <HotkeyLegendCell keyLabel="A" caption="LOW" glow="rgba(34,197,94,0.95)" />
+                                    <HotkeyLegendCell keyLabel="S" caption="MEDIUM" glow="rgba(251,191,36,0.98)" />
+                                    <HotkeyLegendCell keyLabel="D" caption="HARD" glow="rgba(239,68,68,0.95)" />
+                                    <HotkeyLegendCell keyLabel="↓" caption="/2" glow="rgba(59,130,246,0.95)" />
+                                    <HotkeyLegendCell keyLabel="↑" caption="×2" glow="rgba(168,85,247,0.95)" />
+                                    <HotkeyLegendCell keyLabel="Space" caption="BET" minW="72px" glow="rgba(56,189,248,0.98)" />
+                                </SimpleGrid> */}
+
                                 <Button
                                     h="46px"
                                     borderRadius="20px"
                                     bg="#00D4FF"
+                                    mt="20px"
                                     color="#fff"
                                     fontWeight="800"
                                     _hover={{ bg: '#00b8dc' }}
                                     onClick={spinDemo}
                                     isDisabled={isSpinning}
-                                    isLoading={isSpinning}
+                                    // isLoading={isSpinning}
                                 >
-                                    BET
+                                    {isSpinning ? 'Spinning...' : 'BET'}
                                 </Button>
                             </VStack>
                         </CardBody>
                     </Card>
                 </GridItem>
 
-                <GridItem area="game" display="flex" flexDirection="column" minH="0">
+                <GridItem area="game" display="flex" flexDirection="column" minH="0" minW={0}>
                     <Card
-                        pt="24px"
-                        pb="18px"
-                        px="20px"
-                        minH="500px"
+                        pt={{ base: '18px', md: '24px' }}
+                        pb={{ base: '16px', md: '18px' }}
+                        px={{ base: '14px', md: '20px' }}
+                        minH={{ base: 'auto', md: '450px' }}
                         h="100%"
                         display="flex"
                         flexDirection="column"
@@ -690,20 +822,32 @@ export default function WheelPage() {
                             minH="0"
                             position="relative"
                         >
-                            <HStack w="100%" justify="space-between" px={{ base: 0, md: 4 }} mb={3}>
-                                <Box>
+                            <HStack
+                                w="100%"
+                                justify="space-between"
+                                px={{ base: 0, md: 4 }}
+                                mb={3}
+                                flexWrap="wrap"
+                                gap={{ base: 2, md: 0 }}
+                            >
+                                <Box minW="0">
                                     <Text fontSize="xs" color="rgba(255,255,255,0.55)">
                                         Bet
                                     </Text>
-                                    <Text fontSize="xl" color="#fff" fontWeight="800">
+                                    <Text fontSize={{ base: 'lg', md: 'xl' }} color="#fff" fontWeight="800">
                                         {clampBetAmount(amount).toFixed(2)}
                                     </Text>
                                 </Box>
-                                <Box textAlign="right">
+                                <Box textAlign="right" minW="0">
                                     <Text fontSize="xs" color="rgba(255,255,255,0.55)">
                                         Level
                                     </Text>
-                                    <Text fontSize="xl" color="#00D4FF" fontWeight="800" textTransform="uppercase">
+                                    <Text
+                                        fontSize={{ base: 'lg', md: 'xl' }}
+                                        color="#00D4FF"
+                                        fontWeight="800"
+                                        textTransform="uppercase"
+                                    >
                                         {level}
                                     </Text>
                                 </Box>
@@ -711,8 +855,12 @@ export default function WheelPage() {
 
                             <Box
                                 position="relative"
-                                w={{ base: '300px', md: '430px' }}
-                                h={{ base: '300px', md: '430px' }}
+                                w="100%"
+                                mx="auto"
+                                sx={{
+                                    aspectRatio: '1',
+                                    maxW: 'min(430px, calc(100vw - 48px))',
+                                }}
                                 display="flex"
                                 alignItems="center"
                                 justifyContent="center"
@@ -767,9 +915,10 @@ export default function WheelPage() {
                                         borderRadius: '50%',
                                         transformOrigin: 'center center',
                                         background: ringGradient,
-                                        border: `10px solid ${LEVEL_CONFIG[level].edgeColor}`,
+                                        border: `${wheelRimPx} solid ${LEVEL_CONFIG[level].edgeColor}`,
                                         boxShadow:
                                             '0 24px 46px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.2), 0 0 24px rgba(74,140,255,0.25)',
+                                        boxSizing: 'border-box',
                                     }}
                                 >
                                     {/* Segment separators (clear distinction between each segment) */}
@@ -1076,12 +1225,12 @@ export default function WheelPage() {
                     </Card>
                 </GridItem>
 
-                <GridItem area="live" display="flex" flexDirection="column" minH="0">
+                <GridItem area="live" display="flex" flexDirection="column" minH="0" minW={0}>
                     <RealTimeHistory />
                 </GridItem>
             </Grid>
             <WheelHistory />
-            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size={helpModalSize} isCentered scrollBehavior="inside">
                 <ModalOverlay bg="blackAlpha.700" />
                 <ModalContent bg="#2a2d2e" border="1px solid rgba(0, 212, 255, 0.3)">
                     <ModalHeader
@@ -1113,6 +1262,9 @@ export default function WheelPage() {
                                 <Text mb={1}>
                                      - Higher levels offer bigger rewards but lower chances of winning.
                                 </Text>
+                            </Box>
+                            <Box w="100%">
+                                <Image src={keyboardImage} alt="Keyboard" />
                             </Box>
                         </VStack>
                     </ModalBody>
