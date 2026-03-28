@@ -67,6 +67,7 @@ import Filter9Icon from '@mui/icons-material/Filter9';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
+import ClimbPage from "views/Climb/ClimbPage";
 
 import {
   DocumentIcon,
@@ -255,6 +256,14 @@ var dashRoutes = [
     name: "TWIST",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: TwistPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/climb",
+    name: "CLIMB",
+    icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: ClimbPage,
     layout: "/game",
   },
   {

@@ -256,9 +256,11 @@ async function scheduleCreditAndBroadcast(app) {
     if (ably) {
         const views = await CardGameView.find().sort({ time: -1 }).limit(12).lean();
         const data = await enrichCardGameViewsWithUser(views);
-        ably.channels.get("cardGame").publish("cardGameUpdate", { updatedData: data }).catch((err) => {
-            console.error("❌ [cardGameController] Ably publish error:", err);
-        });
+        setTimeout(() => {
+            ably.channels.get("cardGame").publish("cardGameUpdate", { updatedData: data }).catch((err) => {
+                console.error("❌ [cardGameController] Ably publish error:", err);
+            });
+        }, 2000);
     }
 }
 

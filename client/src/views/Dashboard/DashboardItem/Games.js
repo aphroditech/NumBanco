@@ -33,6 +33,7 @@ import alphaTree from "assets/img/Games/alphaTree.jpg"
 import digits from "assets/img/Games/digits.jpg"
 import cloud from "assets/img/Games/cloud.jpg"
 import twist from "assets/img/Games/twist.jpg"
+import climb from "assets/img/Games/climb.jpg"
 import dice from "assets/img/Games/dice.jpg"
 import coinImage from "assets/img/Games/coin.jpg"
 import doubleGame from "assets/img/Games/double.jpg"
@@ -59,6 +60,7 @@ const DASHBOARD_GAMES = [
     { img: jackal, name: "Jackal", path: "/game/jackal", reduxKey: "jackalUsers", tickMs: 2600 },
     { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4900 },
     { img: twist, name: "Twist", path: "/game/twist", reduxKey: "twistUsers", tickMs: 5600 },
+    { img: climb, name: "Climb", path: "/game/climb", reduxKey: "climbUsers", tickMs: 5200 },
     { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
     { img: coinImage, name: "Coin", path: "/game/coin", reduxKey: "coinUsers", tickMs: 3600 },

@@ -39,7 +39,7 @@ export function calculateAlphaTreeBot() {
         return {
             bet,
             result: 0,
-            win: round2(-bet),
+            win: 0,
         };
     }
 

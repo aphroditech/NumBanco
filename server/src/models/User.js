@@ -413,6 +413,13 @@ const userSchema = new mongoose.Schema({
     min: 0,
     max: 2
   },
+  /** Ban-rate tier for Climb only (0 → low ban, 2 → high ban); not the round grid mode. */
+  climbMode: {
+    type: Number,
+    default: 1,
+    min: 0,
+    max: 2
+  },
   alphaTreeMode: {
     type: Number,
     default: 1, // 0=easy, 1=normal, 2=hard
@@ -834,6 +841,21 @@ const userSchema = new mongoose.Schema({
   },
 
   alphaTreeHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+  climbHistory: {
     type: [
       {
         betAmount: { type: Number, required: true },

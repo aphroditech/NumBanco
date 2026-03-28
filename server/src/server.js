@@ -36,6 +36,7 @@ import { diceBot } from "./services/dice/diceBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
 import { coinFlipBot } from "./services/coinFlip/coinFlipBot.service.js";
 import { twistBot } from "./services/twist/twistBot.service.js";
+import { climbBot } from "./services/climb/climbBot.service.js";
 
 
 dotenv.config();
@@ -87,6 +88,8 @@ connectDB()
 
             console.log("✅ Core Ably connected");
 
+            climbBot(ablyCore);
+
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);
             // startBetEngine(ablyCore, 1);
@@ -114,7 +117,7 @@ connectDB()
 
             console.log("🎯 Crash Games Ably connected");
 
-            rocketBot(ablyCrashGames);
+            // rocketBot(ablyCrashGames);
             // jokerCrashBot(ablyCrashGames);
             // pumpingBot(ablyCrashGames);
 
@@ -130,7 +133,7 @@ connectDB()
             console.log("🎲 Dice Games Ably connected");
 
             // rubicBot(ablyDiceGames);
-            coinFlipBot(ablyDiceGames);
+            // coinFlipBot(ablyDiceGames);
             // cardGameBot(ablyDiceGames);
             // aToZBot(ablyDiceGames);
             // twistBot(ablyDiceGames);
@@ -155,7 +158,7 @@ connectDB()
             // startGravityGameLoop(ablyMiningGames);
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);
-            startDoubleGameLoop(ablyMiningGames);
+            // startDoubleGameLoop(ablyMiningGames);
 
         });
 
