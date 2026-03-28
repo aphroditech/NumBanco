@@ -8,6 +8,7 @@ const initialState = {
         pumpingUsers: 0,
         gravityUsers: 0,
         doubleUsers: 0,
+        plinkoUsers: 0,
         cloudSpreadUsers: 0,
         doveUsers: 0,
         cocoUsers: 0,

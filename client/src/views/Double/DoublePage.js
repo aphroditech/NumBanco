@@ -55,7 +55,9 @@ const RESULT_MS = 1000;
 const ROUND_MS = BETTING_MS + ROLLING_MS + RESULT_MS;
 
 const REEL_SPIN_TRANSITION = "transform 2s cubic-bezier(0.15, 0.85, 0.2, 1)";
-const REEL_SPIN_DURATION_MS = 2000;
+/** After RESULT_MS, glide from the winner to the idle strip (runs in closed phase so betting starts already idle). */
+const REEL_IDLE_RETURN_MS = 1000;
+const REEL_IDLE_RETURN_TRANSITION = `transform ${REEL_IDLE_RETURN_MS}ms cubic-bezier(0.15, 0.85, 0.2, 1)`;
 
 const BOX_BG = "#2a2d2e";
 /** Rubic dice panel accent */
@@ -411,7 +413,7 @@ export default function DoublePage() {
   const [reelTranslate, setReelTranslate] = useState(0);
   /** Joined mid-roll: snap to outcome with no CSS transition (must match phase-derived transition). */
   const [skipRollTransition, setSkipRollTransition] = useState(false);
-  /** One-shot: animate strip back to idle when entering betting after result/closed (same timing as spin). */
+  /** True while animating from outcome to idle after the result/history beat (betting phase). */
   const [animateIdleReturn, setAnimateIdleReturn] = useState(false);
   const [optimisticPlaced, setOptimisticPlaced] = useState(false);
   const [nowMs, setNowMs] = useState(Date.now());
@@ -426,6 +428,8 @@ export default function DoublePage() {
   const prevRoundIdRef = useRef(null);
   const lastSeenNonBettingPhaseRef = useRef(null);
   const wasInBettingPhaseRef = useRef(false);
+  /** Idle return finished in closed; skip duplicating it when the next round's betting phase mounts. */
+  const skipIdleReturnOnNextBettingRef = useRef(false);
   const idleReturnTimeoutRef = useRef(null);
   const reelContainerRef = useRef(null);
   const [reelWidth, setReelWidth] = useState(360);
@@ -685,6 +689,13 @@ export default function DoublePage() {
     return "closed";
   }, [clockOffset, state?.roundStartAtMs, elapsedMs]);
 
+  const phaseLocalRef = useRef(phaseLocal);
+  phaseLocalRef.current = phaseLocal;
+
+  /** Ring segment (result + closed share "result" timing) — use for key so result→closed does not remount the ring. */
+  const timelineRingSegment =
+    phaseLocal === "betting" ? "betting" : phaseLocal === "rolling" ? "rolling" : "result";
+
   const translateForIndex = useCallback((cellIndex, width) => {
     const w = width || reelWidth;
     const center = w / 2;
@@ -694,8 +705,8 @@ export default function DoublePage() {
   const reelTransformTransition =
     phaseLocal === "rolling" && !skipRollTransition
       ? REEL_SPIN_TRANSITION
-      : phaseLocal === "betting" && animateIdleReturn
-        ? REEL_SPIN_TRANSITION
+      : (phaseLocal === "betting" || phaseLocal === "closed") && animateIdleReturn
+        ? REEL_IDLE_RETURN_TRANSITION
         : "none";
 
   const clearIdleReturnTimer = useCallback(() => {
@@ -710,6 +721,9 @@ export default function DoublePage() {
     setAnimateIdleReturn((v) => {
       if (!v) return v;
       clearIdleReturnTimer();
+      if (phaseLocalRef.current === "closed") {
+        skipIdleReturnOnNextBettingRef.current = true;
+      }
       return false;
     });
   }, [clearIdleReturnTimer]);
@@ -726,43 +740,74 @@ export default function DoublePage() {
   }, [state?.roundId]);
 
   useEffect(() => {
-    if (phaseLocal !== "betting") {
-      clearIdleReturnTimer();
-      setAnimateIdleReturn(false);
-      wasInBettingPhaseRef.current = false;
-      lastSeenNonBettingPhaseRef.current = phaseLocal;
+    const idleIdx = 5 * SEGMENTS + 7;
+    const idleX = translateForIndex(idleIdx, reelWidth);
+
+    if (phaseLocal === "betting") {
+      setSkipRollTransition(false);
+
+      const justEnteredBetting = !wasInBettingPhaseRef.current;
+      wasInBettingPhaseRef.current = true;
+
+      const fromPostRoll =
+        lastSeenNonBettingPhaseRef.current === "result" ||
+        lastSeenNonBettingPhaseRef.current === "closed";
+
+      if (justEnteredBetting && fromPostRoll) {
+        if (skipIdleReturnOnNextBettingRef.current) {
+          skipIdleReturnOnNextBettingRef.current = false;
+          clearIdleReturnTimer();
+          setAnimateIdleReturn(false);
+        } else {
+          setAnimateIdleReturn(true);
+          clearIdleReturnTimer();
+          idleReturnTimeoutRef.current = setTimeout(() => {
+            idleReturnTimeoutRef.current = null;
+            setAnimateIdleReturn(false);
+          }, REEL_IDLE_RETURN_MS + 120);
+        }
+      } else if (justEnteredBetting && !fromPostRoll) {
+        clearIdleReturnTimer();
+        setAnimateIdleReturn(false);
+      }
+
+      setReelTranslate(idleX);
+      lastSeenNonBettingPhaseRef.current = "betting";
       return;
     }
 
-    setSkipRollTransition(false);
+    wasInBettingPhaseRef.current = false;
 
-    const justEnteredBetting = !wasInBettingPhaseRef.current;
-    wasInBettingPhaseRef.current = true;
-
-    const fromPostRoll =
-      lastSeenNonBettingPhaseRef.current === "result" ||
-      lastSeenNonBettingPhaseRef.current === "closed";
-
-    if (justEnteredBetting && fromPostRoll) {
-      setAnimateIdleReturn(true);
-      clearIdleReturnTimer();
-      idleReturnTimeoutRef.current = setTimeout(() => {
-        idleReturnTimeoutRef.current = null;
-        setAnimateIdleReturn(false);
-      }, REEL_SPIN_DURATION_MS + 120);
-    } else {
-      setAnimateIdleReturn(false);
+    if (phaseLocal === "closed") {
+      const justEnteredClosed = lastSeenNonBettingPhaseRef.current === "result";
+      if (justEnteredClosed) {
+        skipIdleReturnOnNextBettingRef.current = false;
+        setAnimateIdleReturn(true);
+        clearIdleReturnTimer();
+        idleReturnTimeoutRef.current = setTimeout(() => {
+          idleReturnTimeoutRef.current = null;
+          setAnimateIdleReturn(false);
+          if (phaseLocalRef.current === "closed") {
+            skipIdleReturnOnNextBettingRef.current = true;
+          }
+        }, REEL_IDLE_RETURN_MS + 120);
+        setReelTranslate(idleX);
+      }
+      lastSeenNonBettingPhaseRef.current = "closed";
+      return;
     }
 
-    const idleIdx = 5 * SEGMENTS + 7;
-    setReelTranslate(translateForIndex(idleIdx, reelWidth));
+    clearIdleReturnTimer();
+    setAnimateIdleReturn(false);
+    lastSeenNonBettingPhaseRef.current = phaseLocal;
   }, [phaseLocal, reelWidth, translateForIndex, clearIdleReturnTimer]);
 
   useEffect(() => {
     const ws = state?.winningSlot;
     const rid = state?.roundId;
     if (ws == null || rid == null) return;
-    if (phaseLocal !== "rolling" && phaseLocal !== "result" && phaseLocal !== "closed") return;
+    /** Keep winner through rolling + result; closed is handled by idle-return (no overwrite). */
+    if (phaseLocal !== "rolling" && phaseLocal !== "result") return;
 
     const targetIdx = 11 * SEGMENTS + ws;
     /** Skip spin only if we're clearly past the start of the roll (clock skew / tab background). */
@@ -938,22 +983,23 @@ export default function DoublePage() {
     return ((7 / SEGMENTS) * 100).toFixed(1);
   }, [side]);
 
-  /** Primary + secondary lines under the timeline ring. */
+  /** Primary + secondary lines under the timeline ring (whole seconds align with ring digit: 10 → 0). */
   const timelineSubtitle = useMemo(() => {
     if (phaseLocal === "syncing") return { line1: "\u00a0", line2: "\u00a0" };
     if (phaseLocal === "betting") {
-      const t = Math.max(0, (BETTING_MS - Math.min(BETTING_MS, elapsedMs)) / 1000);
-      return { line1: "Place your bets", line2: `Rolling in ${t.toFixed(1)}s` };
+      const secLeft = Math.ceil(Math.max(0, BETTING_MS - Math.min(BETTING_MS, elapsedMs)) / 1000);
+      return { line1: "Place your bets", line2: `Rolling in ${secLeft}s` };
     }
     if (phaseLocal === "rolling") {
-      const nextRound = Math.max(0, (ROUND_MS - elapsedMs) / 1000);
-      return { line1: "Rolling", line2: `Next round in ${nextRound.toFixed(1)}s` };
+      const secLeft = Math.ceil(Math.max(0, ROUND_MS - elapsedMs) / 1000);
+      return { line1: "Rolling", line2: `Next round in ${secLeft}s` };
     }
     if (phaseLocal === "result" || phaseLocal === "closed") {
-      const nextRound = Math.max(0, (ROUND_MS - elapsedMs) / 1000);
+      const untilRoundEnd = Math.max(0, ROUND_MS - elapsedMs);
+      const secLeft = Math.ceil(untilRoundEnd / 1000);
       return {
         line1: "Next round",
-        line2: nextRound > 0.05 ? `Starting in ${nextRound.toFixed(1)}s` : "…",
+        line2: secLeft > 0 ? `Starting in ${secLeft}s` : "…",
       };
     }
     return { line1: "", line2: "" };
@@ -1380,12 +1426,10 @@ const BetColumn = ({ title, accent, total, rows, emptyHint }) => (
                 <Box w="112px" h="112px" flexShrink={0} aria-hidden />
               ) : typeof state?.roundStartAtMs === "number" && clockOffset != null ? (
                 <BettingCountdownRing
-                  key={`${state.roundId}-${phaseLocal}`}
+                  key={`${state.roundId}-${timelineRingSegment}`}
                   roundStartAtMs={state.roundStartAtMs}
                   clockOffset={clockOffset}
-                  segment={
-                    phaseLocal === "betting" ? "betting" : phaseLocal === "rolling" ? "rolling" : "result"
-                  }
+                  segment={timelineRingSegment}
                 />
               ) : (
                 <Box w="112px" h="112px" flexShrink={0} aria-hidden />

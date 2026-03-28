@@ -56,6 +56,8 @@ import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
 import DicePage from "views/Dice/DicePage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
+import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -127,6 +129,14 @@ var dashRoutes = [
     name: "RUBIC",
     icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: RubicPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/plinko",
+    name: "PLINKO",
+    icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: PlinkoPage,
     layout: "/game",
   },
   {

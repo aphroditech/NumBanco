@@ -948,6 +948,37 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  /** Plinko — lifetime stake / gross payout (sum of bet×multiplier per round). */
+  plinkoBetAmount: {
+    type: Number,
+    default: 0,
+  },
+  plinkoWinAmount: {
+    type: Number,
+    default: 0,
+  },
+  plinkoHistory: {
+    type: [
+      {
+        roundId: { type: Number, required: true },
+        betAmount: { type: Number, required: true },
+        winAmount: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        multiplier: { type: Number, required: true },
+        slot: { type: Number, required: true },
+        rows: { type: Number, required: true },
+        risk: { type: String, default: "regular" },
+        pathSteps: { type: [Number], default: [] },
+        hyperMode: { type: Boolean, default: false },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
   rubicMode: {
     type: Number,
     default: 1 // 0: easy, 1: normal, 2: hard

@@ -43,7 +43,9 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CoinPage from "views/Coin/CoinPage";
 import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
+import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import DicePage from "views/Dice/DicePage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
 
 export const TierA = {
     path: "/tierA",
@@ -230,5 +232,13 @@ export const Twist = {
     name: "TWIST",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: TwistPage,
+    layout: "/game",
+}
+
+export const Plinko = {
+    path: "/plinko",
+    name: "PLINKO",
+    icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: PlinkoPage,
     layout: "/game",
 }

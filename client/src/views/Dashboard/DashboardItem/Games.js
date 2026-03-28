@@ -36,6 +36,7 @@ import twist from "assets/img/Games/twist.jpg"
 import dice from "assets/img/Games/dice.jpg"
 import coinImage from "assets/img/Games/coin.jpg"
 import doubleGame from "assets/img/Games/double.jpg"
+import plinko from "assets/img/Games/plinko.jpg"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -51,6 +52,7 @@ const DASHBOARD_GAMES = [
     { img: cardGame, name: "Card Game", path: "/game/card-game", reduxKey: "cardGameUsers", tickMs: 4200 },
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
     { img: doubleGame, name: "Double", path: "/game/double", reduxKey: "doubleUsers", tickMs: 5800 },
+    { img: plinko, name: "Plinko", path: "/game/plinko", reduxKey: "plinkoUsers", tickMs: 5400 },
     { img: cloud, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
     { img: dove, name: "LUCKY HOP", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: dice, name: "Dice", path: "/game/dice", reduxKey: "diceUsers", tickMs: 5200 },
