@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const ModeSchema = new mongoose.Schema(
     {
         multipliers: { type: [Number], default: [] },
-        /** Per pick: probability [0–1] of bust (ban). Default in app is 1/columns for that mode. */
-        banRate: { type: Number, min: 0, max: 1 },
+        /** Per step (row 1→5): P(star) in [0–1]. Step index matches successCount before the pick. */
+        starRates: { type: [Number], default: [] },
     },
     { _id: false }
 );
