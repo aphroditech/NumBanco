@@ -48,6 +48,8 @@ import WheelPage from "views/Wheel/Wheel";
 import AttractionsIcon from '@mui/icons-material/Attractions';
 import ClimbPage from "views/Climb/ClimbPage";
 import StarIcon from '@mui/icons-material/Star';
+import SnakePage from "views/Snakes/Snakes";
+import SnakeIcon from '@mui/icons-material/Whatshot';
 
 export const TierA = {
     path: "/tierA",
@@ -171,6 +173,14 @@ export const Gravity = {
     name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: GravityPage,
+    layout: "/game",
+}
+
+export const Snakes = {
+    path: "/snakes",
+    name: "SNAKES",
+    icon: <SnakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: SnakePage,
     layout: "/game",
 }
 

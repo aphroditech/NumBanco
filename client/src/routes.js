@@ -70,6 +70,9 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import WheelPage from "views/Wheel/Wheel";
 import ClimbPage from "views/Climb/ClimbPage";
+import SnakesPage from "views/Snakes/Snakes";
+
+
 
 import {
   DocumentIcon,
@@ -138,6 +141,14 @@ var dashRoutes = [
     name: "RUBIC",
     icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: RubicPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/snakes",
+    name: "SNAKES",
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: SnakesPage,
     layout: "/game",
   },
   {
