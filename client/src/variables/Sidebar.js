@@ -253,7 +253,7 @@ export const Plinko = {
     path: "/plinko",
     name: "PLINKO",
     icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    component: PlinkoPage,
+    // component: PlinkoPage,
 }
 
 export const Wheel = {
