@@ -755,6 +755,54 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  kenoMode: {
+    type: String,
+    default: 1
+  },
+
+  kenoHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        type: {
+          type: Number,
+          default: 0
+        },
+        numbersLength: {
+          type: Number,
+          default: 0
+        },
+        winLength: {
+            type: Number,
+            default: 0
+        },
+        win: {
+          type: Number,
+          default: 0
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        kenoBalance: {
+          type: Number,
+          default: 0
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
   rubicHistory: {
     type: [
       {

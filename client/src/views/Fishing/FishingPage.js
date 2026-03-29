@@ -355,7 +355,68 @@ export default function FishingPage() {
         if (Number.isFinite(payout) && payout > 0) {
             runWinCelebration(payout);
         }
-    }
+    };
+
+    const handleBetRef = useRef(() => {});
+    const handleCashOutRef = useRef(() => {});
+    const handlefishingRef = useRef(() => {});
+
+    handleBetRef.current = handleBet;
+    handleCashOutRef.current = handleCashOut;
+    handlefishingRef.current = handlefishing;
+
+    useEffect(() => {
+        const typingTarget = (target) => {
+            if (!(target instanceof HTMLElement)) return false;
+            const tag = target.tagName;
+            return (
+                tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+            );
+        };
+
+        const onKeyDown = (e) => {
+            if (isLoading || isHelpModalOpen || confirmOpen) return;
+            if (typingTarget(e.target)) return;
+            if (e.repeat) return;
+
+            const key = e.key.toLowerCase();
+
+            if (
+                (key === 'a' || e.key === 'ArrowLeft') &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                !e.altKey
+            ) {
+                if (!bet || status !== 'continue') return;
+                e.preventDefault();
+                handlefishingRef.current(-1);
+                return;
+            }
+            if (
+                (key === 'd' || e.key === 'ArrowRight') &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                !e.altKey
+            ) {
+                if (!bet || status !== 'continue') return;
+                e.preventDefault();
+                handlefishingRef.current(1);
+                return;
+            }
+            if ((e.key === ' ' || e.code === 'Space') && !e.shiftKey) {
+                if (!bet) {
+                    e.preventDefault();
+                    handleBetRef.current();
+                } else if (status === 'continue') {
+                    e.preventDefault();
+                    handleCashOutRef.current();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isLoading, isHelpModalOpen, confirmOpen, bet, status]);
 
     useEffect(() => {
         const loadingTime = (Math.floor(Math.random() * 10) + 1) * 100;
@@ -1262,6 +1323,22 @@ export default function FishingPage() {
                                         </Text>
                                     </HStack>
                                 </VStack>
+                            </Box>
+
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.03)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                    Keyboard
+                                </Text>
+                                <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.55">
+                                    <b>Space</b> — <b>BET</b> before a round, or <b>CASH OUT</b> while the round is active
+                                    &nbsp;·&nbsp; <b>A</b> / <b>←</b> — <b>HOLD</b> &nbsp;·&nbsp; <b>D</b> / <b>→</b> — <b>REEL</b>.
+                                    Shortcuts are disabled while typing in a field.
+                                </Text>
                             </Box>
 
                             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap="4">

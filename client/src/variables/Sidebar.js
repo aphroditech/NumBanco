@@ -33,6 +33,7 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import StyleIcon from '@mui/icons-material/Style';
+import AppsIcon from '@mui/icons-material/Apps';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
@@ -44,6 +45,7 @@ import CoinPage from "views/Coin/CoinPage";
 import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import DicePage from "views/Dice/DicePage";
+import KenoPage from "views/Keno/KenoPage";
 
 export const TierA = {
     path: "/tierA",
@@ -94,6 +96,14 @@ export const Dice = {
     name: "DICE",
     icon: <FaDice style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DicePage,
+    layout: "/game",
+}
+
+export const Keno = {
+    path: "/keno",
+    name: "KENO",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: KenoPage,
     layout: "/game",
 }
 

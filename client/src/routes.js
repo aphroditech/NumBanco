@@ -40,6 +40,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import DangerousIcon from '@mui/icons-material/Dangerous';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import StyleIcon from '@mui/icons-material/Style';
+import AppsIcon from '@mui/icons-material/Apps';
 
 import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
@@ -56,6 +57,7 @@ import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
 import DicePage from "views/Dice/DicePage";
+import KenoPage from "views/Keno/KenoPage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -119,6 +121,14 @@ var dashRoutes = [
     name: "DICE",
     icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DicePage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/keno",
+    name: "KENO",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: KenoPage,
     layout: "/game",
   },
   {

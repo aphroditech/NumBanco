@@ -36,6 +36,7 @@ import twist from "assets/img/Games/twist.jpg"
 import dice from "assets/img/Games/dice.jpg"
 import coinImage from "assets/img/Games/coin.jpg"
 import doubleGame from "assets/img/Games/double.jpg"
+import keno from "assets/img/Games/keno.jpg"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -62,6 +63,7 @@ const DASHBOARD_GAMES = [
     { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
     { img: coinImage, name: "Coin", path: "/game/coin", reduxKey: "coinUsers", tickMs: 3600 },
+    { img: keno, name: "Keno", path: "/game/keno", reduxKey: "kenoUsers", tickMs: 3600 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {

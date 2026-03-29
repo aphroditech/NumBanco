@@ -28,6 +28,9 @@ export const initializeSetting = async () => {
                 cardGameLesserMultipler: 2,
                 cardGameEqualMultipler: 3,
                 diceWinMultipler: 1.97,
+                easyKenoModeLimit: 120,
+                normalKenoModeLimit: 100,
+                hardKenoModeLimit: 80,
             });
             await defaultSetting.save();
             console.log('✅ Default Setting document created');

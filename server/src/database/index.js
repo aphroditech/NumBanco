@@ -26,7 +26,8 @@ import { initializeCocoRates } from './initCocoRates.js';
 import { initCoinSettings } from './initCoinSettings.js';
 import { initDoubleBotSettings } from './initDoubleBotSettings.js';
 import { initializeTwistSettings } from './initTwistSettings.js';
-
+import { initializeKenoControls } from './kenoContrl.js';
+import { initializeKenoLimits } from './kenoLimits.js';
 
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
@@ -60,5 +61,7 @@ export const initializeDatabase = async () => {
     await initializeJokerCrashIncreases();
     await initializeJokerCrashCards();
     await initializeJokerCrashPercentages();
+    await initializeKenoControls();
+    await initializeKenoLimits();
     console.log('✅ Database initialization complete');
 };

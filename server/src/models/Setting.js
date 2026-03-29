@@ -88,6 +88,18 @@ const settingSchema = new mongoose.Schema({
     diceWinMultipler: {
         type: Number,
         required: true
+    },
+    easyKenoModeLimit: {
+        type: Number,
+        required: true
+    },
+    normalKenoModeLimit: {
+        type: Number,
+        required: true
+    },
+    hardKenoModeLimit: {
+        type: Number,
+        required: true
     }
 }, { timestamps: true });
 

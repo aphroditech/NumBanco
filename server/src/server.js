@@ -36,6 +36,7 @@ import { diceBot } from "./services/dice/diceBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
 import { coinFlipBot } from "./services/coinFlip/coinFlipBot.service.js";
 import { twistBot } from "./services/twist/twistBot.service.js";
+import { kenoBot } from "./services/keno/kenoBot.service.js";
 
 
 dotenv.config();
@@ -130,10 +131,11 @@ connectDB()
             console.log("🎲 Dice Games Ably connected");
 
             // rubicBot(ablyDiceGames);
-            coinFlipBot(ablyDiceGames);
+            // coinFlipBot(ablyDiceGames);
             // cardGameBot(ablyDiceGames);
             // aToZBot(ablyDiceGames);
             // twistBot(ablyDiceGames);
+            kenoBot(ablyDiceGames);
         });
 
         /*
