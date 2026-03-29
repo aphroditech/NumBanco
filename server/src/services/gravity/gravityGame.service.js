@@ -189,8 +189,17 @@ function buildGraphPoints() {
 
 async function publish(ably, event, data) {
   if (!ably) return;
+  const connState = ably.connection?.state;
+  // When Ably is blocked/failed, skip publishing to avoid hammering and noisy errors.
+  if (connState !== "connected") return;
   const channel = ably.channels.get(CHANNEL_NAME);
-  await channel.publish(event, data);
+  try {
+    await channel.publish(event, data);
+  } catch (err) {
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("[gravity] ably publish failed:", err?.code || err?.statusCode || err?.message || err);
+    }
+  }
 }
 
 function getPhase(elapsedMs) {
@@ -768,11 +777,15 @@ export async function startGravityGameLoop(ably) {
           const downBetHi = Math.max(downBetLo, Number(cfg.downBetMaxAmount ?? 30));
 
           if (plan.placedUp < plan.targetUp || plan.placedDown < plan.targetDown) {
-            const MAX_TRIES = 48;
+            // Cap bot Ably messages per second.
+            const MAX_BOT_BETS_PER_TICK = 6;
+            const MAX_TRIES = 24;
+            let placedThisTick = 0;
             for (let k = 0; k < MAX_TRIES; k += 1) {
               const stillUp = plan.placedUp < plan.targetUp;
               const stillDown = plan.placedDown < plan.targetDown;
               if (!stillUp && !stillDown) break;
+              if (placedThisTick >= MAX_BOT_BETS_PER_TICK) break;
 
               let direction;
               if (stillUp && stillDown) direction = Math.random() < 0.5 ? "up" : "down";
@@ -799,6 +812,7 @@ export async function startGravityGameLoop(ably) {
                 if (direction === "up") plan.placedUp += 1;
                 else plan.placedDown += 1;
                 await publishGravityBetEvent(ably, row, round);
+                placedThisTick += 1;
               } catch {
                 // already bet this round / phase closed / balance
               }

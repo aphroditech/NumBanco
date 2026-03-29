@@ -40,6 +40,8 @@ import twistRoutes from "./routes/twistRoutes.js";
 import diceRoutes from "./routes/diceRoutes.js";
 import coinRoutes from "./routes/coinRoutes.js";
 import kenoRoutes from "./routes/kenoRoutes.js";
+import wheelRoutes from "./routes/wheelRoutes.js";
+import climbRoutes from "./routes/climbRoutes.js";
 dotenv.config();
 
 /** Dev often uses localhost OR 127.0.0.1 — both must be allowed or the browser blocks API calls. */
@@ -103,6 +105,8 @@ app.use("/api/alpha-tree", alphaTreeRoutes);
 app.use("/api/twist", twistRoutes);
 app.use("/api/coin", coinRoutes);
 app.use("/api/keno", kenoRoutes);
+app.use("/api/wheel", wheelRoutes);
+app.use("/api/climb", climbRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },

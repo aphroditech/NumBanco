@@ -95,7 +95,7 @@ function getOutcomeKey(pickStr, aToZSetting, aToZAmount, aToZWinAmount) {
         return "NONE";
     }
 
-    if(aToZAmount * 1.3 < aToZWinAmount) {
+    if(aToZAmount * 1.1 < aToZWinAmount) {
         return "NONE";
     }
 
@@ -159,7 +159,6 @@ function checkValid(history, settings, betAmt) {
 }
 
 function generateResult(userNumber, condition, aToZSetting, isValid) {
-    console.log("userNumber", userNumber, "condition", condition, "isValid", isValid);
 
     const MULTIPLIERS = {
         THREE_ORDERED: aToZSetting.THREE_ORDERED.multiplier,

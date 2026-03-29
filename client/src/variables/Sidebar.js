@@ -46,6 +46,10 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import DicePage from "views/Dice/DicePage";
 import KenoPage from "views/Keno/KenoPage";
+import WheelPage from "views/Wheel/Wheel";
+import AttractionsIcon from '@mui/icons-material/Attractions';
+import ClimbPage from "views/Climb/ClimbPage";
+import StarIcon from '@mui/icons-material/Star';
 
 export const TierA = {
     path: "/tierA",
@@ -115,6 +119,7 @@ export const Jackal = {
     layout: "/game",
 }
 
+
 export const Mines = {
     path: "/mine",
     name: "MINES",
@@ -142,7 +147,7 @@ export const Rubic = {
 export const Pumping = {
     path: "/pumping",
     name: "PUMPING",
-    icon: <GavelIcon style={{ fontSize: "24px", color: "#00D4FF" }} />, 
+    icon: <GavelIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PumpingPage,
     layout: "/game",
 }
@@ -240,5 +245,21 @@ export const Twist = {
     name: "TWIST",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: TwistPage,
+    layout: "/game",
+}
+
+export const Wheel = {
+    path: "/wheel",
+    name: "WHEEL",
+    icon: <AttractionsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: WheelPage,
+    layout: "/game",
+}
+
+export const Climb = {
+    path: "/climb",
+    name: "CLIMB",
+    icon: <StarIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: ClimbPage,
     layout: "/game",
 }

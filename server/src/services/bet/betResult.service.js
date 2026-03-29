@@ -204,15 +204,14 @@ const PRIZE_TABLE = [
 ];
 
 
-function selectWinner(bet, level) {
+async function selectWinner(bet, level) {
     const tickets = extractRankedTickets(bet);
     const payouts = assignPrizes(tickets);
     const results = calculateEarnings(payouts);
     const price = level == 0 ? 1 : (level == 1 ? 5 : 50);
 
-    
     User.findOne({userId: results[0].userId})
-    .then(user => {
+    .then(async user => {
         if(user) {
             const winner = new RealTimeWinner({
                 username: user.altas,
@@ -221,9 +220,17 @@ function selectWinner(bet, level) {
                 betId: bet.betId,
                 avatar: user.avatar,
                 membership: user.membership,
-                time: Date.now()
+                time: Date.now(),
+                createdAt: new Date()
             })
-            winner.save();
+            await winner.save();
+
+            const recent = await RealTimeWinner.find()
+                .sort({ createdAt: -1 })
+                .limit(100)
+                .select("_id");
+            const recentIds = recent.map((doc) => doc._id);
+            await RealTimeWinner.deleteMany({ _id: { $nin: recentIds } });
         }
     });
 }

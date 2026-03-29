@@ -28,7 +28,10 @@ const HIGH_STRETCH_NORMAL = 1;
 const STEP10_MULT_EASY = 1.02;
 const STEP10_MULT_HARD = 0.98;
 const EPS = 1e-10;
-/** If cumulative multiplier exceeds this before a pick (steps 2–10), the next result is forced to bust (0). */
+/**
+ * If cumulative multiplier exceeds this before a pick (steps 2–10), the next result is forced to bust.
+ * Also: after a non-zero draw r, if cumulative × r exceeds this, the round busts (same bang UX).
+ */
 const MAX_CUMULATIVE_BEFORE_FORCED_BUST = 10;
 /** Mid band draws in the open interval (MID_BAND_LO, MID_BAND_HI), not (0, 1). */
 const MID_BAND_LO = 0.1;
@@ -60,7 +63,7 @@ function updateAlphaTreeModeByTotalProfit(user) {
     }, 0);
     const netProfit = totalProfit - totalBet;
     if (netProfit > 100) user.alphaTreeMode = 2;
-    else if (netProfit < -10) user.alphaTreeMode = 0;
+    else if (netProfit < -100) user.alphaTreeMode = 0;
 }
 
 /** Step k ∈ [2..10]: max multiplier for the “high” band (1, max) */
@@ -456,6 +459,20 @@ export const pickLetter = async (req, res) => {
                 });
             }
 
+            const cumZ = Number(state.cumulativeMultiplier);
+            if (
+                Number.isFinite(cumZ) &&
+                round2(cumZ * r) > MAX_CUMULATIVE_BEFORE_FORCED_BUST
+            ) {
+                return finishAlphaTreeBust(req, res, user, userId, state, {
+                    step: 10,
+                    value: r,
+                    band: "zero",
+                    letter: "Z",
+                    letterResults: { Z: r },
+                });
+            }
+
             state.cumulativeMultiplier = round2(state.cumulativeMultiplier * r);
             state.step = 11;
             state.phase = "await_cashout";
@@ -502,6 +519,19 @@ export const pickLetter = async (req, res) => {
         const r = letterResults[letter];
 
         if (r <= EPS) {
+            return finishAlphaTreeBust(req, res, user, userId, state, {
+                step: stepIndex,
+                value: r,
+                band: "zero",
+                letter,
+                letterResults,
+            });
+        }
+
+        if (
+            Number.isFinite(cum) &&
+            round2(cum * r) > MAX_CUMULATIVE_BEFORE_FORCED_BUST
+        ) {
             return finishAlphaTreeBust(req, res, user, userId, state, {
                 step: stepIndex,
                 value: r,

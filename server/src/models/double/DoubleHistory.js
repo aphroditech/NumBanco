@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 /**
- * One document per real-user Double bet (not stored on User).
+ * One document per real-user Double bet. Same bet row is also pushed onto User.doubleHistory.
  * Settlement updates winAmount / winningColor / winningSlot.
  */
 const doubleHistorySchema = new mongoose.Schema(
@@ -15,7 +15,7 @@ const doubleHistorySchema = new mongoose.Schema(
     winAmount: { type: Number, default: 0 },
     winningColor: { type: String, enum: ["red", "black", "green"] },
     winningSlot: { type: Number },
-    createdAt: { type: Date, default: Date.now },
+    createAt: { type: Date, default: Date.now },
   },
   { timestamps: false }
 );

@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame,DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice} from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame,DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -72,16 +72,18 @@ function Sidebar(props) {
               <SidebarButtonLink value={CloudSpread} />
               <SidebarButtonLink value={Rocket} />
               <SidebarButtonLink value={Jackal} />
+              <SidebarButtonLink value={AToZGame} />
+              <SidebarButtonLink value={Coin} />
               <SidebarButtonLink value={Dice} />
               <SidebarButtonLink value={Mines} />
               <SidebarButtonLink value={DoveGame} />
               <SidebarButtonLink value={CocoGame} />
-              <SidebarButtonLink value={AToZGame} />
               <SidebarButtonLink value={AlphaTreeGame} />
-              <SidebarButtonLink value={Coin} />
               <SidebarButtonLink value={Twist} />
-            </Collapse>
-          </Box>
+              <SidebarButtonLink value={Wheel} />
+              <SidebarButtonLink value={Climb} />
+            </Collapse >
+          </Box >
         )
       }
       if (prop.name == "LOTTERY") {
@@ -176,7 +178,7 @@ function Sidebar(props) {
 
 export function SidebarResponsive(props) {
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState(null);
+  const [activeMenu, setActiveMenu] = React.useState("menu");
 
   const toggleMenu = (menu) => {
     setActiveMenu(prev => (prev === menu ? null : menu));
@@ -198,7 +200,7 @@ export function SidebarResponsive(props) {
             />
 
             {/* Sub menu */}
-            <Collapse in={activeMenu === "bet"} animateOpacity>
+            <Collapse in={activeMenu === "menu"} animateOpacity>
               <Stack
                 spacing={2}
                 mt={2}
@@ -234,6 +236,8 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={CloudSpread} />
                 <SidebarButtonLink value={Rocket} />
                 <SidebarButtonLink value={Jackal} />
+                <SidebarButtonLink value={AToZGame} />
+                <SidebarButtonLink value={Coin} />
                 <SidebarButtonLink value={Dice} />
                 <SidebarButtonLink value={Mines} />
                 <SidebarButtonLink value={DoveGame} />

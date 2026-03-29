@@ -28,6 +28,9 @@ import { initDoubleBotSettings } from './initDoubleBotSettings.js';
 import { initializeTwistSettings } from './initTwistSettings.js';
 import { initializeKenoControls } from './kenoContrl.js';
 import { initializeKenoLimits } from './kenoLimits.js';
+import { initializeClimbSettings } from './initClimbSettings.js';
+import { initWheelSettings } from './initWheelSettings.js';
+
 
 export const initializeDatabase = async () => {
     console.log('🔄 Initializing database...');
@@ -52,6 +55,7 @@ export const initializeDatabase = async () => {
     await initializeMinesSettings();
     await initializeAlphaTreeSettings();
     await initializeTwistSettings();
+    await initializeClimbSettings();
     await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();
@@ -63,5 +67,6 @@ export const initializeDatabase = async () => {
     await initializeJokerCrashPercentages();
     await initializeKenoControls();
     await initializeKenoLimits();
+    await initWheelSettings();
     console.log('✅ Database initialization complete');
 };
