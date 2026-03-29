@@ -47,7 +47,6 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import DicePage from "views/Dice/DicePage";
-import PlinkoPage from "views/Plinko/PlinkoPage";
 import KenoPage from "views/Keno/KenoPage";
 import WheelPage from "views/Wheel/Wheel";
 import AttractionsIcon from '@mui/icons-material/Attractions';
