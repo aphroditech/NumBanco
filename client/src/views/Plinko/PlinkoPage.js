@@ -43,8 +43,11 @@ const PLINKO_DESKTOP_COL_MIN_H = '520px';
 const PANEL_INNER_MAX_W = { base: '100%', sm: '300px' };
 
 const PLINKO_LIVE_FEED_MAX = 13;
-/** Aligned with WinFireworksEffect — then hide fireworks, bucket highlight, and ball. */
-const PLINKO_WIN_PRESENTATION_MS = 2200;
+/**
+ * Win overlay + board cleanup once fireworks / earn text have finished (~1.6s animations).
+ * Avoids leaving the ball and bucket glow on screen after sparks are gone.
+ */
+const PLINKO_WIN_PRESENTATION_MS = 1700;
 /** Losing rounds: keep result visible briefly (no fireworks). */
 const PLINKO_LOSS_PRESENTATION_MS = 2400;
 
@@ -464,9 +467,9 @@ export default function PlinkoPage() {
 
             <Grid
                 templateAreas={{
-                    base: '"panel" "game" "empty"',
-                    md: '"panel empty" "game game"',
-                    '1550px': '"panel game empty"',
+                    base: '"panel" "game" "live"',
+                    md: '"panel game" "live live"',
+                    '1550px': '"panel game live"',
                 }}
                 templateColumns={{
                     base: 'minmax(0, 1fr)',

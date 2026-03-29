@@ -74,6 +74,9 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import WheelPage from "views/Wheel/Wheel";
 import ClimbPage from "views/Climb/ClimbPage";
+import SnakesPage from "views/Snakes/Snakes";
+
+
 
 import {
   DocumentIcon,
@@ -136,6 +139,7 @@ var dashRoutes = [
     component: DicePage,
     layout: "/game",
   },
+  
   {
     redirect: true,
     path: "/keno",
@@ -154,12 +158,21 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/snakes",
+    name: "SNAKES",
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: SnakesPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/plinko",
     name: "PLINKO",
     icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PlinkoPage,
     layout: "/game",
   },
+
   {
     redirect: true,
     path: "/pumping",

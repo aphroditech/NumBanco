@@ -433,9 +433,9 @@ export default function MinesPage() {
 
                 <Grid
                     templateAreas={{
-                        base: '"panel" "game" "empty"',
-                        md: '"panel empty" "game game"',
-                        "1550px": '"panel game empty"',
+                        base: '"panel" "game" "live"',
+                        md: '"panel game" "live live"',
+                        "1550px": '"panel game live"',
                     }}
                     templateColumns={{
                         base: "1fr",

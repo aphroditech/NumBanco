@@ -80,7 +80,7 @@ export default function PlinkoLiveResults({ rows, desktopMinH = '520px' }) {
 
     return (
         <GridItem
-            area="empty"
+            area="live"
             minW={0}
             maxW="100%"
             display="flex"

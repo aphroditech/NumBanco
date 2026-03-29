@@ -21,6 +21,7 @@ import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
 import AToZPage from "views/AToZ/AToZ";
 import CardGamePage from "views/CardGame/CardGamePage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
@@ -46,12 +47,13 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import DicePage from "views/Dice/DicePage";
-import PlinkoPage from "views/Plinko/PlinkoPage";
 import KenoPage from "views/Keno/KenoPage";
 import WheelPage from "views/Wheel/Wheel";
 import AttractionsIcon from '@mui/icons-material/Attractions';
 import ClimbPage from "views/Climb/ClimbPage";
 import StarIcon from '@mui/icons-material/Star';
+import SnakePage from "views/Snakes/Snakes";
+import SnakeIcon from '@mui/icons-material/Whatshot';
 
 export const TierA = {
     path: "/tierA",
@@ -183,6 +185,14 @@ export const Gravity = {
     name: "GRAVITY",
     icon: <TrendingUpIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: GravityPage,
+    layout: "/game",
+}
+
+export const Snakes = {
+    path: "/snakes",
+    name: "SNAKES",
+    icon: <SnakeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: SnakePage,
     layout: "/game",
 }
 

@@ -7,7 +7,7 @@ export default function UserHistory() {
     const { minesResults } = useAblyMinesResult();
 
     return (
-        <GridItem area="empty" minH="250px" display="flex" alignSelf="start" w="100%">
+        <GridItem area="live" minH="250px" display="flex" alignSelf="start" w="100%">
             <Box
                 w="100%"
                 maxW="100%"
