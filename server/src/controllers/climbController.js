@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import ClimbState from "../models/ClimbState.js";
 import ClimbView from "../models/ClimbView.js";
+import CalendarClimb from "../models/climb/CalendarClimb.js";
 import { sendUserResponse } from "../utils/responses.js";
 import {
     getClimbSettingsMerged,
@@ -109,6 +110,23 @@ function settleActiveClimbWin(state, user) {
     });
     syncClimbModeFromNetProfit(user);
     return { win, totalMultiplier };
+}
+
+function recordCalendarClimbRow(user, state, { busted, win }) {
+    const bet = round2(Number(state.betAmount));
+    const winAmount = round2(Number(win));
+    Promise.resolve()
+        .then(() =>
+            CalendarClimb.create({
+                userName: user.altas ?? "",
+                isWin: !busted,
+                betAmount: bet,
+                level: state.mode || "easy",
+                winAmount,
+                date: new Date(),
+            })
+        )
+        .catch((err) => console.error("[climb] CalendarClimb.create", err));
 }
 
 async function recordClimbViewRow(req, { userId, bet, win, result, mode, isUser = 1 }) {
@@ -265,6 +283,10 @@ export const pickBox = async (req, res) => {
             });
             syncClimbModeFromNetProfit(user);
             await Promise.all([state.deleteOne(), user.save()]);
+            recordCalendarClimbRow(user, state, {
+                busted: true,
+                win: 0,
+            });
             await recordClimbViewRow(req, {
                 userId,
                 bet: state.betAmount,
@@ -296,6 +318,10 @@ export const pickBox = async (req, res) => {
             const lastPickRow = state.activeRow + 1;
             const { win, totalMultiplier } = settleActiveClimbWin(state, user);
             await Promise.all([state.deleteOne(), user.save()]);
+            recordCalendarClimbRow(user, state, {
+                busted: false,
+                win,
+            });
             await recordClimbViewRow(req, {
                 userId,
                 bet: state.betAmount,
@@ -355,6 +381,11 @@ export const cashOut = async (req, res) => {
         const { win, totalMultiplier } = settleActiveClimbWin(state, user);
 
         await Promise.all([state.deleteOne(), user.save()]);
+
+        recordCalendarClimbRow(user, state, {
+            busted: false,
+            win,
+        });
 
         await recordClimbViewRow(req, {
             userId,
