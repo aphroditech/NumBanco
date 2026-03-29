@@ -40,6 +40,7 @@ import keno from "assets/img/Games/keno.jpg"
 import doubleGame from "assets/img/Games/double.jpg"
 import wheel from "assets/img/Games/wheel.jpg"
 import plinko from "assets/img/Games/plinko.jpg"
+import snakes from "assets/img/Games/snake.jpg"
 
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
@@ -63,6 +64,7 @@ const DASHBOARD_GAMES = [
     // { img: dice, name: "Hash Dice", path: "/game/hash-dice", reduxKey: "diceUsers", tickMs: 5300 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
     { img: wheel, name: "Wheel", path: "/game/wheel", reduxKey: "wheelUsers", tickMs: 4600 },
+    { img: snakes, name: "Snakes", path: "/game/snakes", reduxKey: "snakesUsers", tickMs: 3600 },
     { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 3600 },
     { img: jackal, name: "Jackal", path: "/game/jackal", reduxKey: "jackalUsers", tickMs: 2600 },
     { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4900 },

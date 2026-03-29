@@ -11,39 +11,42 @@ import {
 import Card from 'components/Card/Card.js';
 import CardHeader from 'components/Card/CardHeader';
 import React, { useEffect, useState, useRef } from 'react';
-import PumpingRealViewRow from 'components/Tables/PumpingRealViewRow';
+import RocketRealViewRow from 'components/Tables/RocketRealViewRow';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
-import { getPumpingView } from 'action/PumpingActions';
-import { useAblyPumpingUpdates } from 'hooks/useAblyPumpingUpdates';
+import { useAblySnakeResult } from 'hooks/useAblySnakeResult';
 import { useHistory } from 'react-router-dom';
+import { getSnakeResults } from 'action/SnakesActions';
+import Loading from 'components/Loading/Loading';
 
 function RealView() {
-    const { pumpingView, setPumpingView } = useAblyPumpingUpdates();
+    const { snakeResults, setSnakeResults } = useAblySnakeResult();
+    const [isLoading, setIsLoading] = useState(true);
     const [newRowIds, setNewRowIds] = useState(new Set());
     const prevRowIdsRef = useRef(new Set());
     const hasInitializedRef = useRef(false);
     const history = useHistory();
     const getRowId = (row) => {
         if (!row) return "";
-        return row._id || row.id || `${row.altas || "user"}-${row.bet || 0}-${row.win || 0}`;
+        return row._id || row.id || `${row.userName || "user"}-${row.betAmount || 0}-${row.winAmount || 0}`;
     };
 
+
     useEffect(() => {
-        getPumpingView(history).then((res) => {
-            setPumpingView(res.data);
+        getSnakeResults(history).then((res) => {
+            setSnakeResults(res);
+            setIsLoading(false);
         });
     }, []);
 
-    // Detect new rows and apply animation
     useEffect(() => {
-        if (!pumpingView || pumpingView.length === 0) {
+        if (!snakeResults || snakeResults.length === 0) {
             prevRowIdsRef.current = new Set();
             setNewRowIds(new Set());
             hasInitializedRef.current = true;
             return;
         }
 
-        const currentIds = new Set(pumpingView.map(getRowId));
+        const currentIds = new Set(snakeResults.map(getRowId));
 
         if (!hasInitializedRef.current) {
             prevRowIdsRef.current = currentIds;
@@ -66,12 +69,16 @@ function RealView() {
             }, 1700);
             return () => clearTimeout(timeoutId);
         }
-    }, [pumpingView]);
+    }, [snakeResults]);
 
-    const maxRows = 12;
-    const baseRows = Array.isArray(pumpingView) ? pumpingView : [];
+    const maxRows = 16;
+    const baseRows = Array.isArray(snakeResults) ? snakeResults : [];
     const rowsToRender = baseRows.slice(0, maxRows);
     
+    if (isLoading) {
+        return <Loading />;
+    }
+
     return (
         <Card p="24px" pt="30px" overflowX="hidden" height="650px">
             <Box overflowX="hidden" width="100%" overflowY="auto">
@@ -87,7 +94,7 @@ function RealView() {
                                 User
                             </Th>
                             <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
-                                Bet
+                                Result
                             </Th>
                             <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
                                 Win
@@ -98,14 +105,12 @@ function RealView() {
                     {rowsToRender.map((row, index) => {
                         const rowId = getRowId(row);
                         return (
-                            <PumpingRealViewRow
+                            <RocketRealViewRow
                                 key={rowId || index}
-                                altas={row.altas}
+                                altas={row.userName}
                                 avatar={row.avatar}
-                                // membership={row.membership}
-                                // target={row.target}
-                                bet={row.bet}
-                                win={row.win}
+                                result={row.multiplier}
+                                win={row.winAmount}
                                 isNew={newRowIds.has(rowId)}
                             />
                         );

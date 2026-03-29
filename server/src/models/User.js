@@ -381,6 +381,14 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  snakesAmount: {
+    type: Number,
+    default: 0
+  },
+  snakesWinAmount: {
+    type: Number,
+    default: 0
+  },
   /** Twist multiplier ladder positions (persisted per user). */
   twistGreenMultIndex: {
     type: Number,
