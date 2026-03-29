@@ -1,8 +1,13 @@
 import User from "../models/User.js";
 import ClimbState from "../models/ClimbState.js";
 import ClimbView from "../models/ClimbView.js";
+import CalendarClimb from "../models/climb/CalendarClimb.js";
 import { sendUserResponse } from "../utils/responses.js";
-import { getClimbSettingsMerged, normalizeClimbViewResult } from "../services/climb/climbSettings.service.js";
+import {
+    getClimbSettingsMerged,
+    normalizeClimbViewResult,
+    DEFAULT_CLIMB_SETTINGS,
+} from "../services/climb/climbSettings.service.js";
 import {
     enrichClimbViewsWithUser,
     CLIMB_VIEW_LIMIT,
@@ -12,10 +17,7 @@ import {
 const MIN_BET = 0.1;
 const MAX_BET = 20;
 const MODE_TO_COLS = { easy: 5, normal: 3, hard: 2 };
-/** Per-user `climbMode` on User: bust probability for each pick (round grid/mode is separate). */
-const BAN_RATE_CLIMB_MODE_0 = 0.1;
-const BAN_RATE_CLIMB_MODE_2 = 0.8;
-/** Lifetime climb net from `climbHistory` → auto `climbMode` (ban tier). */
+/** Lifetime climb net from `climbHistory` → auto `climbMode` (reserved / stats). */
 const CLIMB_PROFIT_SYNC_HARD_AT = 100;
 const CLIMB_PROFIT_SYNC_EASY_AT = -100;
 
@@ -48,7 +50,7 @@ function climbNetProfitTotal(user) {
 
 /**
  * `climbMode` 2 if net profit > 100, 0 if net < −100, else 1.
- * Independent of round Easy/Normal/Hard grid; only affects ban rate tier.
+ * Pick odds: 0 → easy `starRates`, 2 → hard `starRates`; 1 (normal) → `starRates` for the round’s mode (easy/normal/hard), same as before climbMode tuning.
  */
 function syncClimbModeFromNetProfit(user) {
     const net = climbNetProfitTotal(user);
@@ -59,20 +61,6 @@ function syncClimbModeFromNetProfit(user) {
     } else {
         user.climbMode = 1;
     }
-}
-
-/** `user.climbMode`: 0 → 0.1, 2 → 0.8; 1 uses merged `normal.banRate` / fallback. */
-function banRateFromClimbMode(climbModeNum, cols, mergedSettings) {
-    const raw = Number(climbModeNum);
-    const m = Number.isFinite(raw) ? Math.min(2, Math.max(0, raw)) : 1;
-    if (m === 0) {
-        return BAN_RATE_CLIMB_MODE_0;
-    }
-    if (m === 2) {
-        return BAN_RATE_CLIMB_MODE_2;
-    }
-    const ns = mergedSettings.normal || mergedSettings.easy;
-    return Math.min(1, Math.max(0, Number(ns.banRate ?? 1 / cols)));
 }
 
 async function loadUser(req) {
@@ -122,6 +110,23 @@ function settleActiveClimbWin(state, user) {
     });
     syncClimbModeFromNetProfit(user);
     return { win, totalMultiplier };
+}
+
+function recordCalendarClimbRow(user, state, { busted, win }) {
+    const bet = round2(Number(state.betAmount));
+    const winAmount = round2(Number(win));
+    Promise.resolve()
+        .then(() =>
+            CalendarClimb.create({
+                userName: user.altas ?? "",
+                isWin: !busted,
+                betAmount: bet,
+                level: state.mode || "easy",
+                winAmount,
+                date: new Date(),
+            })
+        )
+        .catch((err) => console.error("[climb] CalendarClimb.create", err));
 }
 
 async function recordClimbViewRow(req, { userId, bet, win, result, mode, isUser = 1 }) {
@@ -242,9 +247,32 @@ export const pickBox = async (req, res) => {
 
         const settings = await getClimbSettingsMerged();
         const gameModeSettings = settings[state.mode] || settings.easy;
-        const banRate = banRateFromClimbMode(user.climbMode, cols, settings);
+        const rawCm = Number(user.climbMode);
+        const cm = Number.isFinite(rawCm) ? Math.min(2, Math.max(0, rawCm)) : 1;
+        let starTierSettings;
+        let starDefaultKey;
+        if (cm === 0) {
+            starTierSettings = settings.easy;
+            starDefaultKey = "easy";
+        } else if (cm === 2) {
+            starTierSettings = settings.hard;
+            starDefaultKey = "hard";
+        } else {
+            starTierSettings = gameModeSettings;
+            starDefaultKey = state.mode;
+        }
+        const stepIdx = state.successCount;
+        const rates = starTierSettings.starRates;
+        let starRate = Number(rates?.[stepIdx]);
+        if (!Number.isFinite(starRate)) {
+            starRate = Number(DEFAULT_CLIMB_SETTINGS[starDefaultKey]?.starRates?.[stepIdx]);
+        }
+        if (!Number.isFinite(starRate)) {
+            starRate = 0.5;
+        }
+        starRate = Math.min(1, Math.max(0, starRate));
 
-        if (Math.random() < banRate) {
+        if (Math.random() >= starRate) {
             user.climbHistory = user.climbHistory || [];
             user.climbHistory.push({
                 betAmount: state.betAmount,
@@ -255,6 +283,10 @@ export const pickBox = async (req, res) => {
             });
             syncClimbModeFromNetProfit(user);
             await Promise.all([state.deleteOne(), user.save()]);
+            recordCalendarClimbRow(user, state, {
+                busted: true,
+                win: 0,
+            });
             await recordClimbViewRow(req, {
                 userId,
                 bet: state.betAmount,
@@ -286,6 +318,10 @@ export const pickBox = async (req, res) => {
             const lastPickRow = state.activeRow + 1;
             const { win, totalMultiplier } = settleActiveClimbWin(state, user);
             await Promise.all([state.deleteOne(), user.save()]);
+            recordCalendarClimbRow(user, state, {
+                busted: false,
+                win,
+            });
             await recordClimbViewRow(req, {
                 userId,
                 bet: state.betAmount,
@@ -345,6 +381,11 @@ export const cashOut = async (req, res) => {
         const { win, totalMultiplier } = settleActiveClimbWin(state, user);
 
         await Promise.all([state.deleteOne(), user.save()]);
+
+        recordCalendarClimbRow(user, state, {
+            busted: false,
+            win,
+        });
 
         await recordClimbViewRow(req, {
             userId,

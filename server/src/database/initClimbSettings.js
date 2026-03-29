@@ -1,8 +1,5 @@
 import ClimbSettings from "../models/ClimbSettings.js";
-import {
-    CLIMB_MODE_COLS,
-    DEFAULT_CLIMB_SETTINGS,
-} from "../services/climb/climbSettings.service.js";
+import { DEFAULT_CLIMB_SETTINGS } from "../services/climb/climbSettings.service.js";
 
 export async function initializeClimbSettings() {
     const existingGlobal = await ClimbSettings.findById("global").lean();
@@ -32,10 +29,13 @@ export async function initializeClimbSettings() {
         if (!valid) {
             updates[`${modeKey}.multipliers`] = DEFAULT_CLIMB_SETTINGS[modeKey].multipliers;
         }
-        const cols = CLIMB_MODE_COLS[modeKey] || 5;
-        const br = Number(existing?.[modeKey]?.banRate);
-        if (!Number.isFinite(br) || br < 0 || br > 1) {
-            updates[`${modeKey}.banRate`] = 1 / cols;
+        const currentRates = existing?.[modeKey]?.starRates;
+        const ratesOk =
+            Array.isArray(currentRates) &&
+            currentRates.length === 5 &&
+            currentRates.every((n) => Number.isFinite(Number(n)) && Number(n) >= 0 && Number(n) <= 1);
+        if (!ratesOk) {
+            updates[`${modeKey}.starRates`] = DEFAULT_CLIMB_SETTINGS[modeKey].starRates;
         }
     }
     if (Object.keys(updates).length > 0) {
