@@ -46,6 +46,7 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import DicePage from "views/Dice/DicePage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
 import KenoPage from "views/Keno/KenoPage";
 import WheelPage from "views/Wheel/Wheel";
 import AttractionsIcon from '@mui/icons-material/Attractions';
@@ -254,6 +255,7 @@ export const Plinko = {
     name: "PLINKO",
     icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PlinkoPage,
+    layout: "/game",
 }
 
 export const Wheel = {
