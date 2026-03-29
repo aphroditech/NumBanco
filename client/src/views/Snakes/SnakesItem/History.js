@@ -7,6 +7,7 @@ import {
     Tr,
     Th,
     Flex,
+    Td,
     Select,
     Button,
     HStack,
@@ -14,26 +15,34 @@ import {
 import Card from 'components/Card/Card.js';
 import CardHeader from 'components/Card/CardHeader';
 import CardBody from 'components/Card/CardBody.js';
-import React, { useState, useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import RestoreRoundedIcon from '@mui/icons-material/RestoreRounded';
-import PumpingHistoryRow from 'components/Tables/PumpingHistoryRow';
 import SpeakerNotesOffRoundedIcon from '@mui/icons-material/SpeakerNotesOffRounded';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import GradientBorder from 'components/GradientBorder/GradientBorder';
 import wolfnoavilable from '../../../assets/img/wolfnoavilable.png';
 
-function History() {
-    const user = useSelector((state) => state.user.userInfo) || {};
+import { getSnakeHistory } from 'action/SnakesActions';
+import { useHistory } from 'react-router-dom';
 
-    const sortedHistory = user.pumpingHistory?.filter((item) => item.active)?.length > 0
-        ? user.pumpingHistory.filter((item) => item.active).sort((a, b) => {
-            const dateA = new Date(a.createAt || 0);
-            const dateB = new Date(b.createAt || 0);
+function History() {
+    const snakesHistory = useSelector((state) => state?.histories?.snakesHistory) || [];
+    const history = useHistory();
+    const dispatch = useDispatch();
+    const sortedHistory = useMemo(() => {
+        if (!snakesHistory?.length) return [];
+        return [...snakesHistory].sort((a, b) => {
+            const dateA = new Date(a.date || 0);
+            const dateB = new Date(b.date || 0);
             return dateB - dateA;
-        })
-        : [];
+        });
+    }, [snakesHistory]); 
+
+    useEffect(() => {
+        getSnakeHistory(history, dispatch);
+    }, [dispatch, history]);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -136,12 +145,15 @@ function History() {
                                     </Th>
 
                                     <Th color="white" className="real_th_font" w="30%">
-                                        Target
+                                        Level
+                                    </Th>
+                                    <Th color="white" className="real_th_font" w="30%">
+                                        Multiplier
                                     </Th>
                                     <Th color="white" className="real_th_font" w="30%">
                                         Bet
                                     </Th>
-                                    <Th color="white" textAlign="left" className="real_th_font" w="20%">
+                                    <Th color="white" className="real_th_font" w="30%">
                                         Result
                                     </Th>
                                     <Th color="white" className="real_th_font" w="30%">
@@ -156,17 +168,16 @@ function History() {
                                 {paginatedHistory.map((row, index, arr) => {
                                     const globalIndex = (currentPage - 1) * itemsPerPage + index;
                                     return (
-                                        <PumpingHistoryRow
-                                            key={globalIndex}
-                                            No={globalIndex + 1}
-                                            target={row.target}
-                                            result={row.result}
-                                            bet={row.bet}
-                                            win={row.win}
-                                            time={row.createAt}
-                                            lastItem={index === arr.length - 1}
-                                        />
-                                    );
+                                        <Tr key={globalIndex}>
+                                            <Td textAlign="center" fontSize="sm" color="#fff" fontWeight="normal" borderBottomColor='#56577A' borderBottom='1px solid #56577A'>{globalIndex + 1}</Td>
+                                            <Td textAlign="center" fontSize="sm" color="#fff" fontWeight="normal" borderBottomColor='#56577A' borderBottom='1px solid #56577A'>{row.level.toUpperCase()}</Td>
+                                            <Td textAlign="center" fontSize="sm" color="#fff" fontWeight="normal" borderBottomColor='#56577A' borderBottom='1px solid #56577A'>{row.multiplier}</Td>
+                                            <Td textAlign="center" fontSize="sm" color="#fff" fontWeight="normal" borderBottomColor='#56577A' borderBottom='1px solid #56577A'>{row.betAmount}</Td>
+                                            <Td textAlign="center" fontSize="sm" color={row.isWin ? "#68d391" : "#f56565"} fontWeight="normal" borderBottomColor='#56577A' borderBottom='1px solid #56577A'>{row.isWin ? "Cash Out" : "Bang"}</Td>
+                                            <Td textAlign="center" fontSize="sm" color={row.winAmount > 0 ? "#68d391" : "#f56565"} fontWeight="normal" borderBottomColor='#56577A' borderBottom='1px solid #56577A'>{row.winAmount}</Td>
+                                            <Td textAlign="center" fontSize="sm" color="#fff" fontWeight="normal" borderBottomColor='#56577A' borderBottom='1px solid #56577A'>{new Date(row.date).toLocaleString()}</Td>
+                                        </Tr>
+                                    )
                                 })}
                             </Tbody>
                         </Table>
