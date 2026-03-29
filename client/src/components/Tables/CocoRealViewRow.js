@@ -61,7 +61,7 @@ if (typeof document !== 'undefined') {
 }
 
 function CocoRealViewRow(props) {
-  const { altas, avatar, bet, win } = props;
+  const { altas, avatar, result, win } = props;
   const isWin = win > 0;
   const rowColor = isWin ? "#68d391" : "#f56565";
   const displayName = altas || "—";
@@ -95,7 +95,7 @@ function CocoRealViewRow(props) {
             )}
             <Tooltip label={altas || ""} placement="top" hasArrow>
               <Text color={rowColor} fontSize="13px" fontWeight="700">
-                {displayName}
+                {displayName.length > 6 ? `${displayName.slice(0, 6)}...` : displayName}
               </Text>
             </Tooltip>
           </HStack>
@@ -109,7 +109,7 @@ function CocoRealViewRow(props) {
         overflow="visible"
       >
         <Text fontSize="13px" color={rowColor} fontWeight="700" textAlign="center" whiteSpace="nowrap" sx={{ fontVariantNumeric: "tabular-nums" }}>
-          {bet}
+          {result}x
         </Text>
       </Td>
       <Td

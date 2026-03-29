@@ -26,6 +26,7 @@ import { initializeCocoRates } from './initCocoRates.js';
 import { initCoinSettings } from './initCoinSettings.js';
 import { initDoubleBotSettings } from './initDoubleBotSettings.js';
 import { initializeTwistSettings } from './initTwistSettings.js';
+import { initializeClimbSettings } from './initClimbSettings.js';
 import { initWheelSettings } from './initWheelSettings.js';
 
 
@@ -52,6 +53,7 @@ export const initializeDatabase = async () => {
     await initializeMinesSettings();
     await initializeAlphaTreeSettings();
     await initializeTwistSettings();
+    await initializeClimbSettings();
     await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();

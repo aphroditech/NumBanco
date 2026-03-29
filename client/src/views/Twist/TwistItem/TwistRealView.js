@@ -1,15 +1,12 @@
 import {
     Box,
-    Text,
     Table,
     Thead,
     Tbody,
     Tr,
     Th,
-    Flex,
+    Text,
 } from '@chakra-ui/react';
-import Card from 'components/Card/Card.js';
-import CardHeader from 'components/Card/CardHeader';
 import React, { useEffect, useState, useRef } from 'react';
 import TwistRealViewRow from 'components/Tables/TwistRealViewRow';
 import { getTwistView } from 'action/TwistActions';
@@ -22,14 +19,26 @@ function TwistRealView() {
     const prevRowIdsRef = useRef(new Set());
     const hasInitializedRef = useRef(false);
     const history = useHistory();
-    const getRowId = (row) => {
-        if (!row) return "";
-        return row._id || row.id || `${row.altas || "user"}-${Number(row.result).toFixed(2)}-${row.win || 0}`;
+
+    const getRowId = (row, index) => {
+        if (!row) return `cv-empty-${index}`;
+        if (row._id != null) return String(row._id);
+        if (row.id != null) return String(row.id);
+        const t = row.time ?? row.createdAt ?? "";
+        const uid = row.userId ?? "u";
+        return `cv-${uid}-${t}-${row.step ?? ""}-${row.multi ?? ""}-${index}`;
+    };
+
+    const normalizeViewPayload = (payload) => {
+        if (Array.isArray(payload)) return payload;
+        if (payload && Array.isArray(payload.data)) return payload.data;
+        return [];
     };
 
     useEffect(() => {
         getTwistView(history).then((res) => {
-            setTwistView(res.data);
+            const raw = res?.data?.data ?? res?.data;
+            setTwistView(normalizeViewPayload(raw));
         });
     }, []);
 
@@ -42,7 +51,7 @@ function TwistRealView() {
             return;
         }
 
-        const currentIds = new Set(twistView.map(getRowId));
+        const currentIds = new Set(twistView.map((row, i) => getRowId(row, i)));
 
         if (!hasInitializedRef.current) {
             prevRowIdsRef.current = currentIds;
@@ -67,42 +76,78 @@ function TwistRealView() {
         }
     }, [twistView]);
 
-    const maxRows = 22;
+    const maxRows = 19;
     const baseRows = Array.isArray(twistView) ? twistView : [];
     const rowsToRender = baseRows.slice(0, maxRows);
     
     return (
-        <Card p="24px" pt="30px" overflowX="hidden" height="100%" display="flex" flexDirection="column">
-            <Box overflowX="hidden" width="100%" overflowY="auto" flex="1" minH="0">
-                <Table
-                variant="unstyled"
-                color="#fff"
+        <Box
+            w="100%"
+            maxW="100%"
+            h="450px"
+            minH={0}
+            flex={1}
+            bg="#2b2b2b"
+            borderRadius="14px"
+            border="1px solid rgba(255,255,255,0.1)"
+            boxShadow="none"
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+            p="12px"
+            pt="16px"
+        >
+            <Text
+                px="10px"
+                pb="6px"
+                fontSize="sm"
+                fontWeight="800"
+                color="rgba(255,255,255,0.92)"
+                letterSpacing="0.02em"
+                flexShrink={0}
+            >
+                Live Results
+            </Text>
+            <Box
+                overflowX="hidden"
                 width="100%"
-                sx={{ tableLayout: "fixed" }}
+                overflowY="auto"
+                flex="1"
+                minH="0"
+                sx={{
+                    "&::-webkit-scrollbar": { display: "none" },
+                    "msOverflowStyle": "none",
+                    "scrollbarWidth": "none",
+                }}
+            >
+                <Table
+                    variant="unstyled"
+                    color="#fff"
+                    width="100%"
+                    sx={{ tableLayout: "fixed" }}
                 >
                     <Thead>
-                        <Tr style={{ textAlignLast: "center" }}>
-                            <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                        <Tr borderBottom="1px solid rgba(255,255,255,0.12)">
+                            <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" whiteSpace="nowrap" w="42%" textTransform="uppercase" letterSpacing="0.06em" pl="20px">
                                 User
                             </Th>
-                            <Th color="white" textAlign="left" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                            <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" textAlign="center" whiteSpace="nowrap" w="28%" textTransform="uppercase" letterSpacing="0.06em">
                                 Result
                             </Th>
-                            <Th color="white" className="real_th_font" px="0px" py="4px" h="32px" borderBottom="none">
+                            <Th color="rgba(255,255,255,0.9)" fontSize="10px" fontWeight="800" px="0" py="4px" h="32px" borderBottom="none" textAlign="right" whiteSpace="nowrap" w="30%" textTransform="uppercase" letterSpacing="0.06em" pr="20px">
                                 Win
                             </Th>
                         </Tr>
                     </Thead>
                     <Tbody>
                     {rowsToRender.map((row, index) => {
-                        const rowId = getRowId(row);
-                        const rowRenderKey = rowId ? `${rowId}-${index}` : `row-${index}`;
+                        const rowId = getRowId(row, index);
                         return (
                             <TwistRealViewRow
-                                key={rowRenderKey}
+                                key={rowId}
                                 altas={row.altas}
                                 avatar={row.avatar}
-                                result={Number(row.result).toFixed(2)}
+                                result={row.result}
                                 win={row.win}
                                 isNew={newRowIds.has(rowId)}
                             />
@@ -111,7 +156,7 @@ function TwistRealView() {
                     </Tbody>
                 </Table>
             </Box>
-        </Card>
+        </Box>
     );
 }
 
