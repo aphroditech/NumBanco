@@ -44,6 +44,8 @@ import CoinPage from "views/Coin/CoinPage";
 import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import DicePage from "views/Dice/DicePage";
+import WheelPage from "views/Wheel/Wheel";
+import AttractionsIcon from '@mui/icons-material/Attractions';
 
 export const TierA = {
     path: "/tierA",
@@ -104,6 +106,7 @@ export const Jackal = {
     component: Mining,
     layout: "/game",
 }
+
 
 export const Mines = {
     path: "/mine",
@@ -230,5 +233,13 @@ export const Twist = {
     name: "TWIST",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: TwistPage,
+    layout: "/game",
+}
+
+export const Wheel = {
+    path: "/wheel",
+    name: "WHEEL",
+    icon: <AttractionsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: WheelPage,
     layout: "/game",
 }

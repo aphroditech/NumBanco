@@ -59,6 +59,7 @@ import DicePage from "views/Dice/DicePage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
+import AttractionsIcon from '@mui/icons-material/Attractions';
 import Coco from "views/Coco/CocoPage";
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import AToZPage from "views/AToZ/AToZ";
@@ -67,6 +68,7 @@ import Filter9Icon from '@mui/icons-material/Filter9';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
+import WheelPage from "views/Wheel/Wheel";
 
 import {
   DocumentIcon,
@@ -112,6 +114,14 @@ var dashRoutes = [
   {
     name: "GAMES",
     icon: <GamesIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+  },
+  {
+    redirect: true,
+    path: "/wheel",
+    name: "WHEEL",
+    icon: <AttractionsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: WheelPage,
+    layout: "/game",
   },
   {
     redirect: true,

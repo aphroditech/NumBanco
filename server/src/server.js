@@ -36,6 +36,7 @@ import { diceBot } from "./services/dice/diceBot.service.js";
 import { jokerCrashBot } from "./services/jokerCrash/jokerCrashBot.service.js";
 import { coinFlipBot } from "./services/coinFlip/coinFlipBot.service.js";
 import { twistBot } from "./services/twist/twistBot.service.js";
+import { wheelBot } from "./services/wheel/wheelBot.service.js";
 
 
 dotenv.config();
@@ -88,9 +89,9 @@ connectDB()
             console.log("✅ Core Ably connected");
 
             // getUserStatusChannel(ablyCore);
-            startBetEngine(ablyCore, 0);
-            startBetEngine(ablyCore, 1);
-            startBetEngine(ablyCore, 2);
+            // startBetEngine(ablyCore, 0);
+            // startBetEngine(ablyCore, 1);
+            // startBetEngine(ablyCore, 2);
 
         });
         ablyFinance.connection.once("connected", () => {
@@ -117,7 +118,8 @@ connectDB()
             // rocketBot(ablyCrashGames);
             // jokerCrashBot(ablyCrashGames);
             // pumpingBot(ablyCrashGames);
-
+            // wheelBot(ablyCrashGames);
+            /** Wheel live feed uses `wheelResult` / `WHEEL_RESULT` on core Ably (see `wheelController` / client hook). */
         });
 
         /*
@@ -147,7 +149,7 @@ connectDB()
             console.log("⛏️ Mining Games Ably connected");
 
             // miningBot(ablyMiningGames);
-            minesBot(ablyMiningGames);
+            // minesBot(ablyMiningGames);
             // fishingBot(ablyMiningGames);
             // cocoBot(ablyMiningGames);
             // alphaTreeBot(ablyMiningGames);
