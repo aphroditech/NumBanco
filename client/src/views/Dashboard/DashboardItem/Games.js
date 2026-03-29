@@ -33,14 +33,14 @@ import alphaTree from "assets/img/Games/alphaTree.jpg"
 import digits from "assets/img/Games/digits.jpg"
 import cloud from "assets/img/Games/cloud.jpg"
 import twist from "assets/img/Games/twist.jpg"
-import climb from "assets/img/Games/climb.jpg"
+import climb from "assets/img/Games/climb.jpg";
 import dice from "assets/img/Games/dice.jpg"
 import coinImage from "assets/img/Games/coin.jpg"
 import keno from "assets/img/Games/keno.jpg"
 import doubleGame from "assets/img/Games/double.jpg"
 import wheel from "assets/img/Games/wheel.jpg"
 import plinko from "assets/img/Games/plinko.jpg"
-
+import diamond from "assets/img/Games/diamond.jpg"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -60,7 +60,6 @@ const DASHBOARD_GAMES = [
     { img: cloud, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
     { img: dove, name: "LUCKY HOP", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: dice, name: "Dice", path: "/game/dice", reduxKey: "diceUsers", tickMs: 5200 },
-    // { img: dice, name: "Hash Dice", path: "/game/hash-dice", reduxKey: "diceUsers", tickMs: 5300 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
     { img: wheel, name: "Wheel", path: "/game/wheel", reduxKey: "wheelUsers", tickMs: 4600 },
     { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 3600 },
@@ -68,6 +67,7 @@ const DASHBOARD_GAMES = [
     { img: mine, name: "Mine", path: "/game/mine", reduxKey: "mineUsers", tickMs: 4900 },
     { img: twist, name: "Twist", path: "/game/twist", reduxKey: "twistUsers", tickMs: 5600 },
     { img: climb, name: "Climb", path: "/game/climb", reduxKey: "climbUsers", tickMs: 5200 },
+    { img: diamond, name: "Diamond", path: "/game/diamond", reduxKey: "diamondUsers", tickMs: 5100 },
     { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
     { img: coinImage, name: "Coin", path: "/game/coin", reduxKey: "coinUsers", tickMs: 3600 },

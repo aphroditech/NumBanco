@@ -43,6 +43,7 @@ import kenoRoutes from "./routes/kenoRoutes.js";
 import wheelRoutes from "./routes/wheelRoutes.js";
 import climbRoutes from "./routes/climbRoutes.js";
 import plinkoRoutes from "./routes/plinkoRoutes.js";
+import diamondRoutes from "./routes/diamondRoutes.js";
 
 dotenv.config();
 
@@ -110,6 +111,7 @@ app.use("/api/plinko", plinkoRoutes);
 app.use("/api/keno", kenoRoutes);
 app.use("/api/wheel", wheelRoutes);
 app.use("/api/climb", climbRoutes);
+app.use("/api/diamond", diamondRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },
