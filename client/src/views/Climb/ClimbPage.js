@@ -42,21 +42,22 @@ const ban = "/climb/ban.png";
 const star = "/climb/star.png";
 const MIN_AMOUNT = 0.1;
 const MAX_AMOUNT = 20;
-/** Minimum height so header + multipliers + 5× grid fit without clipping. Card can grow taller if needed. */
-const CLIMB_MAIN_CARD_HEIGHT = "560px";
-const CLIMB_GRID_CELL_H = "46px";
-const CLIMB_STAR_WIN_SIZE = "36px";
-const CLIMB_STAR_WIN_WRAPPER = "44px";
-const CLIMB_STAR_GHOST_SIZE = "30px";
+/** Minimum game card height — mirrors FishingPage game `minH` (~450px) on tablet+, compact min on phones. */
+const CLIMB_MAIN_CARD_MIN_H = { base: "min(72vh, 520px)", md: "560px" };
+const CLIMB_GRID_CELL_H = { base: "38px", sm: "42px", md: "46px" };
+const CLIMB_STAR_WIN_SIZE = { base: "30px", md: "36px" };
+const CLIMB_STAR_WIN_WRAPPER = { base: "38px", md: "44px" };
+const CLIMB_STAR_GHOST_SIZE = { base: "26px", md: "30px" };
 const CLIMB_MODES = {
     easy: { label: "Easy", cols: 5, rows: 5 },
     normal: { label: "Normal", cols: 3, rows: 5 },
     hard: { label: "Hard", cols: 2, rows: 5 },
 };
+/** Display ladder — keep in sync with server `DEFAULT_CLIMB_SETTINGS` multipliers. */
 const CLIMB_STEP_MULTIPLIERS = {
-    easy: [1.1, 1.25, 1.35, 1.5, 2.0],
-    normal: [1.24, 1.37, 1.5, 2.12, 2.5],
-    hard: [1.5, 1.8, 2.0, 2.7, 3.0],
+    easy: [1.10, 1.25, 1.40, 1.60, 2.00],
+    normal: [1.15, 1.35, 1.65, 2.10, 3.00],
+    hard: [1.20, 1.50, 2.00, 3.00, 5.00],
 };
 
 /** Underlay for star cells while yellow “fills” from the bottom */
@@ -228,6 +229,8 @@ export default function ClimbPage() {
         anchorRect: null,
     });
     const [bustGridSeed, setBustGridSeed] = useState(null);
+    /** If set, cash-out would pay this much (bet × currentMultiplier from server). */
+    const [cashOutPreviewWin, setCashOutPreviewWin] = useState(null);
     const climbMainCardRef = useRef(null);
     const bustBangTimeoutRef = useRef(null);
     const cashOutFxTimeoutRef = useRef(null);
@@ -291,6 +294,22 @@ export default function ClimbPage() {
         setBustGridSeed(null);
     };
 
+    /** Match server `settleActiveClimbWin`: win = round2(betAmount * currentMultiplier). */
+    const applyCashOutPreviewFromClimb = (climb) => {
+        if (!climb?.active) {
+            setCashOutPreviewWin(null);
+            return;
+        }
+        const bet = Number(climb.betAmount ?? 0);
+        const mult = Number(climb.currentMultiplier ?? 1);
+        const sc = Number(climb.successCount ?? 0);
+        if (sc > 0 && bet > 0 && Number.isFinite(bet) && Number.isFinite(mult)) {
+            setCashOutPreviewWin(Math.round(bet * mult * 100) / 100);
+        } else {
+            setCashOutPreviewWin(null);
+        }
+    };
+
     /** After any terminal outcome: one ban column per row so every cell can show star or ban (cosmetic where server didn’t roll). */
     const bustBanColByRow = useMemo(() => {
         if ((gameState !== "busted" && gameState !== "cleared") || bustGridSeed == null) return null;
@@ -321,6 +340,7 @@ export default function ClimbPage() {
             cashOutFxTimeoutRef.current = null;
         }
         setCashOutWinFx({ visible: false, amount: "0.00", subtitle: "", anchorRect: null });
+        setCashOutPreviewWin(null);
     }, [mode]);
 
     const scheduleTerminalBoardReset = (modeKey) => {
@@ -337,6 +357,7 @@ export default function ClimbPage() {
             setGameState("playing");
             setBustGridSeed(null);
             setGameStarted(false);
+            setCashOutPreviewWin(null);
         }, TERMINAL_GRID_REVEAL_MS);
     };
 
@@ -373,6 +394,7 @@ export default function ClimbPage() {
             const state = data?.climb;
             if (!state?.active) {
                 setGameStarted(false);
+                setCashOutPreviewWin(null);
                 return;
             }
             const restoredMode = String(state.mode || "easy");
@@ -383,6 +405,7 @@ export default function ClimbPage() {
             setActiveRow(Math.max(0, Number(state.activeRow ?? 4)));
             setGameStarted(true);
             setGameState("playing");
+            applyCashOutPreviewFromClimb(state);
         })();
         return () => {
             cancelled = true;
@@ -470,6 +493,7 @@ export default function ClimbPage() {
                 setBustGridSeed((Math.random() * 0x7fffffff) | 0);
                 setGameState("busted");
                 setGameStarted(false);
+                setCashOutPreviewWin(null);
                 toast.error("Bang! You hit ban.");
                 scheduleTerminalBoardReset(mode);
                 return;
@@ -478,6 +502,7 @@ export default function ClimbPage() {
             const st = data?.climb;
             const pickCashout = data?.cashout;
             if (!st?.active) {
+                setCashOutPreviewWin(null);
                 if (last?.result === "star") {
                     triggerClearGridFireworks(st, last, pickCashout);
                     toast.success(
@@ -492,11 +517,13 @@ export default function ClimbPage() {
                 scheduleTerminalBoardReset(mode);
                 return;
             }
+            applyCashOutPreviewFromClimb(st);
             const nextRow = Number(st.activeRow);
             if (Number.isFinite(nextRow) && nextRow >= 0) {
                 setActiveRow(nextRow);
                 setGameState("playing");
             } else {
+                setCashOutPreviewWin(null);
                 triggerClearGridFireworks(st, last, pickCashout);
                 toast.success(
                     pickCashout != null && Number.isFinite(Number(pickCashout.win))
@@ -516,22 +543,10 @@ export default function ClimbPage() {
 
     return (
         <Box px={{ base: "16px", md: "24px" }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
-            <WinFireworksEffect
-                isVisible={cashOutWinFx.visible}
-                totalEarn={cashOutWinFx.amount}
-                subtitle={cashOutWinFx.subtitle}
-                duration={2200}
-                anchorRect={cashOutWinFx.anchorRect ?? undefined}
-            />
-            <BangBurstEffect
-                isVisible={bustBangFx.visible}
-                anchorRect={bustBangFx.anchorRect ?? undefined}
-                duration={950}
-            />
             <Grid
                 templateAreas={{
-                    sm: '"panel" "game" "empty"',
-                    md: '"panel empty" "game game"',
+                    sm: '"game" "panel" "empty"',
+                    md: '"game game" "panel empty"',
                     "1550px": '"panel game empty"',
                 }}
                 templateColumns={{
@@ -540,7 +555,7 @@ export default function ClimbPage() {
                     "1550px": "3fr 6fr 2fr",
                 }}
                 templateRows={{
-                    sm: "auto auto auto",
+                    base: "auto auto auto",
                     md: "auto auto",
                     "1550px": "auto",
                 }}
@@ -548,106 +563,152 @@ export default function ClimbPage() {
                 w="100%"
                 alignItems="stretch"
             >
-                <GridItem area="panel" minW={0}>
-                    <Card p="24px" h="100%">
-                        <CardHeader mb="20px">
+                <GridItem
+                    area="panel"
+                    minW={{ base: 0, md: "350px" }}
+                    w="100%"
+                    display="flex"
+                    flexDirection="column"
+                    alignSelf="stretch"
+                    minH={0}
+                >
+                    <Card
+                        flex="1"
+                        display="flex"
+                        flexDirection="column"
+                        justifyContent="flex-start"
+                        alignItems="stretch"
+                        w="100%"
+                        minH={CLIMB_MAIN_CARD_MIN_H}
+                        h={{ base: "auto", "1550px": "100%" }}
+                        pt="22px"
+                        pb="20px"
+                        px="22px"
+                        overflow="visible"
+                    >
+                        <CardHeader mb="12px" p={0} flexShrink={0}>
                             <Flex direction="column" alignSelf="flex-start">
-                                <Text fontSize="lg" color="#fff" fontWeight="bold" mb="6px">
+                                <Text fontSize="lg" color="#fff" fontWeight="bold" mb="4px">
                                     Climb Controls
-                                </Text>
-                                <Text fontSize="sm" color="rgba(255,255,255,0.65)">
-                                    Alpha Tree style panel scaffold
                                 </Text>
                             </Flex>
                         </CardHeader>
-                        <CardBody>
-                            <VStack spacing="14px" align="stretch">
-                                <FormControl>
-                                    <FormLabel color="rgba(255,255,255,0.82)" fontSize="sm" fontWeight="700">
-                                        Bet Amount
-                                    </FormLabel>
-                                    <GradientBorder borderRadius="16px">
-                                        <HStack bg="#323738" borderRadius="16px" px="8px" h="52px" spacing="6px">
-                                            <IconButton
-                                                aria-label="Decrease amount"
-                                                icon={<RemoveIcon style={{ fontSize: 16 }} />}
-                                                size="xs"
-                                                h="30px"
-                                                w="30px"
-                                                minW="30px"
-                                                bg="transparent"
-                                                color="#fff"
-                                                borderRadius="8px"
-                                                _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                                                onClick={() => commitAmount(amountNum - 0.1)}
-                                                isDisabled={!canDecrease}
-                                            />
-                                            <Input
-                                                value={amount}
-                                                onChange={handleAmountChange}
-                                                onBlur={handleAmountBlur}
-                                                textAlign="center"
-                                                bg="transparent"
-                                                border="none"
-                                                _focus={{ boxShadow: "none" }}
-                                                color="#fff"
-                                                fontWeight="bold"
-                                                placeholder={MIN_AMOUNT.toFixed(2)}
-                                            />
-                                            <IconButton
-                                                aria-label="Increase amount"
-                                                icon={<AddIcon style={{ fontSize: 16 }} />}
-                                                size="xs"
-                                                h="30px"
-                                                w="30px"
-                                                minW="30px"
-                                                bg="transparent"
-                                                color="#fff"
-                                                borderRadius="8px"
-                                                _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                                                onClick={() => commitAmount(amountNum + 0.1)}
-                                                isDisabled={!canIncrease}
-                                            />
-                                        </HStack>
-                                    </GradientBorder>
-                                </FormControl>
-                                <FormControl>
-                                    <FormLabel color="rgba(255,255,255,0.82)" fontSize="sm" fontWeight="700">
-                                        Mode
-                                    </FormLabel>
-                                    <HStack spacing={2}>
-                                        {Object.entries(CLIMB_MODES).map(([key, cfg]) => {
-                                            const active = mode === key;
-                                            return (
-                                                <Button
-                                                    key={key}
-                                                    flex="1"
-                                                    h="40px"
-                                                    borderRadius="12px"
-                                                    fontSize="sm"
-                                                    fontWeight="700"
-                                                    bg={active ? "#00D4FF" : "rgba(0, 212, 255, 0.15)"}
-                                                    color={active ? "#07131a" : "#00D4FF"}
-                                                    border="1px solid rgba(0, 212, 255, 0.45)"
-                                                    _hover={{
-                                                        bg: active ? "#00bfe6" : "rgba(0, 212, 255, 0.24)",
-                                                    }}
-                                                    onClick={() => setMode(key)}
-                                                >
-                                                    {cfg.label}
-                                                </Button>
-                                            );
-                                        })}
+                        <CardBody
+                            flex="1"
+                            overflow="visible"
+                            display="flex"
+                            flexDirection="column"
+                            justifyContent="flex-start"
+                            alignItems="stretch"
+                            p={0}
+                            minH={0}
+                        >
+                            <VStack
+                                spacing="6px"
+                                align="stretch"
+                                w="100%"
+                                maxW={{ base: "100%", sm: "300px" }}
+                                mx="auto"
+                                flex="1"
+                                justifyContent="flex-start"
+                                minH={0}
+                            >
+                            <FormControl w="100%" mb={0}>
+                                <FormLabel
+                                    color="rgba(255,255,255,0.82)"
+                                    fontSize="sm"
+                                    fontWeight="700"
+                                    mb="6px"
+                                >
+                                    Bet Amount
+                                </FormLabel>
+                                <GradientBorder borderRadius="16px">
+                                    <HStack bg="#323738" borderRadius="16px" px="8px" h="52px" spacing="6px">
+                                        <IconButton
+                                            aria-label="Decrease amount"
+                                            icon={<RemoveIcon style={{ fontSize: 16 }} />}
+                                            size="xs"
+                                            h="30px"
+                                            w="30px"
+                                            minW="30px"
+                                            bg="transparent"
+                                            color="#fff"
+                                            borderRadius="8px"
+                                            _hover={{ bg: "rgba(255,255,255,0.1)" }}
+                                            onClick={() => commitAmount(amountNum - 0.1)}
+                                            isDisabled={!canDecrease}
+                                        />
+                                        <Input
+                                            value={amount}
+                                            onChange={handleAmountChange}
+                                            onBlur={handleAmountBlur}
+                                            textAlign="center"
+                                            bg="transparent"
+                                            border="none"
+                                            _focus={{ boxShadow: "none" }}
+                                            color="#fff"
+                                            fontWeight="bold"
+                                            placeholder={MIN_AMOUNT.toFixed(2)}
+                                        />
+                                        <IconButton
+                                            aria-label="Increase amount"
+                                            icon={<AddIcon style={{ fontSize: 16 }} />}
+                                            size="xs"
+                                            h="30px"
+                                            w="30px"
+                                            minW="30px"
+                                            bg="transparent"
+                                            color="#fff"
+                                            borderRadius="8px"
+                                            _hover={{ bg: "rgba(255,255,255,0.1)" }}
+                                            onClick={() => commitAmount(amountNum + 0.1)}
+                                            isDisabled={!canIncrease}
+                                        />
                                     </HStack>
-                                </FormControl>
+                                </GradientBorder>
+                            </FormControl>
+                                    <FormControl w="100%" mb={0} pt={0} mt={0}>
+                                        <FormLabel color="rgba(255,255,255,0.82)" fontSize="sm" fontWeight="700">
+                                            Mode
+                                        </FormLabel>
+                                        <HStack spacing={2} w="100%" flexWrap="wrap">
+                                            {Object.entries(CLIMB_MODES).map(([key, cfg]) => {
+                                                const active = mode === key;
+                                                return (
+                                                    <Button
+                                                        key={key}
+                                                        flex="1"
+                                                        h="40px"
+                                                        borderRadius="12px"
+                                                        fontSize="sm"
+                                                        fontWeight="700"
+                                                        bg={active ? "#00D4FF" : "rgba(0, 212, 255, 0.15)"}
+                                                        color={active ? "#07131a" : "#00D4FF"}
+                                                        border="1px solid rgba(0, 212, 255, 0.45)"
+                                                        _hover={{
+                                                            bg: active ? "#00bfe6" : "rgba(0, 212, 255, 0.24)",
+                                                        }}
+                                                        onClick={() => setMode(key)}
+                                                    >
+                                                        {cfg.label}
+                                                    </Button>
+                                                );
+                                            })}
+                                        </HStack>
+                                    </FormControl>
 
-                                <HStack spacing={3} w="100%">
-                                    <ClickButton
-                                        flex="1"
-                                        h="52px"
-                                        borderRadius="16px"
-                                        label={playLoading ? "..." : "Bet"}
-                                        onClick={async () => {
+                                    <Flex
+                                        direction={{ base: "column", sm: "row" }}
+                                        gap={3}
+                                        w="100%"
+                                        flexShrink={0}
+                                    >
+                                        <ClickButton
+                                            flex="1"
+                                            h="52px"
+                                            borderRadius="16px"
+                                            label={playLoading ? "..." : "Bet"}
+                                            onClick={async () => {
                                             const bet = Number(amount);
                                             if (!Number.isFinite(bet) || bet < MIN_AMOUNT || bet > MAX_AMOUNT) {
                                                 toast.error(`Enter amount between ${MIN_AMOUNT} and ${MAX_AMOUNT}`);
@@ -690,23 +751,30 @@ export default function ClimbPage() {
                                                 setGameState("playing");
                                                 setGameStarted(true);
                                                 setCashLoading(false);
+                                                applyCashOutPreviewFromClimb(st);
                                             } catch (err) {
                                                 const msg = err.response?.data?.message || err.response?.data?.error || "Start failed";
                                                 toast.error(msg);
                                             } finally {
                                                 setPlayLoading(false);
                                             }
-                                        }}
-                                        disabled={gameStarted || cashLoading}
-                                    />
-                                    <ClickButton
-                                        flex="1"
-                                        h="52px"
-                                        borderRadius="16px"
-                                        bg="#2f855a"
-                                        border="1px solid rgba(72, 187, 120, 0.45)"
-                                        label={cashLoading ? "..." : "Cash out"}
-                                        onClick={async () => {
+                                            }}
+                                            disabled={gameStarted || cashLoading}
+                                        />
+                                        <ClickButton
+                                            flex="1"
+                                            h="52px"
+                                            borderRadius="16px"
+                                            bg="#2f855a"
+                                            border="1px solid rgba(72, 187, 120, 0.45)"
+                                            label={
+                                                cashLoading
+                                                    ? "..."
+                                                    : cashOutPreviewWin != null && gameStarted
+                                                      ? `Cash out · ${cashOutPreviewWin.toFixed(2)}`
+                                                      : "Cash out"
+                                            }
+                                            onClick={async () => {
                                             if (!gameStarted) return;
                                             setCashLoading(true);
                                             try {
@@ -739,6 +807,7 @@ export default function ClimbPage() {
                                                 setBustGridSeed((Math.random() * 0x7fffffff) | 0);
                                                 setGameStarted(false);
                                                 setGameState("cleared");
+                                                setCashOutPreviewWin(null);
                                                 scheduleTerminalBoardReset(mode);
                                             } catch (err) {
                                                 const msg = err.response?.data?.message || err.response?.data?.error || "Cash out failed";
@@ -746,33 +815,60 @@ export default function ClimbPage() {
                                             } finally {
                                                 setCashLoading(false);
                                             }
-                                        }}
-                                        disabled={!gameStarted || playLoading}
-                                    />
-                                </HStack>
+                                            }}
+                                            disabled={!gameStarted || playLoading}
+                                        />
+                                    </Flex>
                             </VStack>
                         </CardBody>
                     </Card>
                 </GridItem>
 
-                <GridItem area="game" minW={0}>
-                    <Box ref={climbMainCardRef} minH={CLIMB_MAIN_CARD_HEIGHT} h="auto" w="100%" minW={0}>
+                <GridItem
+                    area="game"
+                    minW={0}
+                    display="flex"
+                    flexDirection="column"
+                    alignSelf="stretch"
+                    minH={0}
+                >
+                    <Box
+                        ref={climbMainCardRef}
+                        flex="1"
+                        display="flex"
+                        flexDirection="column"
+                        minH={CLIMB_MAIN_CARD_MIN_H}
+                        h={{ base: "auto", "1550px": "100%" }}
+                        w="100%"
+                        minW={0}
+                    >
                         <Card
-                            minH={CLIMB_MAIN_CARD_HEIGHT}
-                            h="auto"
+                            flex="1"
+                            display="flex"
+                            flexDirection="column"
+                            pt={{ base: "16px", md: "22px" }}
+                            pb={{ base: "16px", md: "22px" }}
+                            px={{ base: "14px", md: "22px" }}
+                            minH={CLIMB_MAIN_CARD_MIN_H}
+                            h="100%"
+                            minW={0}
                             position="relative"
                             overflowX="hidden"
                             overflowY="visible"
+                            alignItems="stretch"
+                            w="100%"
                         >
                         <CardBody p={0} display="flex" flexDirection="column" alignItems="stretch">
                             <VStack spacing={0} align="stretch" w="100%">
                                 <Flex
                                     align="center"
                                     justify="space-between"
-                                    px={4}
+                                    px={{ base: 0, sm: 2, md: 4 }}
                                     py={2.5}
                                     flexShrink={0}
                                     borderBottom="1px solid rgba(0, 212, 255, 0.25)"
+                                    gap={2}
+                                    flexWrap="wrap"
                                 >
                                     <HStack spacing={2} color="#00D4FF">
                                         <ShowChartIcon style={{ fontSize: 20 }} />
@@ -791,11 +887,27 @@ export default function ClimbPage() {
                                         onClick={() => setIsHelpModalOpen(true)}
                                     />
                                 </Flex>
-                                <Box px={4} py={2.5} flexShrink={0} borderBottom="1px solid rgba(0, 212, 255, 0.2)">
-                                    <Text color="rgba(255,255,255,0.75)" fontSize="xs" fontWeight="700" mb={2}>
+                                <Box
+                                    px={{ base: 0, sm: 2, md: 4 }}
+                                    py={2.5}
+                                    flexShrink={0}
+                                    borderBottom="1px solid rgba(0, 212, 255, 0.2)"
+                                    display="flex"
+                                    flexDirection="column"
+                                    alignItems="center"
+                                    w="100%"
+                                >
+                                    <Text
+                                        color="rgba(255,255,255,0.75)"
+                                        fontSize="xs"
+                                        fontWeight="700"
+                                        mb={2}
+                                        textAlign="center"
+                                        w="100%"
+                                    >
                                         Step Multipliers
                                     </Text>
-                                    <HStack spacing={2} flexWrap="wrap">
+                                    <HStack spacing={2} flexWrap="wrap" justifyContent="center" w="100%">
                                         {stepMultipliers.map((m, idx) => {
                                             const isDone = clearedSteps > idx;
                                             const isCurrent = currentStepIndex === idx;
@@ -827,8 +939,8 @@ export default function ClimbPage() {
                                         })}
                                     </HStack>
                                 </Box>
-                                <Box px={4} pt={2} pb={4} flexShrink={0}>
-                                    <VStack spacing={2} w="100%" maxW="540px" mx="auto" align="stretch">
+                                <Box px={{ base: 0, sm: 2, md: 4 }} pt={2} pb={4} flexShrink={0}>
+                                    <VStack spacing={2} w="100%" maxW={{ base: "100%", md: "540px" }} mx="auto" align="stretch">
                                         <Text color="rgba(255,255,255,0.8)" fontWeight="700" fontSize="sm">
                                             {activeMode.label} mode grid ({activeMode.cols}x{activeMode.rows})
                                         </Text>
@@ -848,7 +960,7 @@ export default function ClimbPage() {
                                         <Box w="100%" overflow="visible">
                                             <Grid
                                                 templateColumns={`repeat(${activeMode.cols}, minmax(0, 1fr))`}
-                                                gap="8px"
+                                                gap={{ base: "6px", md: "8px" }}
                                                 w="100%"
                                                 overflow="visible"
                                             >
@@ -887,8 +999,8 @@ export default function ClimbPage() {
                                                                 as="img"
                                                                 src={ban}
                                                                 alt="ban"
-                                                                w="20px"
-                                                                h="20px"
+                                                                w={{ base: "18px", md: "20px" }}
+                                                                h={{ base: "18px", md: "20px" }}
                                                                 objectFit="contain"
                                                                 draggable={false}
                                                                 opacity={isCosmeticBan ? 0.9 : 1}
@@ -1038,12 +1150,39 @@ export default function ClimbPage() {
                     </Box>
                 </GridItem>
 
-                <GridItem area="empty" minW={0} minH={{ base: "280px", "1550px": "0" }} display="flex" flexDirection="column">
-                    <Box flex="1" minH={0} w="100%" display="flex" flexDirection="column">
+                <GridItem
+                    area="empty"
+                    minW={0}
+                    display="flex"
+                    flexDirection="column"
+                    alignSelf="stretch"
+                    minH={0}
+                >
+                    <Box
+                        flex="1"
+                        minH={{ base: "250px", "1550px": "100%" }}
+                        h={{ base: "auto", "1550px": "100%" }}
+                        w="100%"
+                        display="flex"
+                        flexDirection="column"
+                    >
                         <ClimbRealView />
                     </Box>
                 </GridItem>
             </Grid>
+
+            <WinFireworksEffect
+                isVisible={cashOutWinFx.visible}
+                totalEarn={cashOutWinFx.amount}
+                subtitle={cashOutWinFx.subtitle}
+                duration={2200}
+                anchorRect={cashOutWinFx.anchorRect ?? undefined}
+            />
+            <BangBurstEffect
+                isVisible={bustBangFx.visible}
+                anchorRect={bustBangFx.anchorRect ?? undefined}
+                duration={950}
+            />
 
             <BetHistory />
 

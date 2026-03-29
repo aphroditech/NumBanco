@@ -17,7 +17,7 @@ import CardBody from 'components/Card/CardBody.js';
 import React, { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import RestoreRoundedIcon from '@mui/icons-material/RestoreRounded';
-import PumpingHistoryRow from 'components/Tables/PumpingHistoryRow';
+import KenoHistoryRow from 'components/Tables/KenoHistoryRow';
 import SpeakerNotesOffRoundedIcon from '@mui/icons-material/SpeakerNotesOffRounded';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -27,8 +27,8 @@ import wolfnoavilable from '../../../assets/img/wolfnoavilable.png';
 function History() {
     const user = useSelector((state) => state.user.userInfo) || {};
 
-    const sortedHistory = user.pumpingHistory?.filter((item) => item.active)?.length > 0
-        ? user.pumpingHistory.filter((item) => item.active).sort((a, b) => {
+    const sortedHistory = user.kenoHistory?.length > 0
+        ? user.kenoHistory.sort((a, b) => {
             const dateA = new Date(a.createAt || 0);
             const dateB = new Date(b.createAt || 0);
             return dateB - dateA;
@@ -134,12 +134,14 @@ function History() {
                                     <Th color="white" textAlign="left" className="real_th_font" w="15%">
                                         No
                                     </Th>
-
                                     <Th color="white" className="real_th_font" w="30%">
-                                        Target
+                                        Risk
                                     </Th>
                                     <Th color="white" className="real_th_font" w="30%">
                                         Bet
+                                    </Th>
+                                    <Th color="white" className="real_th_font" w="30%">
+                                        Picks
                                     </Th>
                                     <Th color="white" textAlign="left" className="real_th_font" w="20%">
                                         Result
@@ -156,12 +158,13 @@ function History() {
                                 {paginatedHistory.map((row, index, arr) => {
                                     const globalIndex = (currentPage - 1) * itemsPerPage + index;
                                     return (
-                                        <PumpingHistoryRow
+                                        <KenoHistoryRow
                                             key={globalIndex}
                                             No={globalIndex + 1}
-                                            target={row.target}
-                                            result={row.result}
+                                            type={row.type}
                                             bet={row.bet}
+                                            numbersLength={row.numbersLength}
+                                            winLength={row.winLength}
                                             win={row.win}
                                             time={row.createAt}
                                             lastItem={index === arr.length - 1}

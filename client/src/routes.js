@@ -40,6 +40,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import DangerousIcon from '@mui/icons-material/Dangerous';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import StyleIcon from '@mui/icons-material/Style';
+import AppsIcon from '@mui/icons-material/Apps';
 
 import Landing from "views/Landing/Landing"
 import RubicPage from "views/Rubic/RubicPage"
@@ -56,6 +57,10 @@ import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
 import DicePage from "views/Dice/DicePage";
+import HashDicePage from "views/HashDice/HashDicePage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
+import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
+import KenoPage from "views/Keno/KenoPage";
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -137,6 +142,22 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/hash-dice",
+    name: "HASH DICE",
+    icon: <NumbersIcon style={{ fontSize: "24px", color: "#39ff14" }} />,
+    component: HashDicePage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/keno",
+    name: "KENO",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: KenoPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/rubic",
     name: "RUBIC",
     icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -151,6 +172,15 @@ var dashRoutes = [
     component: SnakesPage,
     layout: "/game",
   },
+  {
+    redirect: true,
+    path: "/plinko",
+    name: "PLINKO",
+    icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: PlinkoPage,
+    layout: "/game",
+  },
+
   {
     redirect: true,
     path: "/pumping",

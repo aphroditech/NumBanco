@@ -285,6 +285,44 @@ export default function DicePage() {
             xl: 400,
         }) ?? 400;
 
+    useEffect(() => {
+        const typingTarget = (target) => {
+            if (!(target instanceof HTMLElement)) return false;
+            const tag = target.tagName;
+            return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+        };
+
+        const onKeyDown = (e) => {
+            if (isLoading || isHelpModalOpen) return;
+            if (typingTarget(e.target)) return;
+            if (e.repeat) return;
+            if (e.code !== 'Space' && e.key !== ' ') return;
+
+            e.preventDefault();
+
+            if (e.shiftKey) {
+                if (isMultiBetActive) {
+                    stopMultiBet();
+                } else if (!isBetting && !isRollCooldown) {
+                    startMultiBet();
+                }
+            } else if (!isMultiBetActive && !isBetting && !isRollCooldown) {
+                void placeBetRef.current();
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [
+        isLoading,
+        isHelpModalOpen,
+        isBetting,
+        isRollCooldown,
+        isMultiBetActive,
+        startMultiBet,
+        stopMultiBet,
+    ]);
+
     if (isLoading) {
         return <Loading />;
     }
@@ -841,6 +879,25 @@ export default function DicePage() {
                                             Press <b>Roll dice</b> and wait for the animation to finish.
                                         </Text>
                                     </HStack>
+                                </VStack>
+                            </Box>
+
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.03)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                    Keyboard
+                                </Text>
+                                <VStack align="stretch" spacing="2">
+                                    <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                        <b>Space</b> — place a bet (same as BET).
+                                    </Text>
+                                    <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                        <b>Shift + Space</b> — start Auto BET, or Stop while auto is running.
+                                    </Text>
                                 </VStack>
                             </Box>
 

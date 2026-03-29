@@ -65,6 +65,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={Pumping} />
               <SidebarButtonLink value={Fishing} />
               <SidebarButtonLink value={CardGame} />
+              <SidebarButtonLink value={Keno} />
               <SidebarButtonLink value={JokerCrash} />
               <SidebarButtonLink value={Gravity} />
               <SidebarButtonLink value={DoubleGame} />
@@ -75,6 +76,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={Coin} />
               <SidebarButtonLink value={Snakes} />
               <SidebarButtonLink value={Dice} />
+              <SidebarButtonLink value={Plinko} />
               <SidebarButtonLink value={Mines} />
               <SidebarButtonLink value={DoveGame} />
               <SidebarButtonLink value={CocoGame} />
@@ -229,6 +231,7 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={Pumping} />
                 <SidebarButtonLink value={Fishing} />
                 <SidebarButtonLink value={CardGame} />
+                <SidebarButtonLink value={Keno} />
                 <SidebarButtonLink value={JokerCrash} />
                 <SidebarButtonLink value={Gravity} />
                 <SidebarButtonLink value={DoubleGame} />
@@ -238,10 +241,13 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={AToZGame} />
                 <SidebarButtonLink value={Coin} />
                 <SidebarButtonLink value={Dice} />
+                <SidebarButtonLink value={Plinko} />
                 <SidebarButtonLink value={Mines} />
                 <SidebarButtonLink value={DoveGame} />
                 <SidebarButtonLink value={CocoGame} />
+                <SidebarButtonLink value={AToZGame} />
                 <SidebarButtonLink value={AlphaTreeGame} />
+                <SidebarButtonLink value={Coin} />
                 <SidebarButtonLink value={Twist} />
                 <SidebarButtonLink value={Snakes} />
                 <SidebarButtonLink value={Wheel} />

@@ -21,6 +21,7 @@ import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
 import AToZPage from "views/AToZ/AToZ";
 import CardGamePage from "views/CardGame/CardGamePage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
@@ -33,6 +34,7 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import StyleIcon from '@mui/icons-material/Style';
+import AppsIcon from '@mui/icons-material/Apps';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import ForestIcon from '@mui/icons-material/Forest';
 import Filter9Icon from '@mui/icons-material/Filter9';
@@ -43,7 +45,10 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CoinPage from "views/Coin/CoinPage";
 import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
+import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import DicePage from "views/Dice/DicePage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
+import KenoPage from "views/Keno/KenoPage";
 import WheelPage from "views/Wheel/Wheel";
 import AttractionsIcon from '@mui/icons-material/Attractions';
 import ClimbPage from "views/Climb/ClimbPage";
@@ -100,6 +105,14 @@ export const Dice = {
     name: "DICE",
     icon: <FaDice style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DicePage,
+    layout: "/game",
+}
+
+export const Keno = {
+    path: "/keno",
+    name: "KENO",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: KenoPage,
     layout: "/game",
 }
 
@@ -245,6 +258,14 @@ export const Twist = {
     name: "TWIST",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: TwistPage,
+    layout: "/game",
+}
+
+export const Plinko = {
+    path: "/plinko",
+    name: "PLINKO",
+    icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: PlinkoPage,
     layout: "/game",
 }
 

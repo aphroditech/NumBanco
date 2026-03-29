@@ -19,11 +19,6 @@ import {
     ModalHeader,
     ModalBody,
     ModalCloseButton,
-    Tabs,
-    TabList,
-    TabPanels,
-    Tab,
-    TabPanel,
     Slider,
     SliderTrack,
     SliderFilledTrack,
@@ -56,7 +51,6 @@ import PumpingBalanceGraph from "./PumpingItem/PumpingBalanceGraph";
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import HeatPumpIcon from '@mui/icons-material/HeatPump';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import HelpImage from 'assets/img/helpImage.png';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { toast } from "react-toastify"
 import Loading from 'components/Loading/Loading';
@@ -68,28 +62,6 @@ const MIN_AMOUNT = 0.1;
 const WIN_FIREWORKS_MS = 2200;
 const BANG_EFFECT_MS = 1000;
 
-
-const KeyCap = ({ children, minW }) => (
-    <Box
-        as="kbd"
-        display="inline-flex"
-        alignItems="center"
-        justifyContent="center"
-        minW={minW || "24px"}
-        h="22px"
-        px="6px"
-        fontSize="xs"
-        fontWeight="bold"
-        color="#fff"
-        bg="linear-gradient(180deg, #4a4d50 0%, #2d2f31 100%)"
-        border="1px solid #1a1b1c"
-        borderRadius="4px"
-        boxShadow="0 2px 0 #1a1b1c, inset 0 1px 0 rgba(255,255,255,0.1)"
-        fontFamily="monospace"
-    >
-        {children}
-    </Box>
-);
 const hammerStrike = keyframes`
   0% { 
     transform: rotate(10deg);
@@ -119,7 +91,7 @@ export default function PumpingPage() {
     const amountRef = useRef('0.10');
     const balanceRef = useRef(balance);
     const [amount, setAmount] = useState('0.10');
-
+    const [isLoading, setIsLoading] = useState(true);
 
     const updateTarget = (value) => {
         setTarget(value);
@@ -143,6 +115,15 @@ export default function PumpingPage() {
         amountRef.current = amount;
         balanceRef.current = balance;
     }, [target, amount, balance]);
+
+    useEffect(() => {
+        const loadingTime = (Math.floor(Math.random() * 10) + 1) * 100;
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, loadingTime);
+        return () => clearTimeout(timer);
+    }, []);
+
     const [roll, setRoll] = useState(false);
     const [bet, setBet] = useState(1);
     const [pumpingResult, setPumpingResult] = useState(0);
@@ -626,53 +607,77 @@ export default function PumpingPage() {
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
     useEffect(() => {
+        const typingTarget = (targetEl) => {
+            if (!(targetEl instanceof HTMLElement)) return false;
+            const tag = targetEl.tagName;
+            return (
+                tag === 'INPUT' ||
+                tag === 'TEXTAREA' ||
+                tag === 'SELECT' ||
+                targetEl.isContentEditable
+            );
+        };
+
         const onKeyDown = (e) => {
+            if (isLoading || isHelpModalOpen || isOpen) return;
+            if (typingTarget(e.target)) return;
+
             const key = e.key.toLowerCase();
 
-            if (key === 'w') {
+            if (key === 'w' && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
+                if (e.repeat) return;
                 const current = parseFloat(targetRef.current || 1.01);
                 const newValue = Math.min(1000, current * 2);
                 updateTarget(newValue.toFixed(2));
-            } else if (key === 's') {
+            } else if (key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
+                if (e.repeat) return;
                 const current = parseFloat(targetRef.current || 1.01);
                 const newValue = Math.max(1.01, current / 2);
                 updateTarget(newValue.toFixed(2));
-            }
-            else if (key === 'a') {
+            } else if (key === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
+                if (e.repeat) return;
                 const current = parseFloat(amount || MIN_AMOUNT);
                 const newValue = Math.max(MIN_AMOUNT, current / 2);
-                setAmount(newValue.toFixed(2));
-            } else if (key === 'd') {
+                updateAmount(newValue.toFixed(2));
+            } else if (key === 'd' && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
+                if (e.repeat) return;
                 const current = parseFloat(amount || MIN_AMOUNT);
                 const newValue = Math.min(maxAmount, current * 2);
-                setAmount(newValue.toFixed(2));
-            }
-            else if (e.key === ' ') {
+                updateAmount(newValue.toFixed(2));
+            } else if (e.key === ' ' || e.code === 'Space') {
                 e.preventDefault();
-                if (isBetting || isMultiBetActive || roll) return;
-                setBet(1);
-                handleBet(1);
+                if (e.repeat) return;
+                if (e.shiftKey) {
+                    if (isMultiBetActive) {
+                        stopMultiBet();
+                    } else if (!isBetting && !roll) {
+                        startMultiBet();
+                    }
+                } else if (!isBetting && !isMultiBetActive && !roll) {
+                    setBet(1);
+                    handleBet(1);
+                }
             }
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [bet, roll, amount, balance, target, maxAmount, isBetting, isMultiBetActive]);
-
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const loadingTime = (Math.floor(Math.random() * 10) + 1) * 100;
-
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, loadingTime);
-
-        return () => clearTimeout(timer);
-    }, []);
+    }, [
+        isLoading,
+        isHelpModalOpen,
+        isOpen,
+        bet,
+        roll,
+        amount,
+        balance,
+        target,
+        maxAmount,
+        isBetting,
+        isMultiBetActive,
+    ]);
 
     if (isLoading) {
         return <Loading />;
@@ -684,7 +689,7 @@ export default function PumpingPage() {
             <Grid
                 templateAreas={{
                     sm: '"panel" "game" "empty"',
-                    md: '"panel empty" "game game"',
+                    md: '"game game" "panel empty"',
                     '1550px': '"panel game empty"'
                 }}
                 templateColumns={{
@@ -1316,94 +1321,208 @@ export default function PumpingPage() {
 
             <History />
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
-                <ModalOverlay bg="blackAlpha.700" />
+                <ModalOverlay
+                    bg="rgba(0,0,0,0.72)"
+                    sx={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+                />
                 <ModalContent
-                    bg="#2a2d2e"
-                    border="1px solid rgba(0, 212, 255, 0.3)"
+                    bg="linear-gradient(180deg, rgba(32,36,40,0.98) 0%, rgba(20,22,26,0.98) 100%)"
+                    border="1px solid rgba(0, 212, 255, 0.22)"
+                    borderRadius="16px"
+                    boxShadow="0 24px 80px rgba(0,0,0,0.65)"
+                    overflow="hidden"
                     maxH="80vh"
-                    h="auto"
-                    overflowY="auto"
-                    className="pumping-modal-content"
                 >
-                    <ModalHeader color="white" >
-                        How to Play Pumping Game
-                    </ModalHeader>
-                    <ModalCloseButton color="#fff" _hover={{ color: '#00D4FF' }} />
-                    <ModalBody py="0" maxH="calc(80vh - 60px)" overflowY="auto" className="pumping-modal-body">
-                        <Tabs colorScheme="cyan" variant="enclosed">
-                            <TabList borderColor="rgba(0, 212, 255, 0.2)">
-                                <Tab
-                                    color="rgba(255,255,255,0.7)"
-                                    _selected={{ color: '#00D4FF', borderColor: '#00D4FF' }}
-                                    _hover={{ color: '#00D4FF' }}
-                                >
-                                    How to Play
-                                </Tab>
-                            </TabList>
-                            <TabPanels>
-                                <TabPanel py="24px">
-                                    <img width="100%" src={HelpImage} alt="Help" />
-                                    <VStack spacing="16px" align="stretch">
-                                        <Box>
-                                            <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                1. Set Your Target
-                                            </Text>
-                                            <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Choose a target number (min: 1.01, max: 1000.00) using the up/down arrows. This is the number you're betting on.
-                                            </Text>
-                                        </Box>
-                                        <Box>
-                                            <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                2. Set Your Bet Amount
-                                            </Text>
-                                            <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Enter your bet amount (min: 0.10). Maximum bet based on membership: Free (1), Plus (1000), Pro (your balance). Use the slider or Min/Max buttons for quick adjustment.
-                                            </Text>
-                                        </Box>
-                                        <Box>
-                                            <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                3. High Strike By Harmmer
-                                            </Text>
-                                            <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                Press the BET button to heat the iron ball with the hammer. The ball will rise, and when it reaches the highest point, the result will be displayed.
-                                            </Text>
-                                        </Box>
+                    <Box
+                        px="6"
+                        pt="5"
+                        pb="4"
+                        bg="linear-gradient(90deg, rgba(0,212,255,0.10) 0%, rgba(0,212,255,0.00) 60%)"
+                        borderBottom="1px solid rgba(255,255,255,0.06)"
+                    >
+                        <ModalHeader p="0" color="white" fontSize="lg" fontWeight="800" letterSpacing="0.2px">
+                            How to play Pumping
+                        </ModalHeader>
+                        <Text mt="2" fontSize="sm" color="rgba(255,255,255,0.75)">
+                            Set a target multiplier and stake, strike with the hammer, then compare the result — or run Auto
+                            BET on a timer.
+                        </Text>
+                    </Box>
 
-                                        <Box>
-                                            <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                5. Auto BET
-                                            </Text>
-                                            <Text fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                By clicking the 'Auto BET' button, you can place bets on auto games simultaneously. This feature allows you to select several game outcomes at once, giving you the opportunity to maximize your chances of winning with multiple bets in one go.
-                                            </Text>
+                    <ModalCloseButton
+                        color="rgba(255,255,255,0.85)"
+                        _hover={{ color: '#00D4FF' }}
+                        mt="2"
+                        mr="2"
+                        borderRadius="10px"
+                    />
+
+                    <ModalBody px="6" pt="5" pb="6" maxH="calc(80vh - 100px)" overflowY="auto" className="pumping-modal-body">
+                        <VStack align="stretch" spacing="4">
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.04)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" color="rgba(255,255,255,0.88)" lineHeight="1.55">
+                                    You pick a <b>target</b> (the multiplier you are aiming for) and a <b>stake</b>. Each round
+                                    heats the ball with the hammer; when it reaches the top, the outcome is revealed and
+                                    compared to your target. Payout rules follow the game logic for hit or miss.
+                                </Text>
+                            </Box>
+
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.03)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                    Steps
+                                </Text>
+                                <VStack align="stretch" spacing="2">
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            1
                                         </Box>
-                                        <Box>
-                                            <Text fontSize="md" fontWeight="bold" color="#00D4FF" mb="8px">
-                                                6. Keyboard Shortcuts
-                                            </Text>
-                                            <VStack spacing="4px" align="stretch" fontSize="sm" color="rgba(255,255,255,0.8)">
-                                                <HStack spacing="2" wrap="wrap">
-                                                    <KeyCap>W</KeyCap>
-                                                    <Text as="span">/</Text>
-                                                    <KeyCap>S</KeyCap>
-                                                    <Text as="span">Increase/Decrease target by 2x</Text>
-                                                </HStack>
-                                                <HStack spacing="2" wrap="wrap">
-                                                    <KeyCap>D</KeyCap>
-                                                    <Text as="span">/</Text>
-                                                    <KeyCap>A</KeyCap>
-                                                    <Text as="span">Increase/Decrease amount by 2x</Text>
-                                                </HStack>
-                                                <HStack spacing="2" wrap="wrap">
-                                                    <KeyCap minW="48px">Space</KeyCap>
-                                                    <Text as="span">Place bet (click BET button)</Text>
-                                                </HStack>
-                                            </VStack>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Set <b>target</b> between <b>1.01</b> and <b>1000.00</b> with the arrows or by
+                                            typing. This is the multiplier you are betting on.
+                                        </Text>
+                                    </HStack>
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            2
                                         </Box>
-                                    </VStack>
-                                </TabPanel>
-                            </TabPanels>
-                        </Tabs>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Set your <b>stake</b> (min <b>0.10</b>). Use the slider, <b>Min</b> / <b>Max</b>, or{' '}
+                                            <b>/2</b> and <b>×2</b>. Max stake depends on <b>membership</b> (see below).
+                                        </Text>
+                                    </HStack>
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            3
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            Press <b>BET</b> to strike. The ball rises; at the peak the <b>result</b> is shown
+                                            and compared to your target.
+                                        </Text>
+                                    </HStack>
+                                    <HStack spacing="3" align="flex-start">
+                                        <Box
+                                            w="22px"
+                                            h="22px"
+                                            borderRadius="999px"
+                                            bg="rgba(0,212,255,0.14)"
+                                            border="1px solid rgba(0,212,255,0.25)"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            color="rgba(255,255,255,0.9)"
+                                            fontSize="xs"
+                                            fontWeight="800"
+                                            flex="0 0 auto"
+                                            mt="1px"
+                                        >
+                                            4
+                                        </Box>
+                                        <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.45">
+                                            <b>Auto BET</b> repeats bets on a timer until you press <b>STOP</b>.
+                                        </Text>
+                                    </HStack>
+                                </VStack>
+                            </Box>
+
+                            <Box
+                                p="4"
+                                borderRadius="14px"
+                                bg="rgba(255,255,255,0.03)"
+                                border="1px solid rgba(255,255,255,0.06)"
+                            >
+                                <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                    Keyboard
+                                </Text>
+                                <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.55">
+                                    <b>W</b> / <b>S</b> — double / halve target &nbsp;·&nbsp; <b>D</b> / <b>A</b> — double / halve
+                                    amount &nbsp;·&nbsp; <b>Space</b> — Bet &nbsp;·&nbsp; <b>Shift + Space</b> — start Auto BET
+                                    (or Stop while it runs). Shortcuts are disabled while typing in a field.
+                                </Text>
+                            </Box>
+
+                            <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap="4">
+                                <Box
+                                    p="4"
+                                    borderRadius="14px"
+                                    bg="rgba(255,255,255,0.03)"
+                                    border="1px solid rgba(255,255,255,0.06)"
+                                >
+                                    <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                        Membership & limits
+                                    </Text>
+                                    <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.5">
+                                        <b>Free</b>: max stake <b>1</b>. <b>Plus</b>: up to <b>1000</b>. <b>Pro</b>: up to your{' '}
+                                        <b>balance</b>.
+                                    </Text>
+                                </Box>
+                                <Box
+                                    p="4"
+                                    borderRadius="14px"
+                                    bg="rgba(255,255,255,0.03)"
+                                    border="1px solid rgba(255,255,255,0.06)"
+                                >
+                                    <Text fontSize="sm" fontWeight="800" color="white" mb="3">
+                                        Auto BET
+                                    </Text>
+                                    <Text fontSize="sm" color="rgba(255,255,255,0.82)" lineHeight="1.5">
+                                        Same stake and target each round until you stop. Use the button or{' '}
+                                        <b>Shift + Space</b> to start or stop.
+                                    </Text>
+                                </Box>
+                            </Grid>
+                        </VStack>
                     </ModalBody>
                 </ModalContent>
             </Modal>
