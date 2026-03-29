@@ -60,6 +60,7 @@ const DASHBOARD_GAMES = [
     { img: cloud, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
     { img: dove, name: "LUCKY HOP", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: dice, name: "Dice", path: "/game/dice", reduxKey: "diceUsers", tickMs: 5200 },
+    // { img: dice, name: "Hash Dice", path: "/game/hash-dice", reduxKey: "diceUsers", tickMs: 5300 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
     { img: wheel, name: "Wheel", path: "/game/wheel", reduxKey: "wheelUsers", tickMs: 4600 },
     { img: rocket, name: "Rocket Shot", path: "/game/rocket-shot", reduxKey: "rocketUsers", tickMs: 3600 },

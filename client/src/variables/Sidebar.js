@@ -21,6 +21,7 @@ import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
 import AToZPage from "views/AToZ/AToZ";
 import CardGamePage from "views/CardGame/CardGamePage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
@@ -254,6 +255,7 @@ export const Plinko = {
     name: "PLINKO",
     icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PlinkoPage,
+    layout: "/game",
 }
 
 export const Wheel = {

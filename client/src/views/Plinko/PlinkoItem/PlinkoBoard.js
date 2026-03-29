@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { Box, Text, Flex, Switch, FormLabel } from '@chakra-ui/react';
+import { Box, Flex, Switch, FormLabel } from '@chakra-ui/react';
 
 /** Outer shell — match Plinko game card (PlinkoPage) */
 const BG = '#2a2d2e';
@@ -383,6 +383,7 @@ export default function PlinkoBoard({
         const idle = { x: laneGapX(0, 1, n), y: yRow(0, n) - 2.35, visible: false };
         if (!pathSteps || pathSteps.length !== n || !dropTick) {
             dropBallSizeRef.current = null;
+            activeSlotRef.current = null;
             setBall(idle);
             setPegHitFlash({});
             lastPegHitMsRef.current = {};
@@ -970,23 +971,6 @@ export default function PlinkoBoard({
                             />
                         ))}
                 </svg>
-
-                {isAnimating && (
-                    <Text
-                        position="absolute"
-                        top="38px"
-                        left={0}
-                        right={0}
-                        textAlign="center"
-                        color="rgba(255,255,255,0.45)"
-                        fontSize="xs"
-                        fontWeight="700"
-                        letterSpacing="0.14em"
-                        pointerEvents="none"
-                    >
-                        DROPPING…
-                    </Text>
-                )}
             </Box>
         </Box>
     );
