@@ -254,11 +254,14 @@ function DieFace({ value }) {
 function PerimeterTile({
     children,
     isActive,
+    isLanded,
     isSnake,
     wasVisited,
     onTransitPath,
     transitPing,
     transitBurstKey,
+    landingImpact,
+    landingImpactKey,
     ...rest
 }) {
     const baseBg = isSnake
@@ -273,11 +276,15 @@ function PerimeterTile({
         ? 'linear-gradient(155deg, #4a4872 0%, #3a3858 45%, #2d2b45 100%)'
         : 'linear-gradient(155deg, #3d7a9a 0%, #2d6278 45%, #214a5c 100%)';
 
+    const landedBg = isSnake
+        ? 'linear-gradient(155deg, #4a2f56 0%, #3a2a4c 45%, #2b1f3b 100%)'
+        : 'linear-gradient(155deg, #2b7ea0 0%, #256a86 42%, #1c5267 100%)';
+
     const transitBg = isSnake
         ? 'linear-gradient(155deg, #403e5e 0%, #34324c 45%, #282642 100%)'
         : 'linear-gradient(155deg, #3a5f78 0%, #2e4d60 45%, #254456 100%)';
 
-    const tileBg = isActive ? activeBg : onTransitPath ? transitBg : wasVisited ? visitedTint : baseBg;
+    const tileBg = isLanded ? landedBg : isActive ? activeBg : onTransitPath ? transitBg : wasVisited ? visitedTint : baseBg;
 
     return (
         <MotionFlex
@@ -290,7 +297,9 @@ function PerimeterTile({
             bg={tileBg}
             borderWidth="1px"
             borderColor={
-                isActive
+                isLanded
+                    ? 'rgba(125, 249, 255, 0.98)'
+                    : isActive
                     ? 'rgba(0, 212, 255, 0.85)'
                     : onTransitPath
                       ? 'rgba(0, 212, 255, 0.5)'
@@ -299,7 +308,9 @@ function PerimeterTile({
                         : 'rgba(255,255,255,0.10)'
             }
             boxShadow={
-                isActive
+                isLanded
+                    ? '0 0 0 1px rgba(170,250,255,0.58), 0 16px 34px rgba(0,0,0,0.56), 0 0 32px rgba(125,249,255,0.4), inset 0 0 26px rgba(125,249,255,0.16), inset 0 1px 0 rgba(255,255,255,0.2)'
+                    : isActive
                     ? '0 0 0 1px rgba(0,212,255,0.35), 0 12px 32px rgba(0,0,0,0.55), 0 0 28px rgba(0,212,255,0.35), inset 0 1px 0 rgba(255,255,255,0.18)'
                     : onTransitPath
                       ? '0 0 0 1px rgba(0,212,255,0.2), 0 10px 26px rgba(0,0,0,0.42), 0 0 18px rgba(0,212,255,0.18), inset 0 1px 0 rgba(255,255,255,0.12)'
@@ -309,8 +320,8 @@ function PerimeterTile({
             }
             initial={false}
             animate={{
-                scale: isActive ? 1.06 : onTransitPath ? 1.04 : wasVisited ? 1.02 : 1,
-                y: isActive ? -2 : onTransitPath ? -1 : 0,
+                scale: isLanded ? 1.085 : isActive ? 1.06 : onTransitPath ? 1.04 : wasVisited ? 1.02 : 1,
+                y: isLanded ? -3 : isActive ? -2 : onTransitPath ? -1 : 0,
             }}
             transition={{ type: 'spring', stiffness: 420, damping: 28 }}
             opacity={isSnake && !isActive && !wasVisited && !onTransitPath ? 0.92 : 1}
@@ -323,6 +334,32 @@ function PerimeterTile({
                 pointerEvents="none"
                 borderRadius="18px"
             />
+            {isLanded && (
+                <>
+                    <MotionBox
+                        position="absolute"
+                        inset="-2px"
+                        borderRadius="20px"
+                        pointerEvents="none"
+                        border="2px solid rgba(170, 250, 255, 0.95)"
+                        animate={{ opacity: [0.72, 1, 0.72], scale: [1, 1.035, 1] }}
+                        transition={{ duration: 1.15, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    <MotionBox
+                        position="absolute"
+                        top="7px"
+                        right="7px"
+                        w="8px"
+                        h="8px"
+                        borderRadius="full"
+                        pointerEvents="none"
+                        bg="rgba(170,250,255,0.95)"
+                        boxShadow="0 0 12px rgba(170,250,255,0.9)"
+                        animate={{ opacity: [0.55, 1, 0.55], scale: [0.8, 1.2, 0.8] }}
+                        transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                </>
+            )}
             {isActive && (
                 <>
                     <MotionBox
@@ -369,6 +406,60 @@ function PerimeterTile({
                     animate={{ scale: 1.35, opacity: 0 }}
                     transition={{ duration: 0.5, ease: 'easeOut' }}
                 />
+            )}
+            {landingImpact && (
+                <>
+                    <MotionBox
+                        key={`landing-core-${landingImpactKey}`}
+                        position="absolute"
+                        inset="4px"
+                        borderRadius="15px"
+                        pointerEvents="none"
+                        bg="radial-gradient(circle at 50% 50%, rgba(125, 249, 255, 0.9) 0%, rgba(0, 212, 255, 0.35) 45%, transparent 75%)"
+                        initial={{ opacity: 0.95, scale: 0.72 }}
+                        animate={{ opacity: 0, scale: 1.28 }}
+                        transition={{ duration: 0.48, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                    <MotionBox
+                        key={`landing-ring-${landingImpactKey}`}
+                        position="absolute"
+                        inset="-5px"
+                        borderRadius="24px"
+                        pointerEvents="none"
+                        border="2px solid rgba(125, 249, 255, 0.9)"
+                        initial={{ opacity: 0.92, scale: 0.65 }}
+                        animate={{ opacity: 0, scale: 1.46 }}
+                        transition={{ duration: 0.56, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                    <MotionBox
+                        key={`landing-diag-a-${landingImpactKey}`}
+                        position="absolute"
+                        top="50%"
+                        left="50%"
+                        w="56px"
+                        h="2px"
+                        borderRadius="full"
+                        pointerEvents="none"
+                        bg="linear-gradient(90deg, transparent, rgba(170, 250, 255, 0.95), transparent)"
+                        initial={{ opacity: 0.9, x: '-50%', y: '-50%', scaleX: 0.45, rotate: -28 }}
+                        animate={{ opacity: 0, scaleX: 1.35 }}
+                        transition={{ duration: 0.36, ease: 'easeOut' }}
+                    />
+                    <MotionBox
+                        key={`landing-diag-b-${landingImpactKey}`}
+                        position="absolute"
+                        top="50%"
+                        left="50%"
+                        w="56px"
+                        h="2px"
+                        borderRadius="full"
+                        pointerEvents="none"
+                        bg="linear-gradient(90deg, transparent, rgba(170, 250, 255, 0.95), transparent)"
+                        initial={{ opacity: 0.9, x: '-50%', y: '-50%', scaleX: 0.45, rotate: 28 }}
+                        animate={{ opacity: 0, scaleX: 1.35 }}
+                        transition={{ duration: 0.36, ease: 'easeOut' }}
+                    />
+                </>
             )}
             {wasVisited && !isActive && !onTransitPath && (
                 <MotionBox
@@ -424,6 +515,8 @@ export default function SnakesPage() {
     const [pathTransitSet, setPathTransitSet] = useState(() => new Set());
     const [lastTransitIdx, setLastTransitIdx] = useState(null);
     const [transitWave, setTransitWave] = useState(0);
+    const [landingFxIdx, setLandingFxIdx] = useState(null);
+    const [landingFxKey, setLandingFxKey] = useState(0);
     const autoCashOutHandledRef = useRef(false);
     const ringIndexRef = useRef(0);
     const pathTimersRef = useRef([]);
@@ -511,6 +604,7 @@ export default function SnakesPage() {
         setVisitedRing(new Set());
         setPathTransitSet(new Set());
         setLastTransitIdx(null);
+        setLandingFxIdx(null);
         autoCashOutHandledRef.current = false;
     }, [clearPathTimers, clearOutcomeFxTimer]);
 
@@ -527,6 +621,8 @@ export default function SnakesPage() {
         async (nextIdx) => {
             const tile = board[nextIdx];
             if (!tile) return;
+            setLandingFxIdx(nextIdx);
+            setLandingFxKey((k) => k + 1);
 
             if (tile.kind === 'snake') {
                 const data = {
@@ -705,10 +801,12 @@ export default function SnakesPage() {
         const idx = cellToRingIndex(row, col);
         if (idx < 0) return null;
         const tile = board[idx];
-        const isActive = (phase === 'playing' || phase === 'rolling') && ringIndex === idx;
+        const isLanded = phase === 'playing' && ringIndex === idx;
+        const isActive = phase === 'rolling' && ringIndex === idx;
         const wasVisited = visitedRing.has(idx);
         const onTransitPath = phase === 'rolling' && pathTransitSet.has(idx) && !isActive;
         const transitPing = phase === 'rolling' && lastTransitIdx === idx;
+        const landingImpact = landingFxIdx === idx;
 
         let inner;
         if (tile.kind === 'start') {
@@ -745,11 +843,14 @@ export default function SnakesPage() {
         return (
             <PerimeterTile
                 isActive={isActive}
+                isLanded={isLanded}
                 isSnake={tile.kind === 'snake'}
                 wasVisited={wasVisited && !isActive}
                 onTransitPath={onTransitPath}
                 transitPing={transitPing}
                 transitBurstKey={transitWave}
+                landingImpact={landingImpact}
+                landingImpactKey={landingFxKey}
             >
                 {inner}
             </PerimeterTile>
@@ -1062,7 +1163,7 @@ export default function SnakesPage() {
                         </CardBody>
                     </Card>
                 </GridItem>
-
+                {/* Game */}
                 <GridItem area="game" display="flex" flexDirection="column" minH="0" minW={0}>
                     <Card
                         pt={{ base: '18px', md: '24px' }}

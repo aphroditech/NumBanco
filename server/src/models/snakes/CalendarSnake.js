@@ -10,6 +10,10 @@ const CalendarSnakeSchema = new mongoose.Schema({
         required: true,
         default: false
     },
+    level: {
+        type: String,
+        required: true
+    },
     betAmount: {
         type: Number,
         required: true
