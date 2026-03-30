@@ -95,7 +95,7 @@ function getOutcomeKey(pickStr, aToZSetting, aToZAmount, aToZWinAmount) {
         return "NONE";
     }
 
-    if(aToZAmount * 1.3 < aToZWinAmount) {
+    if(aToZAmount * 1.1 < aToZWinAmount) {
         return "NONE";
     }
 
