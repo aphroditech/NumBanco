@@ -678,6 +678,50 @@ const userSchema = new mongoose.Schema({
     ],
     default: []
   },
+  
+  threeNumbersMode: {
+    type: String,
+    default: 1
+  },
+
+  threeNumbersHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        result: {
+          type: String,
+          required: true
+        },
+        multi: {
+          type: Number,
+          required: true
+        },
+        win: {
+          type: Number,
+          default: 0
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        threeNumbersBalance: {
+          type: Number,
+          default: 0
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        },
+      }
+    ],
+    default: []
+  },
 
   jokerCrashMode: {
     type: String,

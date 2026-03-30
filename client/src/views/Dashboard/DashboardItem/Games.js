@@ -40,6 +40,7 @@ import keno from "assets/img/Games/keno.jpg"
 import doubleGame from "assets/img/Games/double.jpg"
 import wheel from "assets/img/Games/wheel.jpg"
 import plinko from "assets/img/Games/plinko.jpg"
+import threeNumbers from "assets/img/Games/threeNumbers.jpg"
 import diamond from "assets/img/Games/diamond.jpg"
 import snakes from "assets/img/Games/snake.jpg"
 
@@ -56,6 +57,7 @@ const DASHBOARD_GAMES = [
     { img: jokerCrash, name: "Joker Crash", path: "/game/joker-crash", reduxKey: "jokerCrashUsers", tickMs: 4200 },
     { img: cardGame, name: "Card Game", path: "/game/card-game", reduxKey: "cardGameUsers", tickMs: 4200 },
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
+    { img: threeNumbers, name: "Three Numbers", path: "/game/three-numbers", reduxKey: "threeNumbersUsers", tickMs: 3600 },
     { img: doubleGame, name: "Double", path: "/game/double", reduxKey: "doubleUsers", tickMs: 5800 },
     { img: plinko, name: "Plinko", path: "/game/plinko", reduxKey: "plinkoUsers", tickMs: 5400 },
     { img: cloud, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
