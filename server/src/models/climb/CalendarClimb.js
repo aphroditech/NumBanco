@@ -25,7 +25,7 @@ const CalendarClimbSchema = new mongoose.Schema({
         required: true,
         default: 0,
     },
-    date: {
+    date: { 
         type: Date,
         default: Date.now,
     },

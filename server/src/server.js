@@ -24,6 +24,7 @@ import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSp
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 import { minesBot } from "./services/mines/minesBot.js";
 import { plinkoBot } from "./services/plinko/plinkoBot.service.js";
+import { hashDiceBot } from "./services/hashDice/hashDiceBot.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import { miningBot } from "./services/mining/miningBotService.js";
@@ -40,7 +41,9 @@ import { twistBot } from "./services/twist/twistBot.service.js";
 import { kenoBot } from "./services/keno/kenoBot.service.js";
 import { wheelBot } from "./services/wheel/wheelBot.service.js";
 import { climbBot } from "./services/climb/climbBot.service.js";
-
+import { threeNumbersBot } from "./services/threeNumbers/threeNumbersBot.service.js";
+import { diamondBot } from "./services/diamond/diamondBot.service.js";
+import { snakeBot } from "./services/Snakes/SnakeBot.Service.js";
 
 dotenv.config();
 
@@ -57,6 +60,7 @@ app.locals.ablyCore = ablyCore;
 app.locals.ably = ablyCore;
 /** Same Ably app/key: dice/table bots publish here; optional alias if a route must match that connection. */
 app.locals.ablyDiceGames = ablyDiceGames;
+app.locals.ablyMiningGames = ablyMiningGames;
 
 connectDB()
     .then(async () => {
@@ -92,6 +96,7 @@ connectDB()
             console.log("✅ Core Ably connected");
 
             // climbBot(ablyCore);
+            diamondBot(ablyCore);
 
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);
@@ -104,7 +109,7 @@ connectDB()
             console.log("💰 Finance Ably connected");
 
             // confirmDepositEngine(ablyFinance);
-            tronEngine(ablyFinance);
+            // tronEngine(ablyFinance);
             // startPartnerDepositCron(ablyFinance);
             // startWithdrawApprovalCron(ablyFinance);
 
@@ -142,6 +147,7 @@ connectDB()
             // aToZBot(ablyDiceGames);
             // twistBot(ablyDiceGames);
             // kenoBot(ablyDiceGames);
+            threeNumbersBot(ablyDiceGames);
         });
 
         /*
@@ -159,13 +165,21 @@ connectDB()
             // cocoBot(ablyMiningGames);
             // alphaTreeBot(ablyMiningGames);
             // doveBot(ablyMiningGames);
-            minesBot(ablyMiningGames);
-            plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
-            startGravityGameLoop(ablyMiningGames);
-            setCloudSpreadAbly(ablyMiningGames);
-            cloudSpreadBot().catch(console.error);
-            startDoubleGameLoop(ablyMiningGames);
+            // minesBot(ablyMiningGames);
+            // plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
+<<<<<<< HEAD
+            hashDiceBot(ablyMiningGames).catch((e) => console.error("[hashDiceBot] start:", e?.message || e));
+=======
+>>>>>>> c0e798b39ea5a55dd50929237c51cb67ece8122e
+            // startGravityGameLoop(ablyMiningGames);
+            // setCloudSpreadAbly(ablyMiningGames);
+            // cloudSpreadBot().catch(console.error);
+            // startDoubleGameLoop(ablyMiningGames);
+<<<<<<< HEAD
 
+=======
+            // snakeBot(ablyMiningGames);
+>>>>>>> c0e798b39ea5a55dd50929237c51cb67ece8122e
         });
 
         /*

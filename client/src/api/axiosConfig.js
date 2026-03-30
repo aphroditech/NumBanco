@@ -1,7 +1,8 @@
 import axios from "axios";
 
-/** Use REACT_APP_API_URL in client/.env (e.g. http://localhost:5000/api or your LAN IP). */
-const API = "http://localhost:5000/api";
+/** Base URL without trailing slash; `/api` is appended (see client/.env `REACT_APP_API_BASE_URL`). */
+const RAW = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
+const API = `${String(RAW).replace(/\/$/, "")}/api`;
 
 const axiosInstance = axios.create({
     baseURL: API,

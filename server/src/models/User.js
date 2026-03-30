@@ -359,6 +359,48 @@ const userSchema = new mongoose.Schema({
     ],
     default: []
   },
+
+  /** Hash Dice: cumulative stake and gross payout totals (same idea as minesAmount / minesWinAmount). */
+  hashBetAmount: {
+    type: Number,
+    default: 0,
+  },
+  hashWinAmount: {
+    type: Number,
+    default: 0,
+  },
+  /** 0 = normal win-rate table; 1 = reduced rates (DB multipliers). */
+  hashMode: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 1,
+  },
+  /** Consecutive wins since last loss; used with hashMinLossEveryNBets to force a loss. */
+  hashConsecutiveWins: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  hashHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        payout: { type: Number, required: true },
+        side: { type: Number, required: true },
+        roll: { type: Number, default: 0 },
+        isWin: { type: Boolean, required: true },
+        winAmount: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        hashMode: { type: Number, default: 0 },
+        effectiveWinRate: { type: Number, default: 0 },
+        forcedLoss: { type: Boolean, default: false },
+        createAt: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  },
+
   cocoMode: {
     type: Number,
     default: 0, // 0=easy, 1=normal, 2=hard
@@ -378,6 +420,14 @@ const userSchema = new mongoose.Schema({
     default: 0
   },
   wheelWinAmount: {
+    type: Number,
+    default: 0
+  },
+  snakesAmount: {
+    type: Number,
+    default: 0
+  },
+  snakesWinAmount: {
     type: Number,
     default: 0
   },
@@ -670,6 +720,50 @@ const userSchema = new mongoose.Schema({
     ],
     default: []
   },
+  
+  threeNumbersMode: {
+    type: String,
+    default: 1
+  },
+
+  threeNumbersHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        result: {
+          type: String,
+          required: true
+        },
+        multi: {
+          type: Number,
+          required: true
+        },
+        win: {
+          type: Number,
+          default: 0
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        threeNumbersBalance: {
+          type: Number,
+          default: 0
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        },
+      }
+    ],
+    default: []
+  },
 
   jokerCrashMode: {
     type: String,
@@ -925,6 +1019,49 @@ const userSchema = new mongoose.Schema({
       },
     ],
     default: [],
+  },
+
+  diamondHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        keys: { type: [String], default: [] },
+        tier: { type: String, default: "" },
+        rateIndex: { type: Number, default: 0 },
+        mode: {
+          type: String,
+          default: "normal",
+        },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
+  /** Diamond lifetime aggregates used for automatic mode level. */
+  diamondTotalBetAmount: {
+    type: Number,
+    default: 0,
+  },
+  diamondTotalProfit: {
+    type: Number,
+    default: 0,
+  },
+  /** revenue = diamondTotalProfit - diamondTotalBetAmount */
+  diamondRevenue: {
+    type: Number,
+    default: 0,
+  },
+  /** 0: easy, 1: normal, 2: hard */
+  diamondMode: {
+    type: Number,
+    default: 1,
   },
 
   updownHistory: {

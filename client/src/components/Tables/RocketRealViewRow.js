@@ -64,7 +64,7 @@ function RocketRealViewRow(props) {
     const { altas, avatar, result, win } = props;
     const isWin = win > 0;
     const rowColor = isWin ? "#68d391" : "#f56565";
-    const displayName = altas || "—";
+    const displayName = altas.length > 5 ? `${altas.slice(0, 5)}...` : altas || "—";
 
     return (
         <Tr className={props.isNew ? "realtime-new" : undefined} borderBottom="1px solid rgba(255,255,255,0.06)" _last={{ borderBottom: "none" }}>

@@ -288,7 +288,7 @@ export const getWheelResult = async (req, res) => {
 
 export const getWheelHistory = async (req, res) => {
     try {
-        const history = await WheelHistoryModel.findOne({ user: req.user._id });
+        const history = await WheelHistoryModel.findOne({ user: req.user._id }).select("history").lean();
         return res.status(200).json({ history: history?.history || [] });
     } catch (error) {
         console.error("getWheelHistory:", error);

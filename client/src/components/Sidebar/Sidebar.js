@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Plinko,Pumping, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame,DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Plinko,Pumping,HashDice, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame,DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, ThreeNumbers, Snakes, Diamond } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -66,6 +66,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={Fishing} />
               <SidebarButtonLink value={CardGame} />
               <SidebarButtonLink value={Keno} />
+              <SidebarButtonLink value={ThreeNumbers} />
               <SidebarButtonLink value={JokerCrash} />
               <SidebarButtonLink value={Gravity} />
               <SidebarButtonLink value={DoubleGame} />
@@ -74,7 +75,9 @@ function Sidebar(props) {
               <SidebarButtonLink value={Jackal} />
               <SidebarButtonLink value={AToZGame} />
               <SidebarButtonLink value={Coin} />
+              <SidebarButtonLink value={Snakes} />
               <SidebarButtonLink value={Dice} />
+              <SidebarButtonLink value={HashDice} />
               <SidebarButtonLink value={Plinko} />
               <SidebarButtonLink value={Mines} />
               <SidebarButtonLink value={DoveGame} />
@@ -83,6 +86,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={Twist} />
               <SidebarButtonLink value={Wheel} />
               <SidebarButtonLink value={Climb} />
+              <SidebarButtonLink value={Diamond} />
             </Collapse >
           </Box >
         )
@@ -239,7 +243,9 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={Jackal} />
                 <SidebarButtonLink value={AToZGame} />
                 <SidebarButtonLink value={Coin} />
+                <SidebarButtonLink value={ThreeNumbers} />
                 <SidebarButtonLink value={Dice} />
+                <SidebarButtonLink value={HashDice} />
                 <SidebarButtonLink value={Plinko} />
                 <SidebarButtonLink value={Mines} />
                 <SidebarButtonLink value={DoveGame} />
@@ -248,6 +254,10 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={AlphaTreeGame} />
                 <SidebarButtonLink value={Coin} />
                 <SidebarButtonLink value={Twist} />
+                <SidebarButtonLink value={Snakes} />
+                <SidebarButtonLink value={Wheel} />
+                <SidebarButtonLink value={Climb} />
+                <SidebarButtonLink value={Diamond} />
               </Stack>
             </Collapse>
           </Box>

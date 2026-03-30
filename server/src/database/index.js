@@ -32,6 +32,14 @@ import { initializeClimbSettings } from './initClimbSettings.js';
 import { initWheelSettings } from './initWheelSettings.js';
 import { initializePlinkoRateSettings } from './initPlinkoRateSettings.js';
 import { initializePlinkoBotSettings } from './initPlinkoBotSettings.js';
+import { initializeThreeNumbersPercentages } from './threeNumbersPercentages.js';
+import { initializeThreeNumbersLimits } from './threeNumbersLimits.js';
+import { initializeDiamondSettings } from './initDiamondSettings.js';
+import { initializeDiamondViews } from './initDiamondViews.js';
+import { initializeSnakesSettings } from './snakeSettings.js';
+import { initializeHashDiceSettings } from './initHashDiceSettings.js';
+import { initializeHashDiceBotSettings } from './initHashDiceBotSettings.js';
+import { trimHashDiceResultsCollection } from '../services/hashDice/hashDiceResult.service.js';
 
 
 export const initializeDatabase = async () => {
@@ -59,7 +67,12 @@ export const initializeDatabase = async () => {
     await initializeTwistSettings();
     await initializePlinkoRateSettings();
     await initializePlinkoBotSettings();
+    await initializeHashDiceSettings();
+    await initializeHashDiceBotSettings();
+    await trimHashDiceResultsCollection();
     await initializeClimbSettings();
+    await initializeDiamondSettings();
+    await initializeDiamondViews();
     await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();
@@ -72,5 +85,8 @@ export const initializeDatabase = async () => {
     await initializeKenoControls();
     await initializeKenoLimits();
     await initWheelSettings();
+    await initializeThreeNumbersPercentages();
+    await initializeThreeNumbersLimits();
+    await initializeSnakesSettings();
     console.log('✅ Database initialization complete');
 };

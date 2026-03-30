@@ -3,11 +3,12 @@ import GravityHistory from "../../models/gravity/GravityHistory.js";
 import GravityBot from "../../models/gravity/GravityBot.js";
 import User from "../../models/User.js";
 
-const ROUND_MS = 18000;
 const BETTING_MS = 10000;
 const VIEWING_MS = 5000;
 const GRAPH_FLOW_SECONDS = 15;
+/** 3s result beat after the graph; then the next round opens (match `GravityPage.js`). */
 const RESULT_MS = 3000;
+const ROUND_MS = BETTING_MS + VIEWING_MS + RESULT_MS;
 
 const CHANNEL_NAME = "gravityGame";
 const EVENT_STATE = "GRAVITY_STATE";
@@ -441,6 +442,26 @@ async function settleRound(ably) {
   }
 }
 
+async function performAsyncCleanup(newRoundId) {
+  try {
+    // Only keep the most recent round history for live display, delete everything else.
+    await GravityRound.deleteMany({ roundId: { $lt: newRoundId } });
+
+    // Bots in this system are users with partnerLevel: 0.
+    // We want to clear their GravityHistory as it's not needed for long-term record keeping.
+    const botUserIds = await User.find({ partnerLevel: 0 }).select("userId").lean();
+    const botIds = botUserIds.map(u => u.userId);
+    if (botIds.length > 0) {
+      await GravityHistory.deleteMany({
+        roundId: { $lt: newRoundId },
+        userId: { $in: botIds }
+      });
+    }
+  } catch (err) {
+    console.warn("[gravity] Database cleanup failed:", err.message);
+  }
+}
+
 async function createRound() {
   const latest = await GravityRound.findOne({}).sort({ roundId: -1 });
   const roundId = latest?.roundId ? latest.roundId + 1 : 1;
@@ -448,27 +469,6 @@ async function createRound() {
   const settleAt = new Date(now.getTime() + BETTING_MS + VIEWING_MS);
   const endAt = new Date(now.getTime() + ROUND_MS);
   const graphPoints = buildGraphPoints();
-
-  // Cleanup old database records:
-  // 1. Delete old rounds (all except the new one being created).
-  // 2. Delete GravityHistory entries for bots (partnerLevel 0 users) that don't belong to the current round.
-  try {
-    // Only keep the most recent round history for live display, delete everything else.
-    await GravityRound.deleteMany({ roundId: { $lt: roundId } });
-    
-    // Bots in this system are users with partnerLevel: 0. 
-    // We want to clear their GravityHistory as it's not needed for long-term record keeping.
-    const botUserIds = await User.find({ partnerLevel: 0 }).select("userId").lean();
-    const botIds = botUserIds.map(u => u.userId);
-    if (botIds.length > 0) {
-      await GravityHistory.deleteMany({ 
-        roundId: { $lt: roundId }, 
-        userId: { $in: botIds } 
-      });
-    }
-  } catch (err) {
-    console.warn("[gravity] Database cleanup failed:", err.message);
-  }
 
   const round = await GravityRound.create({
     roundId,
@@ -655,12 +655,17 @@ export async function startGravityGameLoop(ably) {
 
   lastBroadcastPhase = null;
 
+  /** Close the given round (if still current) and start the next; shared by interval fallback + scheduled timeout. */
+  let closeGravityRoundAndAdvance;
+  /** Serialize rollovers: timeout + interval can fire together and would otherwise double-insert roundId. */
+  let gravityAdvanceMutex = Promise.resolve();
   // Publish phase changes and settle exactly at boundaries.
   // This reduces up to ~1s delay caused by the 1000ms interval tick.
   const scheduleRoundTimers = (roundForTimers) => {
     if (!roundForTimers?.startAt) return;
     const roundIdForTimers = roundForTimers.roundId;
     const startAtMs = roundForTimers.startAt.getTime();
+    const roundDocIdStr = String(roundForTimers._id);
 
     const publishPhase = async (phaseToSet) => {
       // Only act for the currently active round.
@@ -679,17 +684,49 @@ export async function startGravityGameLoop(ably) {
       await publishPhase("viewing");
     }, delayViewing);
 
-    // viewing -> result (also settle bets)
-    const delayResult = Math.max(0, startAtMs + BETTING_MS + VIEWING_MS - Date.now());
+    // Graph end: settle → full state (result) → RESULT_MS → next round (one chain; no orphaned second timer).
+    const delaySettleAndAdvance = Math.max(0, startAtMs + BETTING_MS + VIEWING_MS - Date.now());
     setTimeout(async () => {
-      lastBroadcastPhase = "result";
-      // settleRound will publish EVENT_RESULT (with points).
-      // settled=true prevents double-settlement.
-      await settleRound(ably);
-    }, delayResult);
+      try {
+        if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
+        lastBroadcastPhase = "result";
+        await settleRound(ably);
+        await publish(ably, EVENT_STATE, await getGravityStateSnapshot());
+        // if (RESULT_MS > 0) {
+        //   await new Promise((r) => setTimeout(r, RESULT_MS));
+        // } // No longer needed: client handles result phase.
+        await closeGravityRoundAndAdvance(roundIdForTimers, roundDocIdStr);
+      } catch (e) {
+        console.error("[gravityGame] settle/advance error:", e?.message || e);
+      }
+    }, delaySettleAndAdvance);
+  };
+
+  closeGravityRoundAndAdvance = (roundIdForTimers, roundDocIdStr) => {
+    const result = gravityAdvanceMutex.then(async () => {
+      if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
+      if (settlePromise && settlingRoundId === roundIdForTimers) {
+        await settlePromise;
+      }
+      if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
+      if (String(currentRound._id) !== roundDocIdStr) return;
+      currentRound.phase = "betting";
+      await GravityRound.updateOne({ _id: currentRound._id }, { $set: { phase: "betting" } });
+      currentRound = await createRound();
+      settled = false;
+      scheduleRoundTimers(currentRound);
+      lastBroadcastPhase = "betting";
+      await publish(ably, EVENT_STATE, await getGravityStateSnapshot());
+      // Decouple database cleanup operations from new round creation.
+      performAsyncCleanup(currentRound.roundId);
+    });
+    gravityAdvanceMutex = result.catch(() => {});
+    return result;
   };
 
   scheduleRoundTimers(currentRound);
+  // Decouple database cleanup operations from new round creation.
+  performAsyncCleanup(currentRound.roundId);
 
   // Bots place automatic bets during the betting phase.
   const getDefaultBotConfig = () => ({
@@ -828,29 +865,14 @@ export async function startGravityGameLoop(ably) {
       }
 
       if (elapsedMs >= ROUND_MS) {
-        // Avoid closing while settlement is still saving the same GravityRound doc.
-        if (settlePromise && settlingRoundId === roundAtTick.roundId) {
-          await settlePromise;
-        }
-        // Another tick could have rolled the round; only close if it's still the same doc.
-        if (!currentRound || String(currentRound._id) !== String(roundAtTick._id)) {
-          return;
-        }
-        currentRound.phase = "closed";
-        await GravityRound.updateOne(
-          { _id: currentRound._id },
-          { $set: { phase: "closed" } }
-        );
-        currentRound = await createRound();
-        scheduleRoundTimers(currentRound);
-        await publish(ably, EVENT_STATE, await getGravityStateSnapshot());
+        await closeGravityRoundAndAdvance(roundAtTick.roundId, String(roundAtTick._id));
       }
     } catch (err) {
       console.error("[gravityGame] loop error:", err);
     } finally {
       loopInFlight = false;
     }
-  }, 1000);
+  }, 500);
 }
 
 export async function publishGravityBetEvent(ably, row, round) {

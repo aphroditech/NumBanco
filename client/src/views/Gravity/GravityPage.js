@@ -19,6 +19,7 @@ import {
   ModalOverlay,
   Progress,
   Select,
+  Spinner,
   Text,
   useBreakpointValue,
   useDisclosure,
@@ -158,12 +159,14 @@ export default function GravityPage() {
       const data = msg?.data;
       if (!data) return;
       
-      // Sync clock offset only once per round or if not yet set.
-      // This prevents jitter in the graph progress calculation during a single round.
-      // Use a ref to track the last synced roundId since the state closure might be stale.
-      if (data.serverNow && (lastSyncRoundIdRef.current === null || data.roundId !== lastSyncRoundIdRef.current)) {
-        const offset = Number(data.serverNow) - Date.now();
-        setClockOffset(offset);
+      // Sync clock on round change (same pattern as Double). Always advance round ref when Ably sends roundId.
+      const prevRid = lastSyncRoundIdRef.current;
+      const roundChanged =
+        data.roundId != null && (prevRid === null || String(data.roundId) !== String(prevRid));
+      if (data.serverNow && roundChanged) {
+        setClockOffset(Number(data.serverNow) - Date.now());
+      }
+      if (data.roundId != null) {
         lastSyncRoundIdRef.current = data.roundId;
       }
 
@@ -356,6 +359,7 @@ export default function GravityPage() {
   const elapsedMs = typeof state?.roundStartAtMs === "number" ? Math.max(0, nowMs - state.roundStartAtMs) : 0;
   const BETTING_MS = 10000;
   const VIEWING_MS = 5000;
+  /** Must match server `gravityGame.service.js` — 3s result, then next betting window. */
   const RESULT_MS = 3000;
 
   const bettingElapsed = Math.max(0, Math.min(BETTING_MS, elapsedMs));
@@ -370,7 +374,7 @@ export default function GravityPage() {
       ? "viewing"
       : elapsedMs < BETTING_MS + VIEWING_MS + RESULT_MS
       ? "result"
-      : "closed";
+      : "betting";
 
   const timelineCharge =
     phaseLocal === "betting"
@@ -409,7 +413,9 @@ export default function GravityPage() {
       ? Math.ceil((RESULT_MS - resultElapsed) / 1000)
       : 0;
 
-  const canBet = phaseLocal === "betting";
+  /** Server `phase` can lead local timeline after round rollover; don't block betting on clock skew. */
+  const serverPhase = state?.phase;
+  const canBet = phaseLocal === "betting" && serverPhase === "betting";
   const chartData = useMemo(() => {
     const raw = (state?.points || [])
       .map((p) => ({
@@ -589,25 +595,43 @@ export default function GravityPage() {
                 <VStack spacing="0" gridColumn="1 / -1" w="100%">
                   <HStack spacing="12px" align="center" w="100%" justifyContent="center">
                     <Box borderRadius="999px" overflow="hidden">
-                      <CircularProgress
-                        value={timelineCharge}
-                        color={timelineColor}
-                        trackColor="rgba(255,255,255,0.16)"
-                        thickness="8px"
-                        size={{ base: "98px", md: "120px" }}
-                      >
-                        <CircularProgressLabel
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                          textAlign="center"
+                      {phaseLocal === "closed" ? (
+                        <Flex
+                          align="center"
+                          justify="center"
+                          w={{ base: "98px", md: "120px" }}
+                          h={{ base: "98px", md: "120px" }}
+                          aria-busy="true"
                         >
-                          <VStack spacing="0" lineHeight="1" alignItems="center" justifyContent="center">
-                            <Text color={timelineColor} fontWeight="800" fontSize={{ base: "2xl", md: "3xl" }}>{timeLeftLocal}</Text>
-                            <Text color={timelineColor} fontWeight="700" fontSize={{ base: "10px", md: "11px" }}>Sec</Text>
-                          </VStack>
-                        </CircularProgressLabel>
-                      </CircularProgress>
+                          <Spinner
+                            thickness="6px"
+                            speed="0.85s"
+                            emptyColor="rgba(255,255,255,0.12)"
+                            color="#a78bfa"
+                            boxSize={{ base: "48px", md: "56px" }}
+                          />
+                        </Flex>
+                      ) : (
+                        <CircularProgress
+                          value={timelineCharge}
+                          color={timelineColor}
+                          trackColor="rgba(255,255,255,0.16)"
+                          thickness="8px"
+                          size={{ base: "98px", md: "120px" }}
+                        >
+                          <CircularProgressLabel
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            textAlign="center"
+                          >
+                            <VStack spacing="0" lineHeight="1" alignItems="center" justifyContent="center">
+                              <Text color={timelineColor} fontWeight="800" fontSize={{ base: "2xl", md: "3xl" }}>{timeLeftLocal}</Text>
+                              <Text color={timelineColor} fontWeight="700" fontSize={{ base: "10px", md: "11px" }}>Sec</Text>
+                            </VStack>
+                          </CircularProgressLabel>
+                        </CircularProgress>
+                      )}
                     </Box>
                   </HStack>
                 </VStack>

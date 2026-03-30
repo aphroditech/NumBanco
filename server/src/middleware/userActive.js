@@ -52,7 +52,38 @@ export const userActive = async () => {
         const jokerCrashUsers = countByActive(18) + 90;
         const cardGameUsers = countByActive(19) + 80;
         const climbUsers = countByActive(20) + 70;
-        const totalActiveUsers = plinkoUsers + tierAUsers + tierBUsers + tierCUsers + rubicUsers + pumpingUsers + gravityUsers + doubleUsers + doveUsers + cloudSpreadUsers + cocoUsers + rocketUsers + jackalUsers + mineUsers + fishingUsers + alphaTreeUsers + aToZUsers + twistUsers + jokerCrashUsers + cardGameUsers + climbUsers;
+<<<<<<< HEAD
+        const hashDiceUsers = countByActive(21) + 52;
+=======
+        const diamondUsers = countByActive(21) + 58;
+>>>>>>> c0e798b39ea5a55dd50929237c51cb67ece8122e
+        const totalActiveUsers =
+            plinkoUsers +
+            tierAUsers +
+            tierBUsers +
+            tierCUsers +
+            rubicUsers +
+            pumpingUsers +
+            gravityUsers +
+            doubleUsers +
+            doveUsers +
+            cloudSpreadUsers +
+            cocoUsers +
+            rocketUsers +
+            jackalUsers +
+            mineUsers +
+            fishingUsers +
+            alphaTreeUsers +
+            aToZUsers +
+            twistUsers +
+            jokerCrashUsers +
+            cardGameUsers +
+            climbUsers +
+<<<<<<< HEAD
+            hashDiceUsers;
+=======
+            diamondUsers;
+>>>>>>> c0e798b39ea5a55dd50929237c51cb67ece8122e
         const result = {
             offlineUsers,
             onlineUsers,
@@ -78,6 +109,11 @@ export const userActive = async () => {
             jokerCrashUsers,
             cardGameUsers,
             climbUsers,
+<<<<<<< HEAD
+            hashDiceUsers,
+=======
+            diamondUsers,
+>>>>>>> c0e798b39ea5a55dd50929237c51cb67ece8122e
             totalActiveUsers
         };
 

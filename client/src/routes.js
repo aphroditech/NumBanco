@@ -57,7 +57,6 @@ import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
 import DicePage from "views/Dice/DicePage";
-import HashDicePage from "views/HashDice/HashDicePage";
 import PlinkoPage from "views/Plinko/PlinkoPage";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import KenoPage from "views/Keno/KenoPage";
@@ -75,6 +74,10 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import WheelPage from "views/Wheel/Wheel";
 import ClimbPage from "views/Climb/ClimbPage";
+import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
+import SnakesPage from "views/Snakes/Snakes";
+import Diamond from "views/Diamond/DiamondPage";
+
 
 import {
   DocumentIcon,
@@ -137,20 +140,21 @@ var dashRoutes = [
     component: DicePage,
     layout: "/game",
   },
-  {
-    redirect: true,
-    path: "/hash-dice",
-    name: "HASH DICE",
-    icon: <NumbersIcon style={{ fontSize: "24px", color: "#39ff14" }} />,
-    component: HashDicePage,
-    layout: "/game",
-  },
+  
   {
     redirect: true,
     path: "/keno",
     name: "KENO",
     icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: KenoPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/three-numbers",
+    name: "THREE NUMBERS",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: ThreeNumbersPage,
     layout: "/game",
   },
   {
@@ -163,12 +167,21 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/snakes",
+    name: "SNAKES",
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: SnakesPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/plinko",
     name: "PLINKO",
     icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PlinkoPage,
     layout: "/game",
   },
+
   {
     redirect: true,
     path: "/pumping",
@@ -303,6 +316,14 @@ var dashRoutes = [
     name: "CLIMB",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: ClimbPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/diamond",
+    name: "DIAMOND",
+    icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Diamond,
     layout: "/game",
   },
   {
@@ -442,20 +463,5 @@ var dashRoutes = [
     component: UserAgreement,
     layout: "/auth",
   },
-  // {
-
-  //   redirect: true,
-  //   path: "/auth/404",
-  //   name: "Not Found Page",
-  //   component: NotFound,
-  //   layout: "/auth",
-  // },
-  // {
-  //   redirect: true,
-  //   path: "/twofa",
-  //   name: "Twofa",
-  //   component: TwoFA,
-  //   layout: "/auth",
-  // },
 ];
 export default dashRoutes;

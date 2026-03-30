@@ -65,7 +65,7 @@ function DiceRealViewRow(props) {
   const isWin = win > 0;
   const rowColor = isWin ? "#68d391" : "#f56565";
   const displayName =
-    altas?.length > 12 ? `${altas.slice(0, 10)}…` : altas || "—";
+    altas && altas.length > 7 ? `${altas.slice(0, 7)}...` : altas || "—";
 
   return (
     <Tr
