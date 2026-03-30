@@ -167,19 +167,12 @@ connectDB()
             // doveBot(ablyMiningGames);
             // minesBot(ablyMiningGames);
             // plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
-<<<<<<< HEAD
             hashDiceBot(ablyMiningGames).catch((e) => console.error("[hashDiceBot] start:", e?.message || e));
-=======
->>>>>>> c0e798b39ea5a55dd50929237c51cb67ece8122e
             // startGravityGameLoop(ablyMiningGames);
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);
             // startDoubleGameLoop(ablyMiningGames);
-<<<<<<< HEAD
-
-=======
             // snakeBot(ablyMiningGames);
->>>>>>> c0e798b39ea5a55dd50929237c51cb67ece8122e
         });
 
         /*
