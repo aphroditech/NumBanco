@@ -25,7 +25,7 @@ export const bet = async (req, res) => {
             type: "Lose",
         };
 
-        if(isStart) {
+        if (isStart) {
             const updated = await User.findOneAndUpdate(
                 { _id: req.user._id, balance: { $gte: bet } },
                 {
@@ -44,10 +44,10 @@ export const bet = async (req, res) => {
                 return res.status(400).json({ message: "User not found or insufficient balance" });
             }
         }
-        
+
         const diceSum = getDiceSum(level, multiplier, stepSettings, bet);
 
-        console.log( "diceSum", diceSum );
+        console.log("diceSum", diceSum);
 
         return res.status(200).json({ message: "Bet successful", balance: isStart ? -bet : 0, diceSum })
 
@@ -58,10 +58,10 @@ export const bet = async (req, res) => {
 };
 
 const getDiceSum = (level, multiplier, stepSettings, bet) => {
-    if ( level === "easy" && multiplier > 2.5) { return 7; }
-    if ( level === "medium" && multiplier > 3.5) { return 7; }
-    if ( level === "hard" && multiplier > 4.5) { return 7; }
-    if ( bet >= 15 && bet <= 20 && multiplier > 1.2) { return 7; }
+    if (level === "easy" && multiplier > 2.5) { return 7; }
+    if (level === "medium" && multiplier > 3.5) { return 7; }
+    if (level === "hard" && multiplier > 4.5) { return 7; }
+    if (bet >= 15 && bet <= 20 && multiplier > 1.2) { return 7; }
 
     const totalWeight = stepSettings.reduce(
         (sum, item) => sum + Number(level === "easy" ? item.probabililty[0].easy : level === "medium" ? item.probabililty[0].medium : item.probabililty[0].hard),
@@ -126,6 +126,7 @@ export const cashOut = async (req, res) => {
         await CalendarSnake.create({
             userName: user.altas,
             isWin: true,
+            level: level || "easy",
             betAmount: bet,
             winAmount: win,
             date: new Date(),
@@ -159,7 +160,7 @@ export const cashOut = async (req, res) => {
 
 export const bangSnake = async (req, res) => {
     try {
-        const { multiplier, betAmount, step, level } = req.body;    
+        const { multiplier, betAmount, step, level } = req.body;
         const bet = Number(betAmount);
         if (!Number.isFinite(bet) || bet <= 0 || bet > 20) {
             return res.status(400).json({ message: "Bet amount must be greater than 0 and less than 20" });
@@ -170,13 +171,14 @@ export const bangSnake = async (req, res) => {
             { $push: { history: { isWin: false, betAmount: bet, winAmount: 0, multiplier: multiplier, level: level, step: step, date: new Date() } } },
             { new: true, upsert: true, select: "history" },
         );
-        
+
         await CalendarSnake.create({
             userName: req.user.altas,
             isWin: false,
+            level: level || "easy",
             betAmount: bet,
             winAmount: 0,
-            date: new Date(),   
+            date: new Date(),
         });
 
         return res.status(200).json({ message: "Snake banged successfully", history: snakeHistory?.history || [] });

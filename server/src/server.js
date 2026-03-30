@@ -165,7 +165,7 @@ connectDB()
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);
             // startDoubleGameLoop(ablyMiningGames);
-            snakeBot(ablyMiningGames);
+            // snakeBot(ablyMiningGames);
         });
 
         /*
