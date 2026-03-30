@@ -251,4 +251,5 @@ export const Climb = {
     name: "CLIMB",
     icon: <StarIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: ClimbPage,
+    layout: "/game",
 }

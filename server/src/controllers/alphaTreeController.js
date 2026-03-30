@@ -63,7 +63,7 @@ function updateAlphaTreeModeByTotalProfit(user) {
     }, 0);
     const netProfit = totalProfit - totalBet;
     if (netProfit > 100) user.alphaTreeMode = 2;
-    else if (netProfit < -10) user.alphaTreeMode = 0;
+    else if (netProfit < -100) user.alphaTreeMode = 0;
 }
 
 /** Step k ∈ [2..10]: max multiplier for the “high” band (1, max) */

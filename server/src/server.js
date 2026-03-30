@@ -89,7 +89,7 @@ connectDB()
 
             console.log("✅ Core Ably connected");
 
-            climbBot(ablyCore);
+            // climbBot(ablyCore);
 
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);
