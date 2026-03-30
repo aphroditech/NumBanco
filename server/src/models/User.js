@@ -945,6 +945,10 @@ const userSchema = new mongoose.Schema({
         keys: { type: [String], default: [] },
         tier: { type: String, default: "" },
         rateIndex: { type: Number, default: 0 },
+        mode: {
+          type: String,
+          default: "normal",
+        },
         createAt: {
           type: Date,
           default: Date.now,
@@ -952,6 +956,26 @@ const userSchema = new mongoose.Schema({
       },
     ],
     default: [],
+  },
+
+  /** Diamond lifetime aggregates used for automatic mode level. */
+  diamondTotalBetAmount: {
+    type: Number,
+    default: 0,
+  },
+  diamondTotalProfit: {
+    type: Number,
+    default: 0,
+  },
+  /** revenue = diamondTotalProfit - diamondTotalBetAmount */
+  diamondRevenue: {
+    type: Number,
+    default: 0,
+  },
+  /** 0: easy, 1: normal, 2: hard */
+  diamondMode: {
+    type: Number,
+    default: 1,
   },
 
   updownHistory: {
