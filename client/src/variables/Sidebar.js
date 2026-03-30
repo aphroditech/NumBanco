@@ -54,6 +54,7 @@ import ClimbPage from "views/Climb/ClimbPage";
 import StarIcon from '@mui/icons-material/Star';
 import SnakePage from "views/Snakes/Snakes";
 import SnakeIcon from '@mui/icons-material/Whatshot';
+import DiamondPage from "views/Diamond/DiamondPage";
 
 export const TierA = {
     path: "/tierA",
@@ -281,5 +282,13 @@ export const Climb = {
     name: "CLIMB",
     icon: <StarIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: ClimbPage,
+    layout: "/game",
+}
+
+export const Diamond = {
+    path: "/diamond",
+    name: "DIAMOND",
+    icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: DiamondPage,
     layout: "/game",
 }

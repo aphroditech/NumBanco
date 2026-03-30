@@ -32,6 +32,8 @@ import { initializeClimbSettings } from './initClimbSettings.js';
 import { initWheelSettings } from './initWheelSettings.js';
 import { initializePlinkoRateSettings } from './initPlinkoRateSettings.js';
 import { initializePlinkoBotSettings } from './initPlinkoBotSettings.js';
+import { initializeDiamondSettings } from './initDiamondSettings.js';
+import { initializeDiamondViews } from './initDiamondViews.js';
 import { initializeSnakesSettings } from './snakeSettings.js';
 
 
@@ -61,6 +63,8 @@ export const initializeDatabase = async () => {
     await initializePlinkoRateSettings();
     await initializePlinkoBotSettings();
     await initializeClimbSettings();
+    await initializeDiamondSettings();
+    await initializeDiamondViews();
     await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();

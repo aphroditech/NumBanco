@@ -75,7 +75,7 @@ import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import WheelPage from "views/Wheel/Wheel";
 import ClimbPage from "views/Climb/ClimbPage";
 import SnakesPage from "views/Snakes/Snakes";
-
+import Diamond from "views/Diamond/DiamondPage";
 
 
 import {
@@ -307,6 +307,14 @@ var dashRoutes = [
     name: "CLIMB",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: ClimbPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/diamond",
+    name: "DIAMOND",
+    icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Diamond,
     layout: "/game",
   },
   {

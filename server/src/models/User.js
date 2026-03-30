@@ -935,6 +935,25 @@ const userSchema = new mongoose.Schema({
     default: [],
   },
 
+  diamondHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        keys: { type: [String], default: [] },
+        tier: { type: String, default: "" },
+        rateIndex: { type: Number, default: 0 },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
   updownHistory: {
     type: [
       {

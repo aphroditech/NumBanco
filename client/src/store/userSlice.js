@@ -21,6 +21,7 @@ const initialState = {
         aToZUsers: 0,
         twistUsers: 0,
         climbUsers: 0,
+        diamondUsers: 0,
         jokerCrashUsers: 0,
         cardGameUsers: 0,
         totalActiveUsers: 0
