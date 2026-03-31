@@ -30,6 +30,7 @@ import GradientBorder from "components/GradientBorder/GradientBorder";
 import Card from "components/Card/Card.js";
 import CardBody from "components/Card/CardBody.js";
 import CardHeader from "components/Card/CardHeader.js";
+import BangBurstEffect from "components/Effects/BangBurstEffect";
 import WinFireworksEffect from "components/Effects/WinFireworksEffect";
 import TarotBetHistory from "./TarotItem/TarotBetHistory";
 import TarotRealView from "./TarotItem/TarotRealView";
@@ -38,10 +39,10 @@ import { setNotification } from "utils/localStorage";
 import { onlineUser, offlineUser } from "action/BetActions";
 
 const publicUrl = process.env.PUBLIC_URL || "";
-const backcard = `${publicUrl}/tarot/back_card.jpg`;
-const frontendBase = `${publicUrl}/tarot/base.jpg`;
-const frontendLeft = `${publicUrl}/tarot/left.jpg`;
-const frontendRight = `${publicUrl}/tarot/right.jpg`;
+const backcard = `${publicUrl}/tarot/back_card.png`;
+const frontendBase = `${publicUrl}/tarot/base.png`;
+const frontendLeft = `${publicUrl}/tarot/left.png`;
+const frontendRight = `${publicUrl}/tarot/right.png`;
 
 const MIN_AMOUNT = 0.1;
 const MAX_AMOUNT = 20;
@@ -55,6 +56,7 @@ const MULT_COUNTUP_MS = 620;
 const CARD_REVEAL_MS = 620;
 const CARD_REVEAL_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 const TAROT_WIN_FIREWORKS_MS = 2200;
+const TAROT_BANG_EFFECT_MS = 950;
 
 function easeOutCubic(t) {
     return 1 - (1 - t) ** 3;
@@ -112,9 +114,9 @@ function TarotSlotCard({ face, isCenter, backSrc, frontSrc }) {
             aria-label={showFront ? `Tarot card ${formatMult(face.value)}×` : "Tarot card back"}
             borderRadius="14px"
             overflow="hidden"
-            border={showFront ? "1px solid rgba(255,255,255,0.14)" : "none"}
-            boxShadow={showFront ? "0 12px 36px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.35)" : "0 12px 36px rgba(0,0,0,0.45)"}
-            bg="#1a1d22"
+            border="none"
+            boxShadow="none"
+            bg="transparent"
             sx={{ aspectRatio: "5 / 7" }}
             position="relative"
         >
@@ -134,7 +136,6 @@ function TarotSlotCard({ face, isCenter, backSrc, frontSrc }) {
                     h="100%"
                     objectFit="contain"
                     objectPosition="center"
-                    bg="#0f1318"
                     display="block"
                     draggable={false}
                 />
@@ -155,7 +156,6 @@ function TarotSlotCard({ face, isCenter, backSrc, frontSrc }) {
                     h="100%"
                     objectFit="contain"
                     objectPosition="center"
-                    bg="#0f1318"
                     display="block"
                     draggable={false}
                 />
@@ -169,7 +169,7 @@ function TarotSlotCard({ face, isCenter, backSrc, frontSrc }) {
                         pt="38%"
                         pb={{ base: 2, md: 2.5 }}
                         px={{ base: 1.5, md: 2 }}
-                        bg="linear-gradient(180deg, transparent 0%, rgba(8,10,14,0.88) 55%, rgba(6,8,12,0.96) 100%)"
+                            bg="linear-gradient(180deg, transparent 0%, rgba(8,10,14,0.38) 65%, rgba(6,8,12,0.52) 100%)"
                         pointerEvents="none"
                     >
                         <Text
@@ -215,6 +215,7 @@ export default function TarotPage() {
     /** Box display value; animates 0 → base → base×left → product while revealing. */
     const [shownMult, setShownMult] = useState(0);
     const [showWinFireworks, setShowWinFireworks] = useState(false);
+    const [showBangEffect, setShowBangEffect] = useState(false);
     const [winFireworksAmount, setWinFireworksAmount] = useState("0.00");
     const [winFireworksSubtitle, setWinFireworksSubtitle] = useState("");
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -223,6 +224,7 @@ export default function TarotPage() {
     const revealTimeoutsRef = useRef([]);
     const multCountupCancelRef = useRef(null);
     const winFireworksTimerRef = useRef(null);
+    const bangEffectTimerRef = useRef(null);
     const betAmountInputRef = useRef(null);
 
     const amountNum = Number(amount || 0);
@@ -258,7 +260,12 @@ export default function TarotPage() {
             clearTimeout(winFireworksTimerRef.current);
             winFireworksTimerRef.current = null;
         }
+        if (bangEffectTimerRef.current) {
+            clearTimeout(bangEffectTimerRef.current);
+            bangEffectTimerRef.current = null;
+        }
         setShowWinFireworks(false);
+        setShowBangEffect(false);
     };
 
     useEffect(() => () => clearRevealTimers(), []);
@@ -372,21 +379,27 @@ export default function TarotPage() {
                 setTotalMult(product);
                 setShownMult(product);
                 setPlayLoading(false);
-                setWinFireworksAmount(win.toFixed(2));
-                setWinFireworksSubtitle(`Total ${formatTotalMultDisplay(product)}×`);
-                setShowWinFireworks(true);
-                if (winFireworksTimerRef.current) clearTimeout(winFireworksTimerRef.current);
-                winFireworksTimerRef.current = window.setTimeout(() => {
-                    setShowWinFireworks(false);
-                    winFireworksTimerRef.current = null;
-                }, TAROT_WIN_FIREWORKS_MS);
                 /** Mirror server delayed credit (pumping-style): stake already deducted in Redux from play response. */
                 dispatch({ type: "UPDATE_USER_BALANCE", payload: win });
                 if (product <= 0) {
+                    setShowBangEffect(true);
+                    if (bangEffectTimerRef.current) clearTimeout(bangEffectTimerRef.current);
+                    bangEffectTimerRef.current = window.setTimeout(() => {
+                        setShowBangEffect(false);
+                        bangEffectTimerRef.current = null;
+                    }, TAROT_BANG_EFFECT_MS);
                     const lostMsg = "You have lost.";
                     toast.info(lostMsg);
                     setNotification(lostMsg, dispatch, "info");
                 } else {
+                    setWinFireworksAmount(win.toFixed(2));
+                    setWinFireworksSubtitle(`Total ${formatTotalMultDisplay(product)}×`);
+                    setShowWinFireworks(true);
+                    if (winFireworksTimerRef.current) clearTimeout(winFireworksTimerRef.current);
+                    winFireworksTimerRef.current = window.setTimeout(() => {
+                        setShowWinFireworks(false);
+                        winFireworksTimerRef.current = null;
+                    }, TAROT_WIN_FIREWORKS_MS);
                     const msg = `You have won $${win.toFixed(2)} in Tarot Game.`;
                     toast.success(msg);
                     setNotification(msg, dispatch, "success");
@@ -585,7 +598,7 @@ export default function TarotPage() {
                         display="flex"
                         flexDirection="column"
                         minH={TAROT_MAIN_CARD_MIN_H}
-                        h={{ base: "auto", "1550px": "100%" }}
+                        h={TAROT_MAIN_CARD_MIN_H}
                         w="100%"
                         minW={0}
                     >
@@ -597,7 +610,7 @@ export default function TarotPage() {
                             pb={{ base: "16px", md: "20px" }}
                             px={{ base: "14px", md: "20px" }}
                             minH={TAROT_MAIN_CARD_MIN_H}
-                            h="100%"
+                            h={TAROT_MAIN_CARD_MIN_H}
                             minW={0}
                             overflow="hidden"
                             alignItems="stretch"
@@ -611,7 +624,7 @@ export default function TarotPage() {
                                     justify="flex-start"
                                     pb={2}
                                     mb={2}
-                                    borderBottom="1px solid rgba(0, 212, 255, 0.2)"
+                                    // borderBottom="1px solid rgba(0, 212, 255, 0.2)"
                                     gap={2}
                                 >
                                     <HStack spacing={2} color="#00D4FF">
@@ -624,14 +637,15 @@ export default function TarotPage() {
 
                                 <VStack flex="1" align="stretch" spacing={0} minH={0} w="100%">
                                     <Flex
-                                        flex="1"
+                                        flex="0 0 auto"
                                         align="flex-start"
                                         justify="center"
-                                        minH={{ base: "240px", md: "330px" }}
+                                        h={{ base: "240px", md: "330px" }}
                                         px={{ base: 3, md: 8 }}
                                         pt={{ base: 2, md: 3 }}
                                         pb={{ base: 2, md: 3 }}
                                         gap={{ base: 3, md: 5 }}
+                                        overflow="hidden"
                                     >
                                         {[0, 1, 2].map((slot) => {
                                             const isCenter = slot === 1;
@@ -645,9 +659,6 @@ export default function TarotPage() {
                                                     minW={0}
                                                     maxW={{ base: "150px", sm: "180px", md: "220px" }}
                                                     alignSelf="flex-start"
-                                                    transform={isCenter ? "scale(1.07)" : undefined}
-                                                    transformOrigin="top center"
-                                                    transition="transform 0.2s ease"
                                                 >
                                                     <TarotSlotCard
                                                         face={face}
@@ -660,7 +671,7 @@ export default function TarotPage() {
                                         })}
                                     </Flex>
 
-                                    <Flex justify="center" w="100%" px={{ base: 3, md: 8 }} pt={2} pb={{ base: 3, md: 4 }}>
+                                    <Flex justify="center" w="100%" px={{ base: 3, md: 8 }} pt={2} pb={{ base: 3, md: 4 }} mt="auto">
                                         <Box
                                             w="100%"
                                             maxW="400px"
@@ -721,8 +732,10 @@ export default function TarotPage() {
                 isVisible={showWinFireworks}
                 totalEarn={winFireworksAmount}
                 subtitle={winFireworksSubtitle}
+                subtitleSyncWithEarn
                 duration={TAROT_WIN_FIREWORKS_MS}
             />
+            <BangBurstEffect isVisible={showBangEffect} duration={TAROT_BANG_EFFECT_MS} />
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
                 <ModalOverlay bg="blackAlpha.700" />
                 <ModalContent bg="#1d2228" border="1px solid rgba(0,212,255,0.2)">
