@@ -33,6 +33,7 @@ import {
     ModalCloseButton,
 } from '@chakra-ui/react';
 import Card from 'components/Card/Card.js';
+import CardHeader from 'components/Card/CardHeader';
 import GradientBorder from 'components/GradientBorder/GradientBorder';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -45,6 +46,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { kenoBet, getKenoControls } from 'action/KenoActions';
 import WinFireworksEffect from 'components/Effects/WinFireworksEffect';
 import BangBurstEffect from 'components/Effects/BangBurstEffect';
+import AppsIcon from '@mui/icons-material/Apps';
 
 const MIN_AMOUNT = 0.1;
 /** Delay between each drawn number appearing on the grid */
@@ -124,8 +126,8 @@ const winGlow = keyframes`
     }
 `;
 
-/** Place file at `public/keno/diamond.gif` */
-const KENO_WIN_GIF = `${process.env.PUBLIC_URL || ''}/twist/diamond.gif`;
+/** Place file at `public/CryptoCrash/diamond.gif` */
+const KENO_WIN_GIF = `${process.env.PUBLIC_URL || ''}/CryptoCrash/diamond.gif`;
 
 const purpleTile = 'linear-gradient(180deg, #a855f7 0%, #7c3aed 45%, #6d28d9 100%)';
 const purpleTileHover = 'linear-gradient(180deg, #c084fc 0%, #9333ea 45%, #7c3aed 100%)';
@@ -504,7 +506,7 @@ export default function KenoPage() {
         <Box px={{ base: '16px', md: '24px' }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
             <Grid
                 templateAreas={{
-                    sm: '"panel" "game" "empty"',
+                    sm: '"game" "panel" "empty"',
                     md: '"game game" "panel empty"',
                     '1550px': '"panel game empty"'
                 }}
@@ -523,26 +525,35 @@ export default function KenoPage() {
             >
                 <GridItem area="panel" minW={"350px"}>
                     <Card pt="30px" pb="22px" px="22px" overflow="visible" minH="450px" position="relative">
-                        <Box position="absolute" top="0" right="0" zIndex={2}>
-                            <IconButton
-                                aria-label="Help"
-                                icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
-                                size="md"
-                                bg="transparent"
-                                color="#00d4ff"
-                                borderRadius="50%"
-                                _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                onClick={() => setIsHelpModalOpen(true)}
-                            />
-                        </Box>
-                        <VStack spacing="24px" w="100%">
-                            <Flex align="center" gap="8px">
-                                <CasinoIcon style={{ fontSize: '30px', color: '#00D4FF' }} />
-                                <Text color="#fff" fontWeight="bold" fontSize="lg" lineHeight="1">
+                        <CardHeader mb="20px">
+                            <Flex direction="column" alignSelf="flex-start">
+                                <Text
+                                    fontSize="lg"
+                                    color="#fff"
+                                    fontWeight="bold"
+                                    mb="6px"
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                >
+                                    <AppsIcon style={{ fontSize: '30px', color: '#00D4FF', marginRight: '8px' }} />
                                     Panel
                                 </Text>
                             </Flex>
-
+                            <Box position="absolute" top="0" right="0" zIndex={2}>
+                                <IconButton
+                                    aria-label="Help"
+                                    icon={<HelpOutlineIcon style={{ fontSize: 24 }} />}
+                                    size="md"
+                                    bg="transparent"
+                                    color="#00d4ff"
+                                    borderRadius="50%"
+                                    _hover={{ bg: 'rgba(255,255,255,0.1)', color: '#00D4FF' }}
+                                    onClick={() => setIsHelpModalOpen(true)}
+                                />
+                            </Box>
+                        </CardHeader>
+                        <VStack spacing="24px" w="100%">
                             <FormControl w="100%" maxW={{ base: '100%', sm: '300px' }}>
                                 <FormLabel color="#fff" fontSize="sm" fontWeight="bold" mb="8px" textAlign="left">
                                     Bet Amount
@@ -1088,7 +1099,7 @@ export default function KenoPage() {
                                                             overflow="hidden"
                                                             mb="2px"
                                                             flexShrink={0}
-                                                            boxShadow="0 0 10px rgba(139, 92, 246, 0.45)"
+                                                            // boxShadow="0 0 10px rgba(139, 92, 246, 0.45)"
                                                         >
                                                             <Box
                                                                 as="img"

@@ -24,6 +24,7 @@ import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSp
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 import { minesBot } from "./services/mines/minesBot.js";
 import { plinkoBot } from "./services/plinko/plinkoBot.service.js";
+import { hashDiceBot } from "./services/hashDice/hashDiceBot.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import { miningBot } from "./services/mining/miningBotService.js";
@@ -40,9 +41,13 @@ import { twistBot } from "./services/twist/twistBot.service.js";
 import { kenoBot } from "./services/keno/kenoBot.service.js";
 import { wheelBot } from "./services/wheel/wheelBot.service.js";
 import { climbBot } from "./services/climb/climbBot.service.js";
+import { threeNumbersBot } from "./services/threeNumbers/threeNumbersBot.service.js";
 import { diamondBot } from "./services/diamond/diamondBot.service.js";
+import { tarotBot } from "./services/tarot/tarotBot.service.js";
 import { snakeBot } from "./services/Snakes/SnakeBot.Service.js";
 import { rangeBot } from "./services/range/rangeBot.service.js";
+import { cryptoCrashBot } from "./services/cryptoCrash/cryptoCrashBot.service.js";
+
 
 dotenv.config();
 
@@ -59,6 +64,7 @@ app.locals.ablyCore = ablyCore;
 app.locals.ably = ablyCore;
 /** Same Ably app/key: dice/table bots publish here; optional alias if a route must match that connection. */
 app.locals.ablyDiceGames = ablyDiceGames;
+app.locals.ablyMiningGames = ablyMiningGames;
 
 connectDB()
     .then(async () => {
@@ -96,6 +102,8 @@ connectDB()
             // climbBot(ablyCore);
             // diamondBot(ablyCore);
             // rangeBot(ablyCore);
+            cryptoCrashBot(ablyCore);
+            // tarotBot(ablyCore);
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);
             // startBetEngine(ablyCore, 1);
@@ -107,7 +115,7 @@ connectDB()
             console.log("💰 Finance Ably connected");
 
             // confirmDepositEngine(ablyFinance);
-            tronEngine(ablyFinance);
+            // tronEngine(ablyFinance);
             // startPartnerDepositCron(ablyFinance);
             // startWithdrawApprovalCron(ablyFinance);
 
@@ -145,6 +153,7 @@ connectDB()
             // aToZBot(ablyDiceGames);
             // twistBot(ablyDiceGames);
             // kenoBot(ablyDiceGames);
+            threeNumbersBot(ablyDiceGames);
         });
 
         /*
@@ -164,6 +173,7 @@ connectDB()
             // doveBot(ablyMiningGames);
             // minesBot(ablyMiningGames);
             // plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
+            hashDiceBot(ablyMiningGames).catch((e) => console.error("[hashDiceBot] start:", e?.message || e));
             // startGravityGameLoop(ablyMiningGames);
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);

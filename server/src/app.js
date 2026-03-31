@@ -43,9 +43,14 @@ import kenoRoutes from "./routes/kenoRoutes.js";
 import wheelRoutes from "./routes/wheelRoutes.js";
 import climbRoutes from "./routes/climbRoutes.js";
 import plinkoRoutes from "./routes/plinkoRoutes.js";
+import threeNumbersRoutes from "./routes/threeNumbersRoutes.js";
 import diamondRoutes from "./routes/diamondRoutes.js";
+import tarotRoutes from "./routes/tarotRoutes.js";
 import snakesRoutes from "./routes/snakesRoutes.js";
 import rangeRoutes from "./routes/rangeRoutes.js";
+import cryptoCrashRoutes from "./routes/cryptoCrashRoutes.js";
+import hashDiceRoutes from "./routes/hashDiceRoutes.js";
+
 
 dotenv.config();
 
@@ -110,12 +115,17 @@ app.use("/api/alpha-tree", alphaTreeRoutes);
 app.use("/api/twist", twistRoutes);
 app.use("/api/coin", coinRoutes);
 app.use("/api/plinko", plinkoRoutes);
+app.use("/api/hash-dice", hashDiceRoutes);
 app.use("/api/keno", kenoRoutes);
 app.use("/api/wheel", wheelRoutes);
 app.use("/api/climb", climbRoutes);
+app.use("/api/threeNumbers", threeNumbersRoutes);
 app.use("/api/diamond", diamondRoutes);
+app.use("/api/tarot", tarotRoutes);
 app.use("/api/snakes", snakesRoutes);
 app.use("/api/range", rangeRoutes);
+app.use("/api/cryptoCrash", cryptoCrashRoutes);
+
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },

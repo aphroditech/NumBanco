@@ -1,7 +1,7 @@
 import axiosInstance from "../api/axiosConfig";
 import { setUserRedux } from ".";
 
-/** Public paytable: `{ tiers: [{ index, rate, chance }] }` — chances normalized server-side. */
+/** `{ modes, revenueAutoMode: { normalBandMin, normalBandMax } }` */
 export const getDiamondSettings = async () => {
     try {
         const res = await axiosInstance.get("/diamond/settings");

@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import User from "../../models/User.js";
 import DiamondView from "../../models/diamond/DiamondView.js";
-import { sampleDiamondPayoutFromDb } from "./diamondSettings.service.js";
+import { sampleDiamondPayoutFromDb, DIAMOND_MODE_KEYS } from "./diamondSettings.service.js";
 import { publishDiamondViewFeed, trimDiamondViewsToMax } from "./diamondViewFeed.js";
 
 function round2(n) {
@@ -29,7 +29,8 @@ export const diamondBot = async (ably) => {
                     if (!randomBot?.altas) return;
 
                     const betAmount = round2(MIN_BET + Math.random() * (MAX_BET - MIN_BET));
-                    const { mult } = await sampleDiamondPayoutFromDb();
+                    const botMode = DIAMOND_MODE_KEYS[Math.floor(Math.random() * DIAMOND_MODE_KEYS.length)];
+                    const { mult } = await sampleDiamondPayoutFromDb(botMode);
                     const win = round2(betAmount * mult);
 
                     await DiamondView.create({

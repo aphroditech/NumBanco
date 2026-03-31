@@ -76,9 +76,12 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import WheelPage from "views/Wheel/Wheel";
 import ClimbPage from "views/Climb/ClimbPage";
+import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
 import SnakesPage from "views/Snakes/Snakes";
 import Diamond from "views/Diamond/DiamondPage";
-
+import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
+import TarotPage from "views/Tarot/TarotPage";
+import HashDicePage from "views/HashDice/HashDicePage";
 
 import {
   DocumentIcon,
@@ -152,6 +155,14 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/three-numbers",
+    name: "THREE NUMBERS",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: ThreeNumbersPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/rubic",
     name: "RUBIC",
     icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -216,6 +227,13 @@ var dashRoutes = [
     layout: "/game",
   },
   {
+    path: "/crypto-crash",
+    name: "CRYPTO CRASH",
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CryptoCrashPage,
+    layout: "/game",
+  },
+  {
     redirect: true,
     path: "/coin",
     name: "COIN",
@@ -245,6 +263,14 @@ var dashRoutes = [
     name: "CLOUD SPREAD",
     icon: <CloudQueueIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: CloudSpreadPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/dove",
+    name: "LUCKY HOP",
+    icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Dove,
     layout: "/game",
   },
   {
@@ -325,6 +351,21 @@ var dashRoutes = [
     name: "DIAMOND",
     icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Diamond,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/tarot",
+    name: "TAROT",
+    component: TarotPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/hash-dice",
+    name: "HASH DICE",
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: HashDicePage,
     layout: "/game",
   },
   {
@@ -464,20 +505,5 @@ var dashRoutes = [
     component: UserAgreement,
     layout: "/auth",
   },
-  // {
-
-  //   redirect: true,
-  //   path: "/auth/404",
-  //   name: "Not Found Page",
-  //   component: NotFound,
-  //   layout: "/auth",
-  // },
-  // {
-  //   redirect: true,
-  //   path: "/twofa",
-  //   name: "Twofa",
-  //   component: TwoFA,
-  //   layout: "/auth",
-  // },
 ];
 export default dashRoutes;

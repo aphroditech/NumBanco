@@ -21,10 +21,10 @@ import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
-import PlinkoPage from "views/Plinko/PlinkoPage";
 import AToZPage from "views/AToZ/AToZ";
 import CardGamePage from "views/CardGame/CardGamePage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
+import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
 // Load Icons
 import { GiChicken, GiFishingHook } from "react-icons/gi";
 import CasinoIcon from '@mui/icons-material/Casino';
@@ -33,6 +33,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
+import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin';
 import StyleIcon from '@mui/icons-material/Style';
 import AppsIcon from '@mui/icons-material/Apps';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
@@ -47,16 +48,22 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import DicePage from "views/Dice/DicePage";
+import HashDicePage from "views/HashDice/HashDicePage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
 import KenoPage from "views/Keno/KenoPage";
 import WheelPage from "views/Wheel/Wheel";
 import AttractionsIcon from '@mui/icons-material/Attractions';
 import ClimbPage from "views/Climb/ClimbPage";
 import StarIcon from '@mui/icons-material/Star';
+import Looks3Icon from '@mui/icons-material/Looks3';
 import SnakePage from "views/Snakes/Snakes";
 import SnakeIcon from '@mui/icons-material/Whatshot';
 import DiamondPage from "views/Diamond/DiamondPage";
 import RangePage from "views/Range/RangePage";
 import HdrStrongIcon from '@mui/icons-material/HdrStrong';
+import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
+import CropPortraitIcon from '@mui/icons-material/CropPortrait';
+import TarotPage from "views/Tarot/TarotPage";
 
 export const TierA = {
     path: "/tierA",
@@ -110,11 +117,27 @@ export const Dice = {
     layout: "/game",
 }
 
+export const HashDice = {
+    path: "/hash-dice",
+    name: "HASH DICE",
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: HashDicePage,
+    layout: "/game",
+}
+
 export const Keno = {
     path: "/keno",
     name: "KENO",
     icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: KenoPage,
+    layout: "/game",
+}
+
+export const ThreeNumbers = {
+    path: "/three-numbers",
+    name: "THREE NUMBERS",
+    icon: <Looks3Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: ThreeNumbersPage,
     layout: "/game",
 }
 
@@ -172,6 +195,13 @@ export const JokerCrash = {
     name: "JOKER CRASH",
     icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: JokerCrashPage,
+    layout: "/game",
+}
+export const CryptoCrash = {
+    path: "/crypto-crash",
+    name: "CRYPTO CRASH",
+    icon: <CurrencyBitcoinIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CryptoCrashPage,
     layout: "/game",
 }
 
@@ -300,5 +330,13 @@ export const Diamond = {
     name: "DIAMOND",
     icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DiamondPage,
+    layout: "/game",
+}
+
+export const Tarot = {
+    path: "/tarot",
+    name: "TAROT",
+    icon: <CropPortraitIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TarotPage,
     layout: "/game",
 }

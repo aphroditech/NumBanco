@@ -7,7 +7,7 @@ import DoubleBotSettings, { DOUBLE_BOT_DEFAULTS } from "../../models/double/Doub
 
 const BETTING_MS = 10000;
 const ROLLING_MS = 2000;
-/** Brief pause after spin before next round (client returns reel to idle when betting starts). */
+/** 1s result beat after the reel; then the next round opens (match `DoublePage.js`). */
 const RESULT_MS = 1000;
 const ROUND_MS = BETTING_MS + ROLLING_MS + RESULT_MS;
 
@@ -384,12 +384,11 @@ async function createRound() {
     users: [],
   });
 
-  try {
-    // Trim DoubleRound collection to the configured retention window.
-    await enforceDoubleRoundRetention();
-  } catch (err) {
+  // Asynchronously enforce retention to avoid blocking new round creation.
+  // This can run in the background.
+  enforceDoubleRoundRetention().catch((err) => {
     console.warn("[double] retention cleanup failed:", err?.message || err);
-  }
+  });
 
   liveUsers = [];
   settled = false;
@@ -741,22 +740,57 @@ export async function startDoubleGameLoop(ably) {
     lastDoubleBotSettingsFetch = Date.now();
   }
 
+  /** Close the given round (if still current) and start the next; shared by interval fallback + scheduled timeout. */
+  let closeDoubleRoundAndAdvance;
+  /** Serialize rollovers: timeout + interval can fire together and would otherwise double-insert roundId. */
+  let doubleAdvanceMutex = Promise.resolve();
+
   const scheduleRoundTimers = (roundForTimers) => {
     if (!roundForTimers?.startAt) return;
     const roundIdForTimers = roundForTimers.roundId;
     const startAtMs = roundForTimers.startAt.getTime();
+    const roundDocIdStr = String(roundForTimers._id);
 
     const delayRolling = Math.max(0, startAtMs + BETTING_MS - Date.now());
     setTimeout(async () => {
       await beginRolling(ably, roundIdForTimers);
     }, delayRolling);
 
+    // Reel end: settle → broadcast result state → wait RESULT_MS → next round (one chain; no orphaned timers).
     const delaySettle = Math.max(0, startAtMs + BETTING_MS + ROLLING_MS - Date.now());
     setTimeout(async () => {
-      if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
-      lastBroadcastPhase = "result";
-      await settleRound(ably);
+      try {
+        if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
+        lastBroadcastPhase = "result";
+        await settleRound(ably);
+        await publish(ably, EVENT_STATE, await getDoubleStateSnapshot());
+        // if (RESULT_MS > 0) {
+        //   await new Promise((r) => setTimeout(r, RESULT_MS));
+        // }
+        await closeDoubleRoundAndAdvance(roundIdForTimers, roundDocIdStr);
+      } catch (e) {
+        console.error("[double] settle/advance error:", e?.message || e);
+      }
     }, delaySettle);
+  };
+
+  closeDoubleRoundAndAdvance = (roundIdForTimers, roundDocIdStr) => {
+    const result = doubleAdvanceMutex.then(async () => {
+      if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
+      if (settlePromise && settlingRoundId === roundIdForTimers) {
+        await settlePromise;
+      }
+      if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
+      if (String(currentRound._id) !== roundDocIdStr) return;
+      await DoubleRound.updateOne({ _id: currentRound._id }, { $set: { phase: "betting" } });
+      currentRound = await createRound();
+      settled = false;
+      scheduleRoundTimers(currentRound);
+      lastBroadcastPhase = "betting";
+      await publish(ably, EVENT_STATE, await getDoubleStateSnapshot());
+    });
+    doubleAdvanceMutex = result.catch(() => {});
+    return result;
   };
 
   scheduleRoundTimers(currentRound);
@@ -845,22 +879,12 @@ export async function startDoubleGameLoop(ably) {
       }
 
       if (elapsedMs >= ROUND_MS) {
-        if (settlePromise && settlingRoundId === roundAtTick.roundId) {
-          await settlePromise;
-        }
-        if (!currentRound || String(currentRound._id) !== String(roundAtTick._id)) {
-          return;
-        }
-        await DoubleRound.updateOne({ _id: currentRound._id }, { $set: { phase: "closed" } });
-        currentRound = await createRound();
-        scheduleRoundTimers(currentRound);
-        lastBroadcastPhase = "betting";
-        await publish(ably, EVENT_STATE, await getDoubleStateSnapshot());
+        await closeDoubleRoundAndAdvance(roundAtTick.roundId, String(roundAtTick._id));
       }
     } catch (err) {
       console.error("[double] loop error:", err);
     } finally {
       loopInFlight = false;
     }
-  }, 2000);
+  }, 500);
 }
