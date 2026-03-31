@@ -55,6 +55,8 @@ import StarIcon from '@mui/icons-material/Star';
 import SnakePage from "views/Snakes/Snakes";
 import SnakeIcon from '@mui/icons-material/Whatshot';
 import DiamondPage from "views/Diamond/DiamondPage";
+import RangePage from "views/Range/RangePage";
+import HdrStrongIcon from '@mui/icons-material/HdrStrong';
 
 export const TierA = {
     path: "/tierA",
@@ -170,6 +172,14 @@ export const JokerCrash = {
     name: "JOKER CRASH",
     icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: JokerCrashPage,
+    layout: "/game",
+}
+
+export const Range = {
+    path: "/range",
+    name: "RANGE",
+    icon: <HdrStrongIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RangePage,
     layout: "/game",
 }
 

@@ -42,6 +42,7 @@ import wheel from "assets/img/Games/wheel.jpg"
 import plinko from "assets/img/Games/plinko.jpg"
 import diamond from "assets/img/Games/diamond.jpg"
 import snakes from "assets/img/Games/snake.jpg"
+import range from "assets/img/Games/range.jpg"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -74,6 +75,7 @@ const DASHBOARD_GAMES = [
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
     { img: coinImage, name: "Coin", path: "/game/coin", reduxKey: "coinUsers", tickMs: 3600 },
     { img: keno, name: "Keno", path: "/game/keno", reduxKey: "kenoUsers", tickMs: 3600 },
+    { img: range, name: "Range", path: "/game/range", reduxKey: "rangeUsers", tickMs: 3400 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {

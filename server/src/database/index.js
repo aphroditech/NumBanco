@@ -35,6 +35,7 @@ import { initializePlinkoBotSettings } from './initPlinkoBotSettings.js';
 import { initializeDiamondSettings } from './initDiamondSettings.js';
 import { initializeDiamondViews } from './initDiamondViews.js';
 import { initializeSnakesSettings } from './snakeSettings.js';
+import { initRangeSettings } from './initRangeSettings.js';
 
 
 export const initializeDatabase = async () => {
@@ -78,5 +79,6 @@ export const initializeDatabase = async () => {
     await initializeKenoLimits();
     await initWheelSettings();
     await initializeSnakesSettings();
+    await initRangeSettings();
     console.log('✅ Database initialization complete');
 };

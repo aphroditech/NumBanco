@@ -60,6 +60,8 @@ import DicePage from "views/Dice/DicePage";
 import PlinkoPage from "views/Plinko/PlinkoPage";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import KenoPage from "views/Keno/KenoPage";
+import RangePage from "views/Range/RangePage";
+import HdrStrongIcon from '@mui/icons-material/HdrStrong';
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -139,7 +141,7 @@ var dashRoutes = [
     component: DicePage,
     layout: "/game",
   },
-  
+
   {
     redirect: true,
     path: "/keno",
@@ -203,6 +205,14 @@ var dashRoutes = [
     name: "JOKER CRASH",
     icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: JokerCrashPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/range",
+    name: "RANGE",
+    icon: <HdrStrongIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RangePage,
     layout: "/game",
   },
   {

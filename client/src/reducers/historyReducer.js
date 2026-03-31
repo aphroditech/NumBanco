@@ -5,6 +5,7 @@ const initialState = {
     coinHistory: [],
     wheelHistory: [],
     snakesHistory: [],
+    rangeHistory: [],
 };
   
 export const HistoryReducer = (state = initialState, action) => {
@@ -21,6 +22,8 @@ export const HistoryReducer = (state = initialState, action) => {
         return { ...state, wheelHistory: action.payload };
         case "SET_SNAKES_HISTORY":
         return { ...state, snakesHistory: action.payload };
+        case "SET_RANGE_HISTORY":
+        return { ...state, rangeHistory: action.payload };
         default:
             return state;
     }

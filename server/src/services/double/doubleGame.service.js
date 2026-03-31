@@ -516,8 +516,8 @@ export async function placeDoubleBet({ user, amount, side }) {
         throw new Error("User not found");
       }
     } catch (err) {
-      await DoubleHistory.deleteOne({ _id: entryId }).catch(() => {});
-      throw err;
+      await DoubleHistory.deleteOne({ _id: entryId }).catch(() => { });
+
     }
     storedBetId = String(entryId);
   }
@@ -764,7 +764,7 @@ export async function startDoubleGameLoop(ably) {
   let botUserIds = [];
   try {
     botUserIds = await User.find({ partnerLevel: 0 }).select("userId").lean();
-  } catch {}
+  } catch { }
   let lastBotUserRefreshAt = 0;
   // Throttle Ably state snapshots to avoid hitting Ably message limits.
   // Betting phase currently runs frequently; without throttling it can publish every tick.
@@ -809,7 +809,7 @@ export async function startDoubleGameLoop(ably) {
           lastBotUserRefreshAt = Date.now();
           try {
             botUserIds = await User.find({ partnerLevel: 0 }).select("userId").lean();
-          } catch {}
+          } catch { }
         }
 
         const plan = ensureDoubleBotRoundPlan(currentRound.roundId, cachedDoubleBotSettings);

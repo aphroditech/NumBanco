@@ -41,7 +41,6 @@ export const buyTickets = async (data, dispatch, history) => {
         if (err.status === 401) {
             history.push("/auth/landing");
         }
-        throw err;
     }
 };
 

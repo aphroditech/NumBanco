@@ -442,6 +442,14 @@ const userSchema = new mongoose.Schema({
     min: 0,
     max: 2
   },
+  rangeAmount: {
+    type: Number,
+    default: 0
+  },
+  rangeWinAmount: {
+    type: Number,
+    default: 0
+  },
   doveAmount: {
     type: Number,
     default: 0
@@ -798,8 +806,8 @@ const userSchema = new mongoose.Schema({
           default: 0
         },
         winLength: {
-            type: Number,
-            default: 0
+          type: Number,
+          default: 0
         },
         win: {
           type: Number,

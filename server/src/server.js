@@ -42,6 +42,7 @@ import { wheelBot } from "./services/wheel/wheelBot.service.js";
 import { climbBot } from "./services/climb/climbBot.service.js";
 import { diamondBot } from "./services/diamond/diamondBot.service.js";
 import { snakeBot } from "./services/Snakes/SnakeBot.Service.js";
+import { rangeBot } from "./services/range/rangeBot.service.js";
 
 dotenv.config();
 
@@ -93,8 +94,8 @@ connectDB()
             console.log("✅ Core Ably connected");
 
             // climbBot(ablyCore);
-            diamondBot(ablyCore);
-
+            // diamondBot(ablyCore);
+            // rangeBot(ablyCore);
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);
             // startBetEngine(ablyCore, 1);

@@ -39,6 +39,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { snakesBet, snakesCashOut, bangSnake } from 'action/SnakesActions';
 import { useHistory } from 'react-router-dom';
 import snakeImage from 'assets/img/Snakes/snake.png';
+import keyboardImage from "assets/img/Snakes/keyboard.jpg"
 
 const MotionFlex = motion(Flex);
 const MotionBox = motion(Box);
@@ -152,6 +153,18 @@ const DIFFICULTY = {
     hard: { key: 'hard', label: 'HARD' },
 };
 
+/** Don’t steal keys from inputs, textareas, selects, buttons, or Chakra modals. */
+function snakesHotkeysShouldIgnoreTarget(target) {
+    if (!target || typeof target.closest !== 'function') return false;
+    if (target.isContentEditable) return true;
+    const el = target.nodeType === Node.TEXT_NODE ? target.parentElement : target;
+    if (!el) return true;
+    if (el.closest?.('[role="dialog"]')) return true;
+    const tag = el.tagName?.toUpperCase?.() ?? '';
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(tag)) return true;
+    return false;
+}
+
 function clampBetAmount(raw) {
     const n = Number(raw);
     if (!Number.isFinite(n)) return MIN_AMOUNT;
@@ -210,14 +223,14 @@ function DieFace({ value }) {
         v === 1
             ? ['a']
             : v === 2
-              ? ['a', 'c']
-              : v === 3
-                ? ['a', 'b', 'c']
-                : v === 4
-                  ? ['a', 'c', 'd', 'f']
-                  : v === 5
-                    ? ['a', 'b', 'c', 'd', 'f']
-                    : ['a', 'c', 'd', 'f', 'g', 'i'];
+                ? ['a', 'c']
+                : v === 3
+                    ? ['a', 'b', 'c']
+                    : v === 4
+                        ? ['a', 'c', 'd', 'f']
+                        : v === 5
+                            ? ['a', 'b', 'c', 'd', 'f']
+                            : ['a', 'c', 'd', 'f', 'g', 'i'];
 
     return (
         <Flex
@@ -300,23 +313,23 @@ function PerimeterTile({
                 isLanded
                     ? 'rgba(125, 249, 255, 0.98)'
                     : isActive
-                    ? 'rgba(0, 212, 255, 0.85)'
-                    : onTransitPath
-                      ? 'rgba(0, 212, 255, 0.5)'
-                      : wasVisited
-                        ? 'rgba(0, 212, 255, 0.35)'
-                        : 'rgba(255,255,255,0.10)'
+                        ? 'rgba(0, 212, 255, 0.85)'
+                        : onTransitPath
+                            ? 'rgba(0, 212, 255, 0.5)'
+                            : wasVisited
+                                ? 'rgba(0, 212, 255, 0.35)'
+                                : 'rgba(255,255,255,0.10)'
             }
             boxShadow={
                 isLanded
                     ? '0 0 0 1px rgba(170,250,255,0.58), 0 16px 34px rgba(0,0,0,0.56), 0 0 32px rgba(125,249,255,0.4), inset 0 0 26px rgba(125,249,255,0.16), inset 0 1px 0 rgba(255,255,255,0.2)'
                     : isActive
-                    ? '0 0 0 1px rgba(0,212,255,0.35), 0 12px 32px rgba(0,0,0,0.55), 0 0 28px rgba(0,212,255,0.35), inset 0 1px 0 rgba(255,255,255,0.18)'
-                    : onTransitPath
-                      ? '0 0 0 1px rgba(0,212,255,0.2), 0 10px 26px rgba(0,0,0,0.42), 0 0 18px rgba(0,212,255,0.18), inset 0 1px 0 rgba(255,255,255,0.12)'
-                      : wasVisited
-                        ? '0 8px 22px rgba(0,0,0,0.4), inset 0 0 20px rgba(0,212,255,0.08), inset 0 1px 0 rgba(255,255,255,0.1)'
-                        : '0 8px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -4px 12px rgba(0,0,0,0.25)'
+                        ? '0 0 0 1px rgba(0,212,255,0.35), 0 12px 32px rgba(0,0,0,0.55), 0 0 28px rgba(0,212,255,0.35), inset 0 1px 0 rgba(255,255,255,0.18)'
+                        : onTransitPath
+                            ? '0 0 0 1px rgba(0,212,255,0.2), 0 10px 26px rgba(0,0,0,0.42), 0 0 18px rgba(0,212,255,0.18), inset 0 1px 0 rgba(255,255,255,0.12)'
+                            : wasVisited
+                                ? '0 8px 22px rgba(0,0,0,0.4), inset 0 0 20px rgba(0,212,255,0.08), inset 0 1px 0 rgba(255,255,255,0.1)'
+                                : '0 8px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -4px 12px rgba(0,0,0,0.25)'
             }
             initial={false}
             animate={{
@@ -492,7 +505,7 @@ export default function SnakesPage() {
 
     const history = useHistory();
     const [amount, setAmount] = useState('0.50');
-    const [difficulty, setDifficulty] = useState('low');
+    const [difficulty, setDifficulty] = useState('medium');
     const dispatch = useDispatch();
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const helpModalSize = useBreakpointValue({ base: 'full', md: 'lg' }) || 'lg';
@@ -630,7 +643,7 @@ export default function SnakesPage() {
                     betAmount: parseFloat(amount),
                     step: `step${step}`,
                     level: difficulty === 'low' ? 'easy' : difficulty,
-                }  
+                }
                 await bangSnake(data, dispatch, history);
                 toast.error('Bang! You hit a snake.');
                 setOutcomeFxKey((k) => k + 1);
@@ -831,8 +844,8 @@ export default function SnakesPage() {
                         isActive
                             ? '0 0 16px rgba(0,212,255,0.55), 0 0 2px rgba(0,0,0,0.4)'
                             : wasVisited
-                              ? '0 0 10px rgba(0,212,255,0.25)'
-                              : '0 1px 2px rgba(0,0,0,0.45)'
+                                ? '0 0 10px rgba(0,212,255,0.25)'
+                                : '0 1px 2px rgba(0,0,0,0.45)'
                     }
                 >
                     {formatMult(tile.mult)}×
@@ -860,6 +873,83 @@ export default function SnakesPage() {
     const canBet = phase === 'idle';
     const canRoll = phase === 'playing' && rollsCompleted < MAX_ROLLS_PER_BET;
     const showCashOutSlot = phase === 'playing' || phase === 'rolling';
+    const canKeyboardCashOut = canRoll && phase !== 'rolling' && phase !== 'outcome';
+
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if (isHelpModalOpen) return;
+            if (snakesHotkeysShouldIgnoreTarget(e.target)) return;
+
+            if (e.key === 'a' || e.key === 'A') {
+                if (!canBet) return;
+                e.preventDefault();
+                setDifficulty('low');
+                return;
+            }
+            if (e.key === 's' || e.key === 'S') {
+                if (!canBet) return;
+                e.preventDefault();
+                setDifficulty('medium');
+                return;
+            }
+            if (e.key === 'd' || e.key === 'D') {
+                if (!canBet) return;
+                e.preventDefault();
+                setDifficulty('hard');
+                return;
+            }
+            if (e.key === 'ArrowDown') {
+                if (!canBet) return;
+                e.preventDefault();
+                const current = parseFloat(amount || String(MIN_AMOUNT));
+                const base = Number.isFinite(current) ? current : MIN_AMOUNT;
+                setAmount(Math.max(MIN_AMOUNT, base / 2).toFixed(2));
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                if (!canBet) return;
+                e.preventDefault();
+                const current = parseFloat(amount || String(MIN_AMOUNT));
+                const base = Number.isFinite(current) ? current : MIN_AMOUNT;
+                const next = Math.min(maxAmount, base * 2);
+                setAmount(next.toFixed(2));
+                return;
+            }
+            if (e.key === 'Enter') {
+                if (!canKeyboardCashOut) return;
+                if (e.repeat) return;
+                e.preventDefault();
+                void onCashOut();
+                return;
+            }
+            if (e.key === ' ' || e.code === 'Space') {
+                if (e.repeat) return;
+                if (canBet) {
+                    e.preventDefault();
+                    onBet();
+                    return;
+                }
+                /** Same as "Roll again" (enabled when `canRoll`; not during `rolling` / `outcome`). */
+                if (canRoll) {
+                    e.preventDefault();
+                    void onRoll();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [
+        isHelpModalOpen,
+        canBet,
+        canRoll,
+        canKeyboardCashOut,
+        amount,
+        maxAmount,
+        onBet,
+        onCashOut,
+        onRoll,
+    ]);
 
     return (
         <Box
@@ -1079,11 +1169,7 @@ export default function SnakesPage() {
                                 </Box>
 
                                 <VStack spacing="10px" w="100%">
-                                    {phase === 'rolling' && (
-                                        <Text fontSize="xs" color="rgba(0,212,255,0.85)" textAlign="center" fontWeight="700">
-                                            Rolling dice…
-                                        </Text>
-                                    )}
+
                                     {showCashOutSlot ? (
                                         <Button
                                             h="46px"
@@ -1098,10 +1184,10 @@ export default function SnakesPage() {
                                                     ? undefined
                                                     : { bg: 'rgba(34, 197, 94, 0.38)' }
                                             }
-                                            onClick={onCashOut}
+                                            onClick={onRoll}
                                             isDisabled={phase === 'rolling'}
                                         >
-                                            Cash out
+                                            {phase === 'rolling' ? 'Rolling dice…' : 'Roll again'}
                                         </Button>
                                     ) : (
                                         <Button
@@ -1114,7 +1200,7 @@ export default function SnakesPage() {
                                             _hover={{ bg: '#00b8dc' }}
                                             onClick={onBet}
                                         >
-                                            Bet
+                                            BET
                                         </Button>
                                     )}
                                     <Button
@@ -1125,11 +1211,13 @@ export default function SnakesPage() {
                                         bg={canRoll ? 'rgba(55, 65, 70, 0.95)' : 'rgba(55, 65, 70, 0.9)'}
                                         color={canRoll ? '#fff' : 'rgba(255,255,255,0.35)'}
                                         border="1px solid rgba(255,255,255,0.12)"
-                                        onClick={onRoll}
+
+                                        onClick={onCashOut}
                                         isDisabled={!canRoll || phase === 'rolling' || phase === 'outcome'}
                                     >
-                                        Roll
+                                        Cash out
                                     </Button>
+
                                 </VStack>
 
                                 <Box>
@@ -1388,8 +1476,8 @@ export default function SnakesPage() {
                                                 completed
                                                     ? 'rgba(0,212,255,0.65)'
                                                     : inProgress
-                                                      ? 'rgba(255,255,255,0.45)'
-                                                      : 'rgba(255,255,255,0.12)'
+                                                        ? 'rgba(255,255,255,0.45)'
+                                                        : 'rgba(255,255,255,0.12)'
                                             }
                                             boxShadow={inProgress ? '0 0 10px rgba(0,212,255,0.35)' : undefined}
                                         />
@@ -1704,8 +1792,9 @@ export default function SnakesPage() {
                                 <Text mb={1}>
                                     -Win rewards based on where it stops — or lose your bet if it hits a snake.
                                 </Text>
+                                <Image src={keyboardImage} alt="Keyboard" />
                                 <Text mb={1} fontSize="xs" color="gray.400">
-                                Tip:You can roll the highest die 5 times, and each time you roll, if you do not encounter a snake, the corresponding multipliers are multiplied consecutively.
+                                    Tip:You can roll the highest die 5 times, and each time you roll, if you do not encounter a snake, the corresponding multipliers are multiplied consecutively.
                                 </Text>
                             </Box>
                         </VStack>

@@ -12,7 +12,7 @@ export const cocoSmash = async (data, dispatch, history) => {
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
         }
-        throw err;
+
     }
 };
 
@@ -26,7 +26,7 @@ export const cocoRestart = async (dispatch, history) => {
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
         }
-        throw err;
+
     }
 };
 export const getCocoView = async (history) => {
@@ -35,7 +35,7 @@ export const getCocoView = async (history) => {
         return res.data;
     } catch (err) {
         console.error(err);
-        if(err.response?.status === 401 && history) {
+        if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
         }
         return [];

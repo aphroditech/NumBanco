@@ -13,7 +13,7 @@ export const alphaTreeStart = async (data, dispatch, history) => {
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
         }
-        throw err;
+        ;
     }
 };
 
@@ -28,7 +28,7 @@ export const alphaTreePick = async (data, dispatch, history) => {
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
         }
-        throw err;
+        ;
     }
 };
 
@@ -43,7 +43,6 @@ export const alphaTreeCashOut = async (dispatch, history) => {
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
         }
-        throw err;
     }
 };
 
