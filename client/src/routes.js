@@ -74,6 +74,7 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import WheelPage from "views/Wheel/Wheel";
 import ClimbPage from "views/Climb/ClimbPage";
+import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
 
 import {
   DocumentIcon,
@@ -142,6 +143,14 @@ var dashRoutes = [
     name: "KENO",
     icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: KenoPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/three-numbers",
+    name: "THREE NUMBERS",
+    icon: <AppsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: ThreeNumbersPage,
     layout: "/game",
   },
   {

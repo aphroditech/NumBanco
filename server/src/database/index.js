@@ -32,6 +32,8 @@ import { initializeClimbSettings } from './initClimbSettings.js';
 import { initWheelSettings } from './initWheelSettings.js';
 import { initializePlinkoRateSettings } from './initPlinkoRateSettings.js';
 import { initializePlinkoBotSettings } from './initPlinkoBotSettings.js';
+import { initializeThreeNumbersPercentages } from './threeNumbersPercentages.js';
+import { initializeThreeNumbersLimits } from './threeNumbersLimits.js';
 
 
 export const initializeDatabase = async () => {
@@ -72,5 +74,7 @@ export const initializeDatabase = async () => {
     await initializeKenoControls();
     await initializeKenoLimits();
     await initWheelSettings();
+    await initializeThreeNumbersPercentages();
+    await initializeThreeNumbersLimits();
     console.log('✅ Database initialization complete');
 };
