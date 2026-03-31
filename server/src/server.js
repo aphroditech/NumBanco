@@ -41,6 +41,8 @@ import { kenoBot } from "./services/keno/kenoBot.service.js";
 import { wheelBot } from "./services/wheel/wheelBot.service.js";
 import { climbBot } from "./services/climb/climbBot.service.js";
 import { threeNumbersBot } from "./services/threeNumbers/threeNumbersBot.service.js";
+import { diamondBot } from "./services/diamond/diamondBot.service.js";
+import { snakeBot } from "./services/Snakes/SnakeBot.Service.js";
 
 dotenv.config();
 
@@ -92,6 +94,7 @@ connectDB()
             console.log("✅ Core Ably connected");
 
             // climbBot(ablyCore);
+            diamondBot(ablyCore);
 
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);
@@ -160,13 +163,13 @@ connectDB()
             // cocoBot(ablyMiningGames);
             // alphaTreeBot(ablyMiningGames);
             // doveBot(ablyMiningGames);
-            minesBot(ablyMiningGames);
-            plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
-            startGravityGameLoop(ablyMiningGames);
-            setCloudSpreadAbly(ablyMiningGames);
-            cloudSpreadBot().catch(console.error);
-            startDoubleGameLoop(ablyMiningGames);
-
+            // minesBot(ablyMiningGames);
+            // plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
+            // startGravityGameLoop(ablyMiningGames);
+            // setCloudSpreadAbly(ablyMiningGames);
+            // cloudSpreadBot().catch(console.error);
+            // startDoubleGameLoop(ablyMiningGames);
+            // snakeBot(ablyMiningGames);
         });
 
         /*

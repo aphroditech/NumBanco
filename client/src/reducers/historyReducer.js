@@ -4,6 +4,7 @@ const initialState = {
     aToZHistory: [],
     coinHistory: [],
     wheelHistory: [],
+    snakesHistory: [],
 };
   
 export const HistoryReducer = (state = initialState, action) => {
@@ -18,6 +19,8 @@ export const HistoryReducer = (state = initialState, action) => {
         return { ...state, coinHistory: action.payload };
         case "SET_WHEEL_HISTORY":
         return { ...state, wheelHistory: action.payload };
+        case "SET_SNAKES_HISTORY":
+        return { ...state, snakesHistory: action.payload };
         default:
             return state;
     }

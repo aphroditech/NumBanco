@@ -29,9 +29,9 @@ function PumpingHistoryRow(props) {
   return (
     <Tr>
         <Td
-        textAlign="center"
-        border={lastItem ? "none" : null}
-        borderBottomColor='#56577A'
+            textAlign="center"
+            border={lastItem ? "none" : null}
+            borderBottomColor='#56577A'
         >
             <Flex direction='column'>
                 <Text fontSize='sm' color='#fff' fontWeight='normal'>

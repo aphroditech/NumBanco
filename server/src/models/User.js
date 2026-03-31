@@ -381,6 +381,14 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  snakesAmount: {
+    type: Number,
+    default: 0
+  },
+  snakesWinAmount: {
+    type: Number,
+    default: 0
+  },
   /** Twist multiplier ladder positions (persisted per user). */
   twistGreenMultIndex: {
     type: Number,
@@ -962,6 +970,25 @@ const userSchema = new mongoose.Schema({
         totalMultiplier: { type: Number, default: 0 },
         profit: { type: Number, default: 0 },
         busted: { type: Boolean, default: false },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
+  diamondHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        keys: { type: [String], default: [] },
+        tier: { type: String, default: "" },
+        rateIndex: { type: Number, default: 0 },
         createAt: {
           type: Date,
           default: Date.now,

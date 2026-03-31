@@ -75,6 +75,9 @@ import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import WheelPage from "views/Wheel/Wheel";
 import ClimbPage from "views/Climb/ClimbPage";
 import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
+import SnakesPage from "views/Snakes/Snakes";
+import Diamond from "views/Diamond/DiamondPage";
+
 
 import {
   DocumentIcon,
@@ -137,6 +140,7 @@ var dashRoutes = [
     component: DicePage,
     layout: "/game",
   },
+  
   {
     redirect: true,
     path: "/keno",
@@ -163,12 +167,21 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/snakes",
+    name: "SNAKES",
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: SnakesPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/plinko",
     name: "PLINKO",
     icon: <ScatterPlotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: PlinkoPage,
     layout: "/game",
   },
+
   {
     redirect: true,
     path: "/pumping",
@@ -303,6 +316,14 @@ var dashRoutes = [
     name: "CLIMB",
     icon: <DonutLargeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: ClimbPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/diamond",
+    name: "DIAMOND",
+    icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Diamond,
     layout: "/game",
   },
   {
@@ -442,20 +463,5 @@ var dashRoutes = [
     component: UserAgreement,
     layout: "/auth",
   },
-  // {
-
-  //   redirect: true,
-  //   path: "/auth/404",
-  //   name: "Not Found Page",
-  //   component: NotFound,
-  //   layout: "/auth",
-  // },
-  // {
-  //   redirect: true,
-  //   path: "/twofa",
-  //   name: "Twofa",
-  //   component: TwoFA,
-  //   layout: "/auth",
-  // },
 ];
 export default dashRoutes;

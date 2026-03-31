@@ -34,6 +34,9 @@ import { initializePlinkoRateSettings } from './initPlinkoRateSettings.js';
 import { initializePlinkoBotSettings } from './initPlinkoBotSettings.js';
 import { initializeThreeNumbersPercentages } from './threeNumbersPercentages.js';
 import { initializeThreeNumbersLimits } from './threeNumbersLimits.js';
+import { initializeDiamondSettings } from './initDiamondSettings.js';
+import { initializeDiamondViews } from './initDiamondViews.js';
+import { initializeSnakesSettings } from './snakeSettings.js';
 
 
 export const initializeDatabase = async () => {
@@ -62,6 +65,8 @@ export const initializeDatabase = async () => {
     await initializePlinkoRateSettings();
     await initializePlinkoBotSettings();
     await initializeClimbSettings();
+    await initializeDiamondSettings();
+    await initializeDiamondViews();
     await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();
@@ -76,5 +81,6 @@ export const initializeDatabase = async () => {
     await initWheelSettings();
     await initializeThreeNumbersPercentages();
     await initializeThreeNumbersLimits();
+    await initializeSnakesSettings();
     console.log('✅ Database initialization complete');
 };
