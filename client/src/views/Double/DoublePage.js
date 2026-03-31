@@ -27,6 +27,7 @@ import {
   SliderTrack,
   SliderFilledTrack,
   SliderThumb,
+  Spinner,
   useDisclosure,
 } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
@@ -51,12 +52,13 @@ import DoubleBetHistory from "./DoubleItem/DoubleBetHistory";
 const SEGMENTS = 15;
 const BETTING_MS = 10000;
 const ROLLING_MS = 2000;
+/** Must match server `doubleGame.service.js` — 1s result, then next 10s betting. */
 const RESULT_MS = 1000;
 const ROUND_MS = BETTING_MS + ROLLING_MS + RESULT_MS;
 
 const REEL_SPIN_TRANSITION = "transform 2s cubic-bezier(0.15, 0.85, 0.2, 1)";
-/** After RESULT_MS, glide from the winner to the idle strip (runs in closed phase so betting starts already idle). */
-const REEL_IDLE_RETURN_MS = 1000;
+/** Return reel to idle when betting starts; shorter so the 10s countdown feels immediate after result. */
+const REEL_IDLE_RETURN_MS = 450;
 const REEL_IDLE_RETURN_TRANSITION = `transform ${REEL_IDLE_RETURN_MS}ms cubic-bezier(0.15, 0.85, 0.2, 1)`;
 
 const BOX_BG = "#2a2d2e";
@@ -686,7 +688,7 @@ export default function DoublePage() {
     if (elapsedMs < BETTING_MS) return "betting";
     if (elapsedMs < BETTING_MS + ROLLING_MS) return "rolling";
     if (elapsedMs < ROUND_MS) return "result";
-    return "closed";
+    return "betting";
   }, [clockOffset, state?.roundStartAtMs, elapsedMs]);
 
   const phaseLocalRef = useRef(phaseLocal);
@@ -851,7 +853,9 @@ export default function DoublePage() {
   }, [myHistory, state?.roundId]);
 
   const hasPlacedRoundBet = myRoundBets.length > 0 || optimisticPlaced;
-  const canBet = phaseLocal === "betting";
+  /** Server `phase` can lead local timeline after round rollover; don't block betting on clock skew. */
+  const serverPhase = state?.phase;
+  const canBet = phaseLocal === "betting" && serverPhase === "betting";
 
   const handleBet = async () => {
     try {
@@ -991,16 +995,19 @@ export default function DoublePage() {
       return { line1: "Place your bets", line2: `Rolling in ${secLeft}s` };
     }
     if (phaseLocal === "rolling") {
-      const secLeft = Math.ceil(Math.max(0, ROUND_MS - elapsedMs) / 1000);
-      return { line1: "Rolling", line2: `Next round in ${secLeft}s` };
+      const secLeft = Math.ceil(Math.max(0, BETTING_MS + ROLLING_MS - elapsedMs) / 1000);
+      return { line1: "Rolling", line2: `Result in ${secLeft}s` };
     }
-    if (phaseLocal === "result" || phaseLocal === "closed") {
-      const untilRoundEnd = Math.max(0, ROUND_MS - elapsedMs);
-      const secLeft = Math.ceil(untilRoundEnd / 1000);
+    if (phaseLocal === "result") {
+      const resElapsed = Math.max(0, elapsedMs - BETTING_MS - ROLLING_MS);
+      const secLeft = Math.ceil(Math.max(0, RESULT_MS - resElapsed) / 1000);
       return {
-        line1: "Next round",
-        line2: secLeft > 0 ? `Starting in ${secLeft}s` : "…",
+        line1: "Result",
+        line2: secLeft > 0 ? `Next bets in ${secLeft}s` : "Starting…",
       };
+    }
+    if (phaseLocal === "closed") {
+      return { line1: "Next round", line2: "Syncing…" };
     }
     return { line1: "", line2: "" };
   }, [phaseLocal, elapsedMs]);
@@ -1424,6 +1431,16 @@ const BetColumn = ({ title, accent, total, rows, emptyHint }) => (
             >
               {phaseLocal === "syncing" ? (
                 <Box w="112px" h="112px" flexShrink={0} aria-hidden />
+              ) : phaseLocal === "closed" && typeof state?.roundStartAtMs === "number" && clockOffset != null ? (
+                <Flex w="112px" h="112px" flexShrink={0} align="center" justify="center" aria-busy="true">
+                  <Spinner
+                    thickness="6px"
+                    speed="0.85s"
+                    emptyColor="rgba(255,255,255,0.12)"
+                    color={TIMELINE_RING_ARC.result}
+                    boxSize="52px"
+                  />
+                </Flex>
               ) : typeof state?.roundStartAtMs === "number" && clockOffset != null ? (
                 <BettingCountdownRing
                   key={`${state.roundId}-${timelineRingSegment}`}

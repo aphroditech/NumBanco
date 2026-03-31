@@ -24,6 +24,7 @@ import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSp
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 import { minesBot } from "./services/mines/minesBot.js";
 import { plinkoBot } from "./services/plinko/plinkoBot.service.js";
+import { hashDiceBot } from "./services/hashDice/hashDiceBot.service.js";
 
 import { fishingBot } from "./services/fishing/fishingBot.service.js";
 import { miningBot } from "./services/mining/miningBotService.js";
@@ -60,6 +61,7 @@ app.locals.ablyCore = ablyCore;
 app.locals.ably = ablyCore;
 /** Same Ably app/key: dice/table bots publish here; optional alias if a route must match that connection. */
 app.locals.ablyDiceGames = ablyDiceGames;
+app.locals.ablyMiningGames = ablyMiningGames;
 
 connectDB()
     .then(async () => {
@@ -109,7 +111,7 @@ connectDB()
             console.log("💰 Finance Ably connected");
 
             // confirmDepositEngine(ablyFinance);
-            tronEngine(ablyFinance);
+            // tronEngine(ablyFinance);
             // startPartnerDepositCron(ablyFinance);
             // startWithdrawApprovalCron(ablyFinance);
 
@@ -167,6 +169,7 @@ connectDB()
             // doveBot(ablyMiningGames);
             // minesBot(ablyMiningGames);
             // plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
+            hashDiceBot(ablyMiningGames).catch((e) => console.error("[hashDiceBot] start:", e?.message || e));
             // startGravityGameLoop(ablyMiningGames);
             // setCloudSpreadAbly(ablyMiningGames);
             // cloudSpreadBot().catch(console.error);

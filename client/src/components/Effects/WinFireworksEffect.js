@@ -4,6 +4,8 @@ import ReactDOM from "react-dom";
 function WinFireworksEffect({
     isVisible,
     totalEarn,
+    /** When set (e.g. 3), formats numeric totalEarn with toFixed — avoids "$0.2" for 0.197. */
+    earnDecimals,
     width,
     height,
     duration = 1200,
@@ -13,13 +15,10 @@ function WinFireworksEffect({
     /** Optional viewport-space anchor rect: effect centers within this box. */
     anchorRect
 }) {
-    if (!isVisible) return null;
-    if (typeof document === "undefined") return null;
-
-    const [viewport, setViewport] = useState({
-        w: window.innerWidth,
-        h: window.innerHeight
-    });
+    const [viewport, setViewport] = useState(() => ({
+        w: typeof window !== "undefined" ? window.innerWidth : 0,
+        h: typeof window !== "undefined" ? window.innerHeight : 0,
+    }));
     const isMountedRef = useRef(true);
     const isVisibleRef = useRef(isVisible);
 
@@ -45,8 +44,15 @@ function WinFireworksEffect({
         };
     }, []);
 
-    const fwWidth = width || viewport.w;
-    const fwHeight = height || viewport.h;
+    const earnLabel = useMemo(() => {
+        if (typeof earnDecimals === "number" && earnDecimals >= 0) {
+            const n = typeof totalEarn === "number" ? totalEarn : parseFloat(String(totalEarn).replace(/,/g, ""));
+            if (Number.isFinite(n)) return n.toFixed(earnDecimals);
+        }
+        if (totalEarn == null || totalEarn === "") return "0";
+        return String(totalEarn);
+    }, [totalEarn, earnDecimals]);
+
     const burstSparks = useMemo(() => {
         const count = 140;
         return Array.from({ length: count }, () => {
@@ -97,6 +103,11 @@ function WinFireworksEffect({
             };
         });
     }, [isVisible]);
+
+    if (!isVisible || typeof document === "undefined") return null;
+
+    const fwWidth = width || viewport.w;
+    const fwHeight = height || viewport.h;
 
     const content = (
         <div style={{
@@ -178,9 +189,7 @@ function WinFireworksEffect({
                     textAlign: "center",
                     pointerEvents: "none"
                 }}>
-                    <div className="earn-neon">
-                        ${totalEarn}
-                    </div>
+                    <div className="earn-neon">{`$${earnLabel}`}</div>
                     {subtitle ? (
                         <div className="earn-subtitle">{subtitle}</div>
                     ) : null}
