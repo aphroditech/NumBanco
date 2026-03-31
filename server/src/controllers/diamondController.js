@@ -5,6 +5,10 @@ import { diamondKeysForRateIndex } from "../services/diamond/diamondGame.service
 import {
     sampleDiamondPayoutFromDb,
     getDiamondSettingsForClient,
+    isDiamondMode,
+    getResolvedRevenueAutoMode,
+    getDiamondModeLevelByRevenue,
+    DIAMOND_MODE_BY_LEVEL,
 } from "../services/diamond/diamondSettings.service.js";
 import {
     fetchDiamondLivePayload,
@@ -19,6 +23,17 @@ const DIAMOND_HISTORY_MAX = 200;
 
 function round2(n) {
     return Math.round(Number(n) * 100) / 100;
+}
+
+function deriveDiamondTotalsFromHistory(history) {
+    const list = Array.isArray(history) ? history : [];
+    let totalBetAmount = 0;
+    let totalProfit = 0;
+    for (const row of list) {
+        totalBetAmount += Number(row?.betAmount ?? 0);
+        totalProfit += Number(row?.profit ?? 0);
+    }
+    return { totalBetAmount: round2(totalBetAmount), totalProfit: round2(totalProfit) };
 }
 
 async function loadUser(req) {
@@ -85,7 +100,25 @@ export const playDiamond = async (req, res) => {
             return res.status(400).json({ error: "Insufficient balance", message: "Insufficient balance" });
         }
 
-        const { mult, tier, rateIndex } = await sampleDiamondPayoutFromDb();
+        const revenueBands = await getResolvedRevenueAutoMode();
+
+        const hasPersistedTotals =
+            Number.isFinite(Number(user.diamondTotalBetAmount)) &&
+            Number.isFinite(Number(user.diamondTotalProfit));
+        const baseTotals = hasPersistedTotals
+            ? {
+                  totalBetAmount: round2(Number(user.diamondTotalBetAmount)),
+                  totalProfit: round2(Number(user.diamondTotalProfit)),
+              }
+            : deriveDiamondTotalsFromHistory(user.diamondHistory);
+        const revenue = round2(baseTotals.totalProfit - baseTotals.totalBetAmount);
+        const modeLevel = getDiamondModeLevelByRevenue(revenue, revenueBands);
+        const mode = DIAMOND_MODE_BY_LEVEL[modeLevel] || "normal";
+        if (!isDiamondMode(mode)) {
+            return res.status(500).json({ error: "Invalid resolved diamond mode" });
+        }
+
+        const { mult, tier, rateIndex } = await sampleDiamondPayoutFromDb(mode);
         const keys = diamondKeysForRateIndex(rateIndex);
         const win = round2(betAmount * mult);
 
@@ -93,6 +126,10 @@ export const playDiamond = async (req, res) => {
         user.totalBet = Number(user.totalBet ?? 0) + betAmount;
         user.refreshBet = Number(user.refreshBet ?? 0) + betAmount;
         user.lotterybet = Number(user.lotterybet ?? 0) + betAmount;
+        user.diamondTotalBetAmount = round2(baseTotals.totalBetAmount + betAmount);
+        user.diamondTotalProfit = round2(baseTotals.totalProfit + win);
+        user.diamondRevenue = round2(user.diamondTotalProfit - user.diamondTotalBetAmount);
+        user.diamondMode = getDiamondModeLevelByRevenue(user.diamondRevenue, revenueBands);
         user.totalhistory = user.totalhistory || [];
         user.totalhistory.push({
             amount: round2(win - betAmount),
@@ -109,6 +146,7 @@ export const playDiamond = async (req, res) => {
             keys,
             tier,
             rateIndex,
+            mode,
             createAt: new Date(),
         });
         if (user.diamondHistory.length > DIAMOND_HISTORY_MAX) {
@@ -143,6 +181,10 @@ export const playDiamond = async (req, res) => {
                 rateIndex,
                 win,
                 betAmount,
+                mode,
+                modeLevel: user.diamondMode,
+                revenue: user.diamondRevenue,
+                revenueAutoMode: revenueBands,
             },
         });
     } catch (error) {

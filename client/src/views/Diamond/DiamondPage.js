@@ -13,12 +13,20 @@ import {
     VStack,
     HStack,
     IconButton,
+    Button,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalCloseButton,
     Text,
     keyframes,
 } from "@chakra-ui/react";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import DiamondIcon from "@mui/icons-material/Diamond";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import ClickButton from "components/Input/ClickButton";
 import GradientBorder from "components/GradientBorder/GradientBorder";
 import Card from "components/Card/Card.js";
@@ -27,6 +35,7 @@ import CardHeader from "components/Card/CardHeader.js";
 import DiamondBetHistory from "./DiamondItem/DiamondBetHistory";
 import DiamondRealView from "./DiamondItem/DiamondRealView";
 import { diamondPlay, getDiamondSettings } from "action/DiamondActions";
+import { setNotification } from "utils/localStorage";
 
 const publicUrl = process.env.PUBLIC_URL || "";
 /**
@@ -85,16 +94,30 @@ const MAX_AMOUNT = 20;
 const DIAMOND_PANEL_MIN_H = { base: "auto", md: "360px" };
 const DIAMOND_MAIN_CARD_MIN_H = { base: "auto", md: "min(520px, 88vh)" };
 
-/** Fallback if `/diamond/settings` fails — keep aligned with server `DEFAULT_DIAMOND_TIERS`. */
-const DIAMOND_PAYTABLE_FALLBACK_TIERS = [
-    { rate: 0, weight: 0.15 },
-    { rate: 0.2, weight: 0.6 },
-    { rate: 1.2, weight: 0.12 },
-    { rate: 2.5, weight: 0.07 },
-    { rate: 6, weight: 0.03 },
-    { rate: 15, weight: 0.02 },
-    { rate: 70, weight: 0.01 },
-];
+const DIAMOND_MODES = {
+    easy: { label: "Easy" },
+    normal: { label: "Normal" },
+    hard: { label: "Hard" },
+};
+
+/** Shared multipliers (Normal ladder); only weights differ per mode — matches server. */
+const DIAMOND_FALLBACK_RATES = [0, 0.2, 1.2, 2.5, 6, 15, 70];
+const DIAMOND_FALLBACK_WEIGHTS_BY_MODE = {
+    easy: [0.15, 0.6, 0.12, 0.07, 0.03, 0.02, 0.01],
+    normal: [0.15, 0.6, 0.12, 0.07, 0.03, 0.02, 0.01],
+    hard: [0.15, 0.6, 0.12, 0.07, 0.03, 0.02, 0.01],
+};
+
+/** Fallback if `/diamond/settings` fails */
+const DIAMOND_PAYTABLE_FALLBACK_BY_MODE = Object.fromEntries(
+    Object.keys(DIAMOND_FALLBACK_WEIGHTS_BY_MODE).map((k) => [
+        k,
+        DIAMOND_FALLBACK_RATES.map((rate, i) => ({
+            rate,
+            weight: DIAMOND_FALLBACK_WEIGHTS_BY_MODE[k][i],
+        })),
+    ])
+);
 
 /** Abstract pip patterns (grey / black / grey-border) — same multiset story as server gem layouts. */
 const DIAMOND_PAYTABLE_PATTERNS = [
@@ -107,10 +130,11 @@ const DIAMOND_PAYTABLE_PATTERNS = [
     ["grey", "grey", "grey", "grey", "grey"],
 ];
 
-function buildDefaultPaytableRows() {
-    const sum =
-        DIAMOND_PAYTABLE_FALLBACK_TIERS.reduce((s, t) => s + Math.max(0, t.weight), 0) || 1;
-    return DIAMOND_PAYTABLE_FALLBACK_TIERS.map((t, index) => ({
+function buildDefaultPaytableRowsForMode(modeKey) {
+    const tiers =
+        DIAMOND_PAYTABLE_FALLBACK_BY_MODE[modeKey] || DIAMOND_PAYTABLE_FALLBACK_BY_MODE.normal;
+    const sum = tiers.reduce((s, t) => s + Math.max(0, t.weight), 0) || 1;
+    return tiers.map((t, index) => ({
         index,
         mult: t.rate,
         chance: Math.max(0, t.weight) / sum,
@@ -275,34 +299,52 @@ export default function DiamondPage() {
     const [boardImages, setBoardImages] = useState(() => [null, null, null, null, null]);
     const [winMult, setWinMult] = useState(null);
     const [winRateIndex, setWinRateIndex] = useState(null);
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const boardRoundRef = useRef(0);
+    const betAmountInputRef = useRef(null);
     const paytableWrapRef = useRef(null);
     const rowRefs = useRef([]);
     const [bubbleAnchorY, setBubbleAnchorY] = useState(null);
     const [diamondLiveSuppressUntil, setDiamondLiveSuppressUntil] = useState(0);
-    const [paytableRows, setPaytableRows] = useState(() => buildDefaultPaytableRows());
+    const [diamondModes, setDiamondModes] = useState(null);
+    const [revenueAutoMode, setRevenueAutoMode] = useState(null);
+    const [mode, setMode] = useState("normal");
+    const [paytableRows, setPaytableRows] = useState(() => buildDefaultPaytableRowsForMode("normal"));
 
     useEffect(() => {
         let cancelled = false;
         getDiamondSettings()
             .then((data) => {
-                if (cancelled || !Array.isArray(data?.tiers) || data.tiers.length === 0) return;
-                setPaytableRows(
-                    data.tiers.map((t) => ({
-                        index: t.index,
-                        mult: Number(t.rate),
-                        chance: Number(t.chance),
-                        pattern: DIAMOND_PAYTABLE_PATTERNS[t.index] ?? DIAMOND_PAYTABLE_PATTERNS[0],
-                    }))
-                );
+                if (cancelled || !data?.modes) return;
+                setDiamondModes(data.modes);
+                setRevenueAutoMode(data.revenueAutoMode ?? null);
             })
             .catch(() => {
-                /* keep buildDefaultPaytableRows() */
+                /* keep fallbacks */
             });
         return () => {
             cancelled = true;
         };
     }, []);
+
+    useEffect(() => {
+        const tiers = diamondModes?.[mode]?.tiers;
+        if (!Array.isArray(tiers) || tiers.length === 0) {
+            setPaytableRows(buildDefaultPaytableRowsForMode(mode));
+            return;
+        }
+        setPaytableRows(
+            tiers.map((t) => ({
+                index: t.index,
+                mult: Number(t.rate),
+                chance: Number(t.chance),
+                pattern: DIAMOND_PAYTABLE_PATTERNS[t.index] ?? DIAMOND_PAYTABLE_PATTERNS[0],
+            }))
+        );
+    }, [diamondModes, mode]);
+
+    const revenueBandLo = revenueAutoMode?.normalBandMin ?? -20;
+    const revenueBandHi = revenueAutoMode?.normalBandMax ?? 20;
 
     const chancePct =
         winRateIndex != null && paytableRows[winRateIndex]
@@ -394,6 +436,8 @@ export default function DiamondPage() {
         try {
             const data = await diamondPlay({ betAmount: bet }, dispatch, history);
             const round = data?.diamond;
+            const appliedMode = String(round?.mode || mode);
+            if (DIAMOND_MODES[appliedMode]) setMode(appliedMode);
             keys = round?.keys;
             mult = Number(round?.mult ?? 0);
             win = Number(round?.win ?? 0);
@@ -437,10 +481,14 @@ export default function DiamondPage() {
                     setWinMult(mult);
                     setWinRateIndex(rateIndex);
                     setProfit(win.toFixed(8));
-                    if (mult > 0) {
-                        toast.success(`Hit ${mult.toFixed(2)}x`);
+                    if (win > 0) {
+                        const notifyMsg = `You won $${win.toFixed(2)} in Diamond Game`;
+                        toast.success(notifyMsg);
+                        setNotification(notifyMsg, dispatch, "success");
                     } else {
-                        toast.info("0.00x — no win");
+                        const lostMsg = "You have lost.";
+                        toast.info(lostMsg);
+                        setNotification(lostMsg, dispatch, "info");
                     }
                     setPlayLoading(false);
                 }
@@ -448,6 +496,53 @@ export default function DiamondPage() {
             revealTimeoutsRef.current.push(t);
         }
     };
+
+    const amountRef = useRef(amount);
+    amountRef.current = amount;
+    const playLoadingRef = useRef(playLoading);
+    playLoadingRef.current = playLoading;
+    const commitAmountRef = useRef(commitAmount);
+    commitAmountRef.current = commitAmount;
+    const runBetRef = useRef(runBet);
+    runBetRef.current = runBet;
+
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if (isHelpModalOpen) return;
+
+            const active = document.activeElement;
+            const tag = active?.tagName?.toLowerCase();
+            if (tag === "select") return;
+            if (tag === "textarea" || active?.isContentEditable) return;
+            if (tag === "input" && betAmountInputRef.current && active !== betAmountInputRef.current) return;
+
+            const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+            const adjustBet = (mult) => {
+                const raw = amountRef.current;
+                const n = raw === "" ? MIN_AMOUNT : Number(raw);
+                const base = Number.isFinite(n) ? Math.max(MIN_AMOUNT, n) : MIN_AMOUNT;
+                commitAmountRef.current(base * mult);
+            };
+
+            if (e.key === "ArrowUp" || k === "w") {
+                e.preventDefault();
+                adjustBet(2);
+                return;
+            }
+            if (e.key === "ArrowDown" || k === "s") {
+                e.preventDefault();
+                adjustBet(0.5);
+                return;
+            }
+            if (e.key === " " || e.code === "Space") {
+                e.preventDefault();
+                if (playLoadingRef.current) return;
+                runBetRef.current();
+            }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [isHelpModalOpen]);
 
     return (
         <Box px={{ base: "16px", md: "24px" }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
@@ -484,6 +579,7 @@ export default function DiamondPage() {
                         flex="1"
                         display="flex"
                         flexDirection="column"
+                        position="relative"
                         w="100%"
                         minH={DIAMOND_PANEL_MIN_H}
                         h={{ base: "auto", "1550px": "100%" }}
@@ -492,8 +588,22 @@ export default function DiamondPage() {
                         px="22px"
                         overflow="visible"
                     >
+                        <IconButton
+                            aria-label="How to play Diamond"
+                            icon={<HelpOutlineIcon style={{ fontSize: 22 }} />}
+                            size="sm"
+                            position="absolute"
+                            top="14px"
+                            right="14px"
+                            zIndex={2}
+                            bg="rgba(0, 0, 0, 0.35)"
+                            color="#00d4ff"
+                            borderRadius="full"
+                            _hover={{ bg: "rgba(0, 0, 0, 0.5)", color: "#00D4FF" }}
+                            onClick={() => setIsHelpModalOpen(true)}
+                        />
                         <CardHeader mb="12px" p={0} flexShrink={0}>
-                            <Text fontSize="lg" color="#fff" fontWeight="bold" mb="4px">
+                            <Text fontSize="lg" color="#fff" fontWeight="bold" mb="4px" pr="44px">
                                 Diamond Controls
                             </Text>
                         </CardHeader>
@@ -520,6 +630,7 @@ export default function DiamondPage() {
                                                 isDisabled={!canDecrease}
                                             />
                                             <Input
+                                                ref={betAmountInputRef}
                                                 value={amount}
                                                 onChange={handleAmountChange}
                                                 onBlur={handleAmountBlur}
@@ -851,6 +962,100 @@ export default function DiamondPage() {
             </Grid>
 
             <DiamondBetHistory />
+
+            <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} size="lg" isCentered>
+                <ModalOverlay bg="blackAlpha.700" />
+                <ModalContent
+                    bg="#2a2d2e"
+                    border="1px solid rgba(0, 212, 255, 0.3)"
+                    maxH="80vh"
+                    overflowY="auto"
+                    className="pumping-modal-content"
+                >
+                    <ModalHeader color="white">How to play Diamond</ModalHeader>
+                    <ModalCloseButton color="#fff" _hover={{ color: "#00D4FF" }} />
+                    <ModalBody py="0" maxH="calc(80vh - 60px)" overflowY="auto" className="pumping-modal-body">
+                        <VStack align="stretch" spacing={4} pb={4}>
+                            <Box>
+                                <Text color="#fff" fontSize="sm" fontWeight="800" mb={1.5}>
+                                    Goal
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall">
+                                    Place a bet and reveal five boards. The result tier determines your payout
+                                    multiplier, and your win is <strong>bet × multiplier</strong>.
+                                </Text>
+                            </Box>
+                            <Box>
+                                <Text color="#fff" fontSize="sm" fontWeight="800" mb={1.5}>
+                                    Start a round
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall">
+                                    Set your{" "}
+                                    <strong>bet amount</strong> (between shown min and max), then press{" "}
+                                    <strong>Bet</strong>. The game draws a server-side tier and reveals five gems from left
+                                    to right.
+                                </Text>
+                            </Box>
+                            <Box>
+                                <Text color="#fff" fontSize="sm" fontWeight="800" mb={1.5}>
+                                    Keyboard
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall" mb={2}>
+                                    <strong>↑ Up arrow</strong> — multiply the bet by <strong>2</strong> (capped at the max
+                                    bet).
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall" mb={2}>
+                                    <strong>↓ Down arrow</strong> — cut the bet in <strong>half</strong> (floored at the
+                                    min bet).
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall" mb={2}>
+                                    <strong>W</strong> and <strong>S</strong> — same as <strong>↑</strong> and{" "}
+                                    <strong>↓</strong> (double and half the bet).
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall" mb={2}>
+                                    <strong>Space</strong> — same as pressing <strong>Bet</strong> (ignored while a round
+                                    is loading).
+                                </Text>
+                                <Text color="rgba(255,255,255,0.65)" fontSize="sm" lineHeight="tall">
+                                    Shortcuts are off while this help window is open. They also do not run when focus is
+                                    in a select, another text field, or a rich text area — only the bet amount field still
+                                    receives them among inputs.
+                                </Text>
+                            </Box>
+                            <Box>
+                                <Text color="#fff" fontSize="sm" fontWeight="800" mb={1.5}>
+                                    Payout table
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall" mb={2}>
+                                    Each row is a tier.
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall">
+                                    The percentage under each multiplier is the weight for the tier.
+                                </Text>
+                            </Box>
+                            <Box>
+                                <Text color="#fff" fontSize="sm" fontWeight="800" mb={1.5}>
+                                    Result and profit
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall">
+                                    After all five gems appear, the selected tier is highlighted, and you will see:
+                                    <strong> Result</strong> (multiplier), <strong>Profit</strong>, and{" "}
+                                    <strong>Chance</strong> for that round.
+                                </Text>
+                            </Box>
+                            <Box>
+                                <Text color="#fff" fontSize="sm" fontWeight="800" mb={1.5}>
+                                    Live Results
+                                </Text>
+                                <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall">
+                                    The right panel shows recent Diamond rounds from users activity in real
+                                    time.
+                                </Text>
+                            </Box>
+                        </VStack>
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
         </Box>
     );
 }
