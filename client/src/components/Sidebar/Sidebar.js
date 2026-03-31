@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Plinko,Pumping, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame,DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, ThreeNumbers, Snakes, Diamond } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Plinko,Pumping, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame,DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, ThreeNumbers, Snakes, Diamond, Tarot } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -86,6 +86,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={Wheel} />
               <SidebarButtonLink value={Climb} />
               <SidebarButtonLink value={Diamond} />
+              <SidebarButtonLink value={Tarot} />
             </Collapse >
           </Box >
         )
@@ -256,6 +257,7 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={Wheel} />
                 <SidebarButtonLink value={Climb} />
                 <SidebarButtonLink value={Diamond} />
+                <SidebarButtonLink value={Tarot} />
               </Stack>
             </Collapse>
           </Box>

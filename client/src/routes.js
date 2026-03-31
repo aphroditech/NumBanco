@@ -77,8 +77,7 @@ import ClimbPage from "views/Climb/ClimbPage";
 import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
 import SnakesPage from "views/Snakes/Snakes";
 import Diamond from "views/Diamond/DiamondPage";
-
-
+import TarotPage from "views/Tarot/TarotPage";
 import {
   DocumentIcon,
   PersonIcon,
@@ -324,6 +323,13 @@ var dashRoutes = [
     name: "DIAMOND",
     icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Diamond,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/tarot",
+    name: "TAROT",
+    component: TarotPage,
     layout: "/game",
   },
   {

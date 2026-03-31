@@ -57,7 +57,8 @@ import Looks3Icon from '@mui/icons-material/Looks3';
 import SnakePage from "views/Snakes/Snakes";
 import SnakeIcon from '@mui/icons-material/Whatshot';
 import DiamondPage from "views/Diamond/DiamondPage";
-
+import CropPortraitIcon from '@mui/icons-material/CropPortrait';
+import TarotPage from "views/Tarot/TarotPage";
 export const TierA = {
     path: "/tierA",
     name: "Tier A",
@@ -300,5 +301,13 @@ export const Diamond = {
     name: "DIAMOND",
     icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DiamondPage,
+    layout: "/game",
+}
+
+export const Tarot = {
+    path: "/tarot",
+    name: "TAROT",
+    icon: <CropPortraitIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TarotPage,
     layout: "/game",
 }

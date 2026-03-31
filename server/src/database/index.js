@@ -36,6 +36,8 @@ import { initializeThreeNumbersPercentages } from './threeNumbersPercentages.js'
 import { initializeThreeNumbersLimits } from './threeNumbersLimits.js';
 import { initializeDiamondSettings } from './initDiamondSettings.js';
 import { initializeDiamondViews } from './initDiamondViews.js';
+import { initializeTarotViews } from './initTarotViews.js';
+import { initializeTarotSettings } from './initTarotSettings.js';
 import { initializeSnakesSettings } from './snakeSettings.js';
 
 
@@ -67,6 +69,8 @@ export const initializeDatabase = async () => {
     await initializeClimbSettings();
     await initializeDiamondSettings();
     await initializeDiamondViews();
+    await initializeTarotSettings();
+    await initializeTarotViews();
     await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();

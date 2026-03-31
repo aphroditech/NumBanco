@@ -1022,6 +1022,55 @@ const userSchema = new mongoose.Schema({
     default: 1,
   },
 
+  tarotHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        base: {
+          value: { type: Number, default: 0 },
+          ratePct: { type: Number, default: 0 },
+        },
+        left: {
+          value: { type: Number, default: 0 },
+          ratePct: { type: Number, default: 0 },
+        },
+        right: {
+          value: { type: Number, default: 0 },
+          ratePct: { type: Number, default: 0 },
+        },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+  /** Tarot lifetime aggregates for mode automation. */
+  tarotTotalBetAmount: {
+    type: Number,
+    default: 0,
+  },
+  tarotTotalProfit: {
+    type: Number,
+    default: 0,
+  },
+  /** revenue = tarotTotalProfit - tarotTotalBetAmount */
+  tarotRevenue: {
+    type: Number,
+    default: 0,
+  },
+  /** 0: easy, 1: normal, 2: hard */
+  tarotMode: {
+    type: Number,
+    default: 1,
+    min: 0,
+    max: 2,
+  },
+
   updownHistory: {
     type: [
       {
