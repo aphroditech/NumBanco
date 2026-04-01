@@ -64,7 +64,8 @@ import HdrStrongIcon from '@mui/icons-material/HdrStrong';
 import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 import CropPortraitIcon from '@mui/icons-material/CropPortrait';
 import TarotPage from "views/Tarot/TarotPage";
-
+import RockPage from "views/Rock/RockPage";
+import PanToolIcon from '@mui/icons-material/PanTool';
 export const TierA = {
     path: "/tierA",
     name: "Tier A",
@@ -338,5 +339,13 @@ export const Tarot = {
     name: "TAROT",
     icon: <CropPortraitIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: TarotPage,
+    layout: "/game",
+}
+
+export const Rock = {
+    path: "/rock",
+    name: "ROCK",
+    icon: <PanToolIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RockPage,
     layout: "/game",
 }

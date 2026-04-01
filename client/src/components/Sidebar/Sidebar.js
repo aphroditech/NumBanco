@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, Keno, Plinko, CardGame, JokerCrash, Gravity, DoubleGame, DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, Snakes, Diamond, Range, Tarot, HashDice, CryptoCrash } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, Keno, Plinko, CardGame, JokerCrash, Gravity, DoubleGame, DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, Snakes, Diamond, Range, Tarot, HashDice, CryptoCrash, ThreeNumbers, Rock } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -71,6 +71,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={CryptoCrash} />
               <SidebarButtonLink value={Gravity} />
               <SidebarButtonLink value={DoubleGame} />
+              <SidebarButtonLink value={Rock} />
               <SidebarButtonLink value={CloudSpread} />
               <SidebarButtonLink value={Rocket} />
               <SidebarButtonLink value={Jackal} />
@@ -241,6 +242,7 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={JokerCrash} />
                 <SidebarButtonLink value={Gravity} />
                 <SidebarButtonLink value={DoubleGame} />
+                <SidebarButtonLink value={Rock} />
                 <SidebarButtonLink value={CloudSpread} />
                 <SidebarButtonLink value={Rocket} />
                 <SidebarButtonLink value={Jackal} />

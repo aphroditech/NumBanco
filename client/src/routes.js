@@ -83,6 +83,8 @@ import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 import TarotPage from "views/Tarot/TarotPage";
 import HashDicePage from "views/HashDice/HashDicePage";
 
+import RockPage from "views/Rock/RockPage";
+import PanToolIcon from '@mui/icons-material/PanTool';
 import {
   DocumentIcon,
   PersonIcon,
@@ -127,6 +129,14 @@ var dashRoutes = [
   {
     name: "GAMES",
     icon: <GamesIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+  },
+  {
+    redirect: true,
+    path: "/rock",
+    name: "ROCK",
+    icon: <PanToolIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RockPage,
+    layout: "/game",
   },
   {
     redirect: true,

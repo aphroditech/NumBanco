@@ -47,7 +47,7 @@ import { tarotBot } from "./services/tarot/tarotBot.service.js";
 import { snakeBot } from "./services/Snakes/SnakeBot.Service.js";
 import { rangeBot } from "./services/range/rangeBot.service.js";
 import { cryptoCrashBot } from "./services/cryptoCrash/cryptoCrashBot.service.js";
-
+import { rockBot } from "./services/rock/rockBotService.js";
 
 dotenv.config();
 
@@ -102,7 +102,8 @@ connectDB()
             // climbBot(ablyCore);
             // diamondBot(ablyCore);
             // rangeBot(ablyCore);
-            cryptoCrashBot(ablyCore);
+            // cryptoCrashBot(ablyCore);
+            // rockBot(ablyCore);
             // tarotBot(ablyCore);
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);

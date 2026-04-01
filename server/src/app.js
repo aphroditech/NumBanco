@@ -50,6 +50,7 @@ import snakesRoutes from "./routes/snakesRoutes.js";
 import rangeRoutes from "./routes/rangeRoutes.js";
 import cryptoCrashRoutes from "./routes/cryptoCrashRoutes.js";
 import hashDiceRoutes from "./routes/hashDiceRoutes.js";
+import rockRoutes from "./routes/rockRoutes.js";
 
 
 dotenv.config();
@@ -124,6 +125,7 @@ app.use("/api/diamond", diamondRoutes);
 app.use("/api/tarot", tarotRoutes);
 app.use("/api/snakes", snakesRoutes);
 app.use("/api/range", rangeRoutes);
+app.use("/api/rock", rockRoutes);
 app.use("/api/cryptoCrash", cryptoCrashRoutes);
 
 app.get("/api/graph-data", (req, res) => {
