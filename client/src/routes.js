@@ -59,7 +59,6 @@ import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
 import DicePage from "views/Dice/DicePage";
-import HashDicePage from "views/HashDice/HashDicePage";
 import PlinkoPage from "views/Plinko/PlinkoPage";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import KenoPage from "views/Keno/KenoPage";
@@ -173,7 +172,7 @@ var dashRoutes = [
     component: HashDicePage,
     layout: "/game",
   },
-  
+
   {
     redirect: true,
     path: "/keno",
