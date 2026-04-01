@@ -168,7 +168,8 @@ export default function Dashboard(props) {
                 ref={mainPanel}
                 w={{
                     base: "100%",
-                    xl: "calc(100% - 275px)",
+                    /* Match fixed sidebar: 260px width + 16px left margin */
+                    xl: "calc(100% - 276px)",
                 }}>
                 <Portal>
                     <AdminNavbar

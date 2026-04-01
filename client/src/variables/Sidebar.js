@@ -11,12 +11,14 @@ import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import Mining from "views/Mining/Mining";
 import RocketShot from "views/RocketShot/RocketShot";
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import RocketIcon from '@mui/icons-material/Rocket';
 import RubicPage from "views/Rubic/RubicPage";
 import PumpingPage from "views/Pumping/PumpingPage";
 import FishingPage from "views/Fishing/FishingPage";
 import JokerCrashPage from "views/JokerCrash/JokerCrashPage";
 import GravityPage from "views/Gravity/GravityPage";
 import DoublePage from "views/Double/DoublePage";
+import TrenballPage from "views/Trenball/TrenballPage";
 import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
@@ -221,6 +223,14 @@ export const DoubleGame = {
     name: "DOUBLE",
     icon: <TokenIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DoublePage,
+    layout: "/game",
+}
+
+export const TrenballGame = {
+    path: "/trenball",
+    name: "PULSE CRASH",
+    icon: <RocketIcon style={{ fontSize: "24px", color: "#00d4ff" }} />,
+    component: TrenballPage,
     layout: "/game",
 }
 

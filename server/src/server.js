@@ -20,6 +20,7 @@ import { pumpingBot } from "./services/pumping/pumpingBot.service.js";
 import { rubicBot } from "./services/Rubic/rubicBot.service.js";
 import { startGravityGameLoop } from "./services/gravity/gravityGame.service.js";
 import { startDoubleGameLoop } from "./services/double/doubleGame.service.js";
+import { startTrenballGameLoop } from "./services/trenball/trenballGame.service.js";
 import { startCloudSpreadGameLoop, setCloudSpreadAbly } from "./services/cloudSpread/cloudSpreadGame.service.js";
 import { cloudSpreadBot } from "./services/cloudSpread/cloudSpreadBot.service.js";
 import { minesBot } from "./services/mines/minesBot.js";
@@ -97,6 +98,9 @@ connectDB()
 
             // climbBot(ablyCore);
             diamondBot(ablyCore);
+            startTrenballGameLoop(ablyCore).catch((e) =>
+              console.error("[trenball] failed to start loop:", e?.message || e)
+            );
 
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);

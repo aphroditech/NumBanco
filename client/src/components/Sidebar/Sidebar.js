@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Plinko,Pumping,HashDice, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame,DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, ThreeNumbers, Snakes, Diamond } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Plinko,Pumping,HashDice, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame, TrenballGame, DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, ThreeNumbers, Snakes, Diamond } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -28,10 +28,8 @@ import Landing_logo from "assets/img/logo_Landing.png";
 function Sidebar(props) {
   let variantChange = "0.2s linear";
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState("menu");
-  const toggleMenu = (menu) => {
-    setActiveMenu(prev => prev === menu ? null : menu);
-  };
+  const [menuOpen, setMenuOpen] = React.useState(true);
+  const [gamesOpen, setGamesOpen] = React.useState(true);
   const createLinks = (routes) => {
 
     return routes.map((prop, key) => {
@@ -43,9 +41,9 @@ function Sidebar(props) {
           <Box key={key}>
             <SideBarToggle
               value={prop}
-              isExpanded={activeMenu === "menu"}
-              onClick={() => toggleMenu("menu")} />
-            <Collapse in={activeMenu === "menu"} animateOpacity>
+              isExpanded={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)} />
+            <Collapse in={menuOpen} animateOpacity>
               <SidebarButtonLink value={TierA} />
               <SidebarButtonLink value={TierB} />
               <SidebarButtonLink value={TierC} />
@@ -58,9 +56,9 @@ function Sidebar(props) {
           <Box key={key}>
             <SideBarToggle
               value={prop}
-              isExpanded={activeMenu === "games"}
-              onClick={() => toggleMenu("games")} />
-            <Collapse in={activeMenu === "games"} animateOpacity>
+              isExpanded={gamesOpen}
+              onClick={() => setGamesOpen((v) => !v)} />
+            <Collapse in={gamesOpen} animateOpacity>
               <SidebarButtonLink value={Rubic} />
               <SidebarButtonLink value={Pumping} />
               <SidebarButtonLink value={Fishing} />
@@ -70,6 +68,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={JokerCrash} />
               <SidebarButtonLink value={Gravity} />
               <SidebarButtonLink value={DoubleGame} />
+              <SidebarButtonLink value={TrenballGame} />
               <SidebarButtonLink value={CloudSpread} />
               <SidebarButtonLink value={Rocket} />
               <SidebarButtonLink value={Jackal} />
@@ -183,11 +182,8 @@ function Sidebar(props) {
 
 export function SidebarResponsive(props) {
   const mainPanel = React.useRef();
-  const [activeMenu, setActiveMenu] = React.useState("menu");
-
-  const toggleMenu = (menu) => {
-    setActiveMenu(prev => (prev === menu ? null : menu));
-  };
+  const [menuOpen, setMenuOpen] = React.useState(true);
+  const [gamesOpen, setGamesOpen] = React.useState(true);
 
   const createLinks = (routes) => {
     return routes.map((prop, key) => {
@@ -200,12 +196,12 @@ export function SidebarResponsive(props) {
             <SideBarToggle
               value={prop}
 
-              isExpanded={activeMenu === "menu"}
-              onClick={() => toggleMenu("menu")}
+              isExpanded={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)}
             />
 
             {/* Sub menu */}
-            <Collapse in={activeMenu === "menu"} animateOpacity>
+            <Collapse in={menuOpen} animateOpacity>
               <Stack
                 spacing={2}
                 mt={2}
@@ -223,9 +219,9 @@ export function SidebarResponsive(props) {
           <Box key={key}>
             <SideBarToggle
               value={prop}
-              isExpanded={activeMenu === "games"}
-              onClick={() => toggleMenu("games")} />
-            <Collapse in={activeMenu === "games"} animateOpacity>
+              isExpanded={gamesOpen}
+              onClick={() => setGamesOpen((v) => !v)} />
+            <Collapse in={gamesOpen} animateOpacity>
               <Stack
                 spacing={2}
                 mt={2}

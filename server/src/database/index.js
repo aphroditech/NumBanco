@@ -39,6 +39,7 @@ import { initializeDiamondViews } from './initDiamondViews.js';
 import { initializeSnakesSettings } from './snakeSettings.js';
 import { initializeHashDiceSettings } from './initHashDiceSettings.js';
 import { initializeHashDiceBotSettings } from './initHashDiceBotSettings.js';
+import { initTrenballBotSettings } from './initTrenballBotSettings.js';
 import { trimHashDiceResultsCollection } from '../services/hashDice/hashDiceResult.service.js';
 
 
@@ -69,6 +70,7 @@ export const initializeDatabase = async () => {
     await initializePlinkoBotSettings();
     await initializeHashDiceSettings();
     await initializeHashDiceBotSettings();
+    await initTrenballBotSettings();
     await trimHashDiceResultsCollection();
     await initializeClimbSettings();
     await initializeDiamondSettings();
