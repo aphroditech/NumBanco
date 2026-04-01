@@ -126,8 +126,8 @@ const winGlow = keyframes`
     }
 `;
 
-/** Place file at `public/keno/diamond.gif` */
-const KENO_WIN_GIF = `${process.env.PUBLIC_URL || ''}/twist/diamond.gif`;
+/** Place file at `public/CryptoCrash/diamond.gif` */
+const KENO_WIN_GIF = `${process.env.PUBLIC_URL || ''}/CryptoCrash/diamond.gif`;
 
 const purpleTile = 'linear-gradient(180deg, #a855f7 0%, #7c3aed 45%, #6d28d9 100%)';
 const purpleTileHover = 'linear-gradient(180deg, #c084fc 0%, #9333ea 45%, #7c3aed 100%)';
