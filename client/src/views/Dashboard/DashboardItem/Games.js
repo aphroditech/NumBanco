@@ -43,6 +43,7 @@ import plinko from "assets/img/Games/plinko.jpg"
 import threeNumbers from "assets/img/Games/threeNumbers.jpg"
 import diamond from "assets/img/Games/diamond.jpg"
 import snakes from "assets/img/Games/snake.jpg"
+import cryptoCrash from "assets/img/Games/cryptoCrash.jpg"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -58,6 +59,8 @@ const DASHBOARD_GAMES = [
     { img: cardGame, name: "Card Game", path: "/game/card-game", reduxKey: "cardGameUsers", tickMs: 4200 },
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
     { img: threeNumbers, name: "Three Numbers", path: "/game/three-numbers", reduxKey: "threeNumbersUsers", tickMs: 3600 },
+    { img: keno, name: "Keno", path: "/game/keno", reduxKey: "kenoUsers", tickMs: 3600 },
+    { img: cryptoCrash, name: "Crypto Crash", path: "/game/crypto-crash", reduxKey: "cryptoCrashUsers", tickMs: 3600 },
     { img: doubleGame, name: "Double", path: "/game/double", reduxKey: "doubleUsers", tickMs: 5800 },
     { img: plinko, name: "Plinko", path: "/game/plinko", reduxKey: "plinkoUsers", tickMs: 5400 },
     { img: cloud, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
@@ -75,7 +78,6 @@ const DASHBOARD_GAMES = [
     { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
     { img: coinImage, name: "Coin", path: "/game/coin", reduxKey: "coinUsers", tickMs: 3600 },
-    { img: keno, name: "Keno", path: "/game/keno", reduxKey: "kenoUsers", tickMs: 3600 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {

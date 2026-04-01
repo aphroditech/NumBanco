@@ -783,6 +783,66 @@ const userSchema = new mongoose.Schema({
     default: []
   },
 
+  cryptoCrashMode: {
+    type: String,
+    default: 1
+  },
+
+  cryptoCrashHistory: {
+    type: [
+      {
+        bet: {
+          type: Number,
+        },
+        win: {
+          type: Number,
+          required: true
+        },
+        step: {
+          type: Number,
+          required: true,
+        },
+        multi: {
+          type: Number,
+          required: true
+        },
+        totalBet: {
+          type: Number,
+          default: 0
+        },
+        totalWin: {
+          type: Number,
+          default: 0
+        },
+        cryptoCrashBalance: {
+          type: Number,
+          default: 0
+        },
+        info: {
+          type: [
+            {
+              step: Number,
+              coin: Number,
+              result: Number,
+              status: Number,
+              multi: Number,
+              imulti: Number,
+            }
+          ]
+        },
+        active: {
+          type: Boolean,
+          default: false
+        },
+        createAt: {
+          type: Date,
+          default: Date.now()
+        }
+      }
+    ],
+    default: []
+  },
+
   diceHistory: {
     type: [
       {

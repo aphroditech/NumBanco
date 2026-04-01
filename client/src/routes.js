@@ -77,6 +77,7 @@ import ClimbPage from "views/Climb/ClimbPage";
 import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
 import SnakesPage from "views/Snakes/Snakes";
 import Diamond from "views/Diamond/DiamondPage";
+import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 
 
 import {
@@ -216,6 +217,14 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/crypto-crash",
+    name: "CRYPTO CRASH",
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CryptoCrashPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/coin",
     name: "COIN",
     icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -244,6 +253,14 @@ var dashRoutes = [
     name: "CLOUD SPREAD",
     icon: <CloudQueueIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: CloudSpreadPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/dove",
+    name: "LUCKY HOP",
+    icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Dove,
     layout: "/game",
   },
   {

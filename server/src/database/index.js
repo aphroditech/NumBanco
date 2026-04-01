@@ -37,6 +37,8 @@ import { initializeThreeNumbersLimits } from './threeNumbersLimits.js';
 import { initializeDiamondSettings } from './initDiamondSettings.js';
 import { initializeDiamondViews } from './initDiamondViews.js';
 import { initializeSnakesSettings } from './snakeSettings.js';
+import { initializeCryptoCrashPercentages } from './cryptoCrashPercentages.js';
+import { initializeCryptoCrashLimits } from './cryptoCrashLimits.js';
 
 
 export const initializeDatabase = async () => {
@@ -82,5 +84,7 @@ export const initializeDatabase = async () => {
     await initializeThreeNumbersPercentages();
     await initializeThreeNumbersLimits();
     await initializeSnakesSettings();
+    await initializeCryptoCrashPercentages();
+    await initializeCryptoCrashLimits();
     console.log('✅ Database initialization complete');
 };

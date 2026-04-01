@@ -688,7 +688,7 @@ export default function PumpingPage() {
             <Result />
             <Grid
                 templateAreas={{
-                    sm: '"panel" "game" "empty"',
+                    sm: '"game" "panel" "empty"',
                     md: '"game game" "panel empty"',
                     '1550px': '"panel game empty"'
                 }}

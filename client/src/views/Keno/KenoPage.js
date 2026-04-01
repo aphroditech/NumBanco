@@ -506,7 +506,7 @@ export default function KenoPage() {
         <Box px={{ base: '16px', md: '24px' }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
             <Grid
                 templateAreas={{
-                    sm: '"panel" "game" "empty"',
+                    sm: '"game" "panel" "empty"',
                     md: '"game game" "panel empty"',
                     '1550px': '"panel game empty"'
                 }}

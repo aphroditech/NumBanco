@@ -34,6 +34,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
+import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin';
 import StyleIcon from '@mui/icons-material/Style';
 import AppsIcon from '@mui/icons-material/Apps';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
@@ -57,6 +58,7 @@ import Looks3Icon from '@mui/icons-material/Looks3';
 import SnakePage from "views/Snakes/Snakes";
 import SnakeIcon from '@mui/icons-material/Whatshot';
 import DiamondPage from "views/Diamond/DiamondPage";
+import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 
 export const TierA = {
     path: "/tierA",
@@ -180,6 +182,13 @@ export const JokerCrash = {
     name: "JOKER CRASH",
     icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: JokerCrashPage,
+    layout: "/game",
+}
+export const CryptoCrash = {
+    path: "/crypto-crash",
+    name: "CRYPTO CRASH",
+    icon: <CurrencyBitcoinIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CryptoCrashPage,
     layout: "/game",
 }
 

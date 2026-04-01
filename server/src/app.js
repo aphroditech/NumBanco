@@ -46,6 +46,7 @@ import plinkoRoutes from "./routes/plinkoRoutes.js";
 import threeNumbersRoutes from "./routes/threeNumbersRoutes.js";
 import diamondRoutes from "./routes/diamondRoutes.js";
 import snakesRoutes from "./routes/snakesRoutes.js";
+import cryptoCrashRoutes from "./routes/cryptoCrashRoutes.js";
 
 dotenv.config();
 
@@ -116,6 +117,7 @@ app.use("/api/climb", climbRoutes);
 app.use("/api/threeNumbers", threeNumbersRoutes);
 app.use("/api/diamond", diamondRoutes);
 app.use("/api/snakes", snakesRoutes);
+app.use("/api/cryptoCrash", cryptoCrashRoutes);
 app.get("/api/graph-data", (req, res) => {
   res.json([
     { name: "Jan", value: 400 },
