@@ -126,8 +126,8 @@ const winGlow = keyframes`
     }
 `;
 
-/** Place file at `public/keno/diamond.gif` */
-const KENO_WIN_GIF = `${process.env.PUBLIC_URL || ''}/twist/diamond.gif`;
+/** Place file at `public/CryptoCrash/diamond.gif` */
+const KENO_WIN_GIF = `${process.env.PUBLIC_URL || ''}/CryptoCrash/diamond.gif`;
 
 const purpleTile = 'linear-gradient(180deg, #a855f7 0%, #7c3aed 45%, #6d28d9 100%)';
 const purpleTileHover = 'linear-gradient(180deg, #c084fc 0%, #9333ea 45%, #7c3aed 100%)';
@@ -506,7 +506,7 @@ export default function KenoPage() {
         <Box px={{ base: '16px', md: '24px' }} minH="100vh" bg="transparent" marginTop="100px" w="100%" maxW="100%">
             <Grid
                 templateAreas={{
-                    sm: '"panel" "game" "empty"',
+                    sm: '"game" "panel" "empty"',
                     md: '"game game" "panel empty"',
                     '1550px': '"panel game empty"'
                 }}

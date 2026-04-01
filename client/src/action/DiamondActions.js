@@ -8,7 +8,7 @@ export const getDiamondSettings = async () => {
         return res.data;
     } catch (err) {
         console.error(err);
-        throw err;
+
     }
 };
 
@@ -19,7 +19,7 @@ export const getDiamondLiveView = async (history) => {
     } catch (err) {
         console.error(err);
         if (err.response?.status === 401 && history) history.push("/auth/landing");
-        throw err;
+
     }
 };
 
@@ -31,6 +31,6 @@ export const diamondPlay = async (data, dispatch, history) => {
     } catch (err) {
         console.error(err);
         if (err.response?.status === 401 && history) history.push("/auth/landing");
-        throw err;
+
     }
 };

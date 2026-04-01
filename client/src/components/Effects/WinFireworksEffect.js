@@ -12,6 +12,8 @@ function WinFireworksEffect({
     zIndex = 9999,
     /** Optional line under the main amount (e.g. total multiplier). */
     subtitle,
+    /** Make subtitle follow the same fade timeline as main earn text. */
+    subtitleSyncWithEarn = false,
     /** Optional viewport-space anchor rect: effect centers within this box. */
     anchorRect
 }) {
@@ -191,7 +193,7 @@ function WinFireworksEffect({
                 }}>
                     <div className="earn-neon">{`$${earnLabel}`}</div>
                     {subtitle ? (
-                        <div className="earn-subtitle">{subtitle}</div>
+                        <div className={`earn-subtitle${subtitleSyncWithEarn ? " earn-subtitle-sync" : ""}`}>{subtitle}</div>
                     ) : null}
                 </div>
                 <style>{`
@@ -265,6 +267,10 @@ function WinFireworksEffect({
                         0 0 22px rgba(0, 212, 255, 0.35);
                     letter-spacing: 0.04em;
                     animation: subtitleIn 0.85s ease-out 0.15s both;
+                }
+
+                .earn-subtitle.earn-subtitle-sync {
+                    animation: earnPop 1.6s ease-out both;
                 }
 
                 @keyframes subtitleIn {

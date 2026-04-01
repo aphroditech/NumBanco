@@ -55,6 +55,7 @@ export const userActive = async () => {
 
         const hashDiceUsers = countByActive(21) + 52;
         const diamondUsers = countByActive(21) + 58;
+        const tarotUsers = countByActive(22) + 50;
         const totalActiveUsers =
             plinkoUsers +
             tierAUsers +
@@ -77,8 +78,9 @@ export const userActive = async () => {
             jokerCrashUsers +
             cardGameUsers +
             climbUsers +
-            hashDiceUsers;
-            diamondUsers;
+            diamondUsers +
+            hashDiceUsers +
+            tarotUsers;
         const result = {
             offlineUsers,
             onlineUsers,
@@ -106,6 +108,7 @@ export const userActive = async () => {
             climbUsers,
             hashDiceUsers,
             diamondUsers,
+            tarotUsers,
             totalActiveUsers
         };
 

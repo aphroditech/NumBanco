@@ -9,7 +9,7 @@ export const climbStart = async (data, dispatch, history) => {
     } catch (err) {
         console.error(err);
         if (err.response?.status === 401 && history) history.push("/auth/landing");
-        throw err;
+
     }
 };
 
@@ -21,7 +21,7 @@ export const climbPick = async (data, dispatch, history) => {
     } catch (err) {
         console.error(err);
         if (err.response?.status === 401 && history) history.push("/auth/landing");
-        throw err;
+
     }
 };
 
@@ -33,7 +33,6 @@ export const climbCashOut = async (dispatch, history) => {
     } catch (err) {
         console.error(err);
         if (err.response?.status === 401 && history) history.push("/auth/landing");
-        throw err;
     }
 };
 

@@ -181,6 +181,23 @@ export const bangSnake = async (req, res) => {
             date: new Date(),
         });
 
+        const snakeResult = new SnakeResult({
+            userName: req.user.altas,
+            avatar: req.user.avatar,
+            isWin: false,
+            multiplier: 0,
+            betAmount: bet,
+            winAmount: 0,
+            date: new Date(),
+        });
+        await snakeResult.save();
+
+        const ably = req.app.locals.ably;
+        if (ably) {
+            const channel = ably.channels.get("snakesResult");
+            channel.publish("SNAKES_RESULT", snakeResult);
+        }
+
         return res.status(200).json({ message: "Snake banged successfully", history: snakeHistory?.history || [] });
 
     }

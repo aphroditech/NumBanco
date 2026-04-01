@@ -25,6 +25,7 @@ const initialState = {
         diamondUsers: 0,
         jokerCrashUsers: 0,
         cardGameUsers: 0,
+        tarotUsers: 0,
         hashDiceUsers: 0,
         totalActiveUsers: 0
     },

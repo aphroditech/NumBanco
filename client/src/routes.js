@@ -63,6 +63,8 @@ import HashDicePage from "views/HashDice/HashDicePage";
 import PlinkoPage from "views/Plinko/PlinkoPage";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import KenoPage from "views/Keno/KenoPage";
+import RangePage from "views/Range/RangePage";
+import HdrStrongIcon from '@mui/icons-material/HdrStrong';
 
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
@@ -80,7 +82,9 @@ import ClimbPage from "views/Climb/ClimbPage";
 import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
 import SnakesPage from "views/Snakes/Snakes";
 import Diamond from "views/Diamond/DiamondPage";
-
+import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
+import TarotPage from "views/Tarot/TarotPage";
+import HashDicePage from "views/HashDice/HashDicePage";
 
 import {
   DocumentIcon,
@@ -235,6 +239,21 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/range",
+    name: "RANGE",
+    icon: <HdrStrongIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RangePage,
+    layout: "/game",
+  },
+  {
+    path: "/crypto-crash",
+    name: "CRYPTO CRASH",
+    icon: <WhatshotIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CryptoCrashPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/coin",
     name: "COIN",
     icon: <MonetizationOnIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -263,6 +282,14 @@ var dashRoutes = [
     name: "CLOUD SPREAD",
     icon: <CloudQueueIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: CloudSpreadPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/dove",
+    name: "LUCKY HOP",
+    icon: <TwitterIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: Dove,
     layout: "/game",
   },
   {
@@ -343,6 +370,13 @@ var dashRoutes = [
     name: "DIAMOND",
     icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Diamond,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/tarot",
+    name: "TAROT",
+    component: TarotPage,
     layout: "/game",
   },
   {

@@ -26,10 +26,10 @@ export function generateBSCWallet() {
 // Generate TRON wallet
 export function generateTRONWallet() {
   // Generate random private key (without 0x prefix for TronWeb)
-  const privateKey = Array.from({length: 64}, () => 
+  const privateKey = Array.from({ length: 64 }, () =>
     Math.floor(Math.random() * 16).toString(16)
   ).join('');
-  
+
   // Initialize TronWeb to get address
   // TronWeb default export is a constructor; instantiate directly
   let tronWeb;
@@ -41,7 +41,7 @@ export function generateTRONWallet() {
     });
   } catch (err) {
     console.error('Failed to initialize TronWeb:', err);
-    // throw err;
+    // 
     return;
   }
 
@@ -49,7 +49,7 @@ export function generateTRONWallet() {
   if (!address) {
     console.warn('TronWeb did not produce a base58 address for the generated key');
   }
-  
+
   return {
     address: address,
     privateKey: encrypt(privateKey)

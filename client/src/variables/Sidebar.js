@@ -35,6 +35,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
+import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin';
 import StyleIcon from '@mui/icons-material/Style';
 import AppsIcon from '@mui/icons-material/Apps';
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
@@ -60,6 +61,11 @@ import Looks3Icon from '@mui/icons-material/Looks3';
 import SnakePage from "views/Snakes/Snakes";
 import SnakeIcon from '@mui/icons-material/Whatshot';
 import DiamondPage from "views/Diamond/DiamondPage";
+import RangePage from "views/Range/RangePage";
+import HdrStrongIcon from '@mui/icons-material/HdrStrong';
+import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
+import CropPortraitIcon from '@mui/icons-material/CropPortrait';
+import TarotPage from "views/Tarot/TarotPage";
 
 export const TierA = {
     path: "/tierA",
@@ -193,6 +199,21 @@ export const JokerCrash = {
     component: JokerCrashPage,
     layout: "/game",
 }
+export const CryptoCrash = {
+    path: "/crypto-crash",
+    name: "CRYPTO CRASH",
+    icon: <CurrencyBitcoinIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: CryptoCrashPage,
+    layout: "/game",
+}
+
+export const Range = {
+    path: "/range",
+    name: "RANGE",
+    icon: <HdrStrongIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RangePage,
+    layout: "/game",
+}
 
 export const CardGame = {
     path: "/card-game",
@@ -319,5 +340,13 @@ export const Diamond = {
     name: "DIAMOND",
     icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DiamondPage,
+    layout: "/game",
+}
+
+export const Tarot = {
+    path: "/tarot",
+    name: "TAROT",
+    icon: <CropPortraitIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TarotPage,
     layout: "/game",
 }

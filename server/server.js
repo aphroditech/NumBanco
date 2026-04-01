@@ -104,7 +104,7 @@ connectDB()
             console.log("💰 Finance Ably connected");
 
             // confirmDepositEngine(ablyFinance);
-            tronEngine(ablyFinance);
+            // tronEngine(ablyFinance);
             // startPartnerDepositCron(ablyFinance);
             // startWithdrawApprovalCron(ablyFinance);
 
@@ -159,12 +159,12 @@ connectDB()
             // cocoBot(ablyMiningGames);
             // alphaTreeBot(ablyMiningGames);
             // doveBot(ablyMiningGames);
-            minesBot(ablyMiningGames);
-            plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
-            startGravityGameLoop(ablyMiningGames);
-            setCloudSpreadAbly(ablyMiningGames);
-            cloudSpreadBot().catch(console.error);
-            startDoubleGameLoop(ablyMiningGames);
+            // minesBot(ablyMiningGames);
+            // plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
+            // startGravityGameLoop(ablyMiningGames);
+            // setCloudSpreadAbly(ablyMiningGames);
+            // cloudSpreadBot().catch(console.error);
+            // startDoubleGameLoop(ablyMiningGames);
 
         });
 

@@ -48,7 +48,7 @@ export const completeWheelSpin = async ({ multiplier, betAmount, level }, dispat
         if (err.response?.status === 401 && history) {
             history.push("/auth/landing");
         }
-        throw err;
+
     }
 };
 

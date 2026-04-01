@@ -36,7 +36,12 @@ import { initializeThreeNumbersPercentages } from './threeNumbersPercentages.js'
 import { initializeThreeNumbersLimits } from './threeNumbersLimits.js';
 import { initializeDiamondSettings } from './initDiamondSettings.js';
 import { initializeDiamondViews } from './initDiamondViews.js';
+import { initializeTarotViews } from './initTarotViews.js';
+import { initializeTarotSettings } from './initTarotSettings.js';
 import { initializeSnakesSettings } from './snakeSettings.js';
+import { initRangeSettings } from './initRangeSettings.js';
+import { initializeCryptoCrashPercentages } from './cryptoCrashPercentages.js';
+import { initializeCryptoCrashLimits } from './cryptoCrashLimits.js';
 import { initializeHashDiceSettings } from './initHashDiceSettings.js';
 import { initializeHashDiceBotSettings } from './initHashDiceBotSettings.js';
 import { initTrenballBotSettings } from './initTrenballBotSettings.js';
@@ -75,6 +80,8 @@ export const initializeDatabase = async () => {
     await initializeClimbSettings();
     await initializeDiamondSettings();
     await initializeDiamondViews();
+    await initializeTarotSettings();
+    await initializeTarotViews();
     await initializeCocoRates();
     await initializeFishingPercentages();
     await initializeFishingLimits();
@@ -90,5 +97,8 @@ export const initializeDatabase = async () => {
     await initializeThreeNumbersPercentages();
     await initializeThreeNumbersLimits();
     await initializeSnakesSettings();
+    await initRangeSettings();
+    await initializeCryptoCrashPercentages();
+    await initializeCryptoCrashLimits();
     console.log('✅ Database initialization complete');
 };

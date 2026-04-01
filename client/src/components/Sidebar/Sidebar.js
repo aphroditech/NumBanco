@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Plinko,Pumping,HashDice, CloudSpread, Fishing, CardGame, Keno, JokerCrash, Gravity, DoubleGame, TrenballGame, DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, ThreeNumbers, Snakes, Diamond } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, Keno, ThreeNumbers, Plinko, CardGame, JokerCrash, Gravity, DoubleGame,TrenballGame, DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, Snakes, Diamond, Range, Tarot, HashDice, CryptoCrash } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -66,6 +66,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={Keno} />
               <SidebarButtonLink value={ThreeNumbers} />
               <SidebarButtonLink value={JokerCrash} />
+              <SidebarButtonLink value={CryptoCrash} />
               <SidebarButtonLink value={Gravity} />
               <SidebarButtonLink value={DoubleGame} />
               <SidebarButtonLink value={TrenballGame} />
@@ -75,6 +76,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={AToZGame} />
               <SidebarButtonLink value={Coin} />
               <SidebarButtonLink value={Snakes} />
+              <SidebarButtonLink value={Range} />
               <SidebarButtonLink value={Dice} />
               <SidebarButtonLink value={HashDice} />
               <SidebarButtonLink value={Plinko} />
@@ -86,6 +88,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={Wheel} />
               <SidebarButtonLink value={Climb} />
               <SidebarButtonLink value={Diamond} />
+              <SidebarButtonLink value={Tarot} />
             </Collapse >
           </Box >
         )
@@ -251,9 +254,11 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={Coin} />
                 <SidebarButtonLink value={Twist} />
                 <SidebarButtonLink value={Snakes} />
+                <SidebarButtonLink value={Range} />
                 <SidebarButtonLink value={Wheel} />
                 <SidebarButtonLink value={Climb} />
                 <SidebarButtonLink value={Diamond} />
+                <SidebarButtonLink value={Tarot} />
               </Stack>
             </Collapse>
           </Box>

@@ -340,8 +340,8 @@ export default function DicePage() {
         >
             <Grid
                 templateAreas={{
-                    sm: '"panel" "game" "empty"',
-                    md: '"panel empty" "game game"',
+                    sm: '"game" "panel" "empty"',
+                    md: '"game game" "panel empty"',
                     '1550px': '"panel game empty"'
                 }}
                 templateColumns={{
