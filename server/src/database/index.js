@@ -44,6 +44,7 @@ import { initializeCryptoCrashPercentages } from './cryptoCrashPercentages.js';
 import { initializeCryptoCrashLimits } from './cryptoCrashLimits.js';
 import { initializeHashDiceSettings } from './initHashDiceSettings.js';
 import { initializeHashDiceBotSettings } from './initHashDiceBotSettings.js';
+import { initTrenballBotSettings } from './initTrenballBotSettings.js';
 import { trimHashDiceResultsCollection } from '../services/hashDice/hashDiceResult.service.js';
 import { initRockSettings } from './initRockSettings.js';
 
@@ -76,6 +77,7 @@ export const initializeDatabase = async () => {
     await initializeHashDiceSettings();
     await initializeHashDiceBotSettings();
     await initRockSettings();
+    await initTrenballBotSettings();
     await trimHashDiceResultsCollection();
     await initializeClimbSettings();
     await initializeDiamondSettings();

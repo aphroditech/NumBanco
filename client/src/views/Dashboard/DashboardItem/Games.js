@@ -29,6 +29,7 @@ import fishing from "assets/img/Games/fishing.jpg"
 import mine from "assets/img/Games/mine.jpg"
 import cardGame from "assets/img/Games/cardgame.jpg"
 import jokerCrash from "assets/img/Games/jokercrash.jpg"
+import trenballImg from "assets/img/Games/crash.jpg"
 import alphaTree from "assets/img/Games/alphaTree.jpg"
 import digits from "assets/img/Games/digits.jpg"
 import cloud from "assets/img/Games/cloud.jpg"
@@ -59,6 +60,7 @@ const DASHBOARD_GAMES = [
     { img: pumping, name: "Pumping", path: "/game/pumping", reduxKey: "pumpingUsers", tickMs: 3800 },
     { img: fishing, name: "Fishing", path: "/game/fishing", reduxKey: "fishingUsers", tickMs: 4200 },
     { img: jokerCrash, name: "Joker Crash", path: "/game/joker-crash", reduxKey: "jokerCrashUsers", tickMs: 4200 },
+    { img: trenballImg, name: "PulseCrash", path: "/game/trenball", reduxKey: "trenballUsers", tickMs: 4000 },
     { img: cardGame, name: "Card Game", path: "/game/card-game", reduxKey: "cardGameUsers", tickMs: 4200 },
     { img: gravity, name: "Gravity", path: "/game/gravity", reduxKey: "gravityUsers", tickMs: 6500 },
     { img: threeNumbers, name: "Three Numbers", path: "/game/three-numbers", reduxKey: "threeNumbersUsers", tickMs: 3600 },

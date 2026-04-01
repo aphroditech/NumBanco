@@ -96,7 +96,7 @@ export default function AdminNavbar(props) {
       }}
       pt='8px'
       top='18px'
-      w={{ sm: "calc(100vw - 60px)", xl: "calc(100vw - 75px - 275px)" }}>
+      w={{ sm: "calc(100vw - 60px)", xl: "calc(100vw - 75px - 276px)" }}>
       <Flex
         w='100%'
         flexDirection={{

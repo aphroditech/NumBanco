@@ -1251,6 +1251,35 @@ const userSchema = new mongoose.Schema({
     default: [],
   },
 
+  /** Trenball — one entry per real-user bet (mirrors TrenballHistory collection). */
+  trenballHistory: {
+    type: [
+      {
+        _id: { type: mongoose.Schema.Types.ObjectId },
+        roundId: { type: Number, required: true },
+        userName: { type: String, default: "" },
+        avatar: { type: String, default: "" },
+        side: {
+          type: String,
+          required: true,
+          enum: ["crash", "red", "green", "moon"],
+        },
+        betAmount: { type: Number, required: true },
+        winAmount: { type: Number, default: 0 },
+        crashMultiplier: { type: Number },
+        outcome: {
+          type: String,
+          enum: ["crash", "red", "green", "moon"],
+        },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
   /** Cloud Spread — round summaries (like rubicHistory / pumpingHistory). */
   cloudSpreadHistory: {
     type: [

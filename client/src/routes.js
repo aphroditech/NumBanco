@@ -31,6 +31,7 @@ import CloudDownloadRoundedIcon from '@mui/icons-material/CloudDownloadRounded';
 import CasinoIcon from '@mui/icons-material/Casino';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import RocketIconMui from '@mui/icons-material/Rocket';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import NumbersIcon from '@mui/icons-material/Numbers';
@@ -47,6 +48,7 @@ import RubicPage from "views/Rubic/RubicPage"
 import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
 import DoublePage from "views/Double/DoublePage"
+import TrenballPage from "views/Trenball/TrenballPage"
 import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import FishingPage from "views/Fishing/FishingPage";
 import CardGamePage from "views/CardGame/CardGamePage";
@@ -57,6 +59,7 @@ import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
 import DicePage from "views/Dice/DicePage";
+import HashDicePage from "views/HashDice/HashDicePage";
 import PlinkoPage from "views/Plinko/PlinkoPage";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import KenoPage from "views/Keno/KenoPage";
@@ -118,6 +121,14 @@ var dashRoutes = [
     component: Partnership,
     layout: "/user",
   },
+  {
+    redirect: true,
+    path: "/trenball",
+    name: "TRENBALL",
+    icon: <RocketIconMui style={{ fontSize: "24px", color: "#3bc117" }} />,
+    component: TrenballPage,
+    layout: "/game",
+  },
   // {
   //   name: "LOTTERY",
   //   icon: <CasinoIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -154,7 +165,15 @@ var dashRoutes = [
     component: DicePage,
     layout: "/game",
   },
-
+  {
+    redirect: true,
+    path: "/hash-dice",
+    name: "HASH DICE",
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: HashDicePage,
+    layout: "/game",
+  },
+  
   {
     redirect: true,
     path: "/keno",
@@ -368,14 +387,6 @@ var dashRoutes = [
     path: "/tarot",
     name: "TAROT",
     component: TarotPage,
-    layout: "/game",
-  },
-  {
-    redirect: true,
-    path: "/hash-dice",
-    name: "HASH DICE",
-    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
-    component: HashDicePage,
     layout: "/game",
   },
   {
