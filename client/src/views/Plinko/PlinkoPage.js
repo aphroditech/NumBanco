@@ -21,7 +21,7 @@ import {
 import { toast } from 'react-toastify';
 import Card from 'components/Card/Card.js';
 import CardBody from 'components/Card/CardBody.js';
-import GradientBorder from 'components/GradientBorder/GradientBorder';
+import GamePillAmountField from 'components/GamePillAmountField/GamePillAmountField';
 import WinFireworksEffect from 'components/Effects/WinFireworksEffect';
 import { plinkoBet, fetchPlinkoHistory, fetchPlinkoLiveResults } from 'action/PlinkoActions';
 import ablyClient from '../../ably/ablyClient';
@@ -32,6 +32,7 @@ import PlinkoBoard from './PlinkoItem/PlinkoBoard';
 import PlinkoBetHistory from './PlinkoItem/PlinkoBetHistory';
 import PlinkoLiveResults from './PlinkoItem/PlinkoLiveResults';
 import { getPlinkoMultipliers } from './plinkoMultipliers';
+import filterBetAmountTyping from 'variables/filterBetAmountTyping';
 
 const MIN_AMOUNT = 0.5;
 const MAX_AMOUNT = 20;
@@ -87,7 +88,7 @@ export default function PlinkoPage() {
     }, [balance]);
 
     const [panelTab, setPanelTab] = useState('manual');
-    const [amount, setAmount] = useState('0.50');
+    const [amount, setAmount] = useState(() => MIN_AMOUNT.toFixed(2));
     const [rows, setRows] = useState(16);
     const [history, setHistory] = useState([]);
     const [liveFeed, setLiveFeed] = useState([]);
@@ -179,8 +180,9 @@ export default function PlinkoPage() {
     const lastStrip = useMemo(() => history.slice(-25), [history]);
 
     const handleAmountChange = (e) => {
-        const v = e.target.value.replace(/[^0-9.]/g, '');
-        setAmount(v);
+        const next = filterBetAmountTyping(e.target.value, maxAmount);
+        if (next == null) return;
+        setAmount(next.value);
     };
 
     const handleAmountBlur = () => {
@@ -337,6 +339,50 @@ export default function PlinkoPage() {
         }
     };
 
+    const handleBetRef = useRef(handleBet);
+    handleBetRef.current = handleBet;
+
+    useEffect(() => {
+        const typingTarget = (el) => {
+            if (!(el instanceof HTMLElement)) return false;
+            const tag = el.tagName;
+            return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+        };
+
+        const onKeyDown = (e) => {
+            if (typingTarget(e.target)) return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+            const key = e.key.toLowerCase();
+
+            if (key === 'a') {
+                if (isAnimating || isAutoRunning) return;
+                e.preventDefault();
+                if (e.repeat) return;
+                const current = parseFloat(amount) || MIN_AMOUNT;
+                setPresetAmount(current / 2);
+                return;
+            }
+            if (key === 's') {
+                if (isAnimating || isAutoRunning) return;
+                e.preventDefault();
+                if (e.repeat) return;
+                const current = parseFloat(amount) || MIN_AMOUNT;
+                setPresetAmount(current * 2);
+                return;
+            }
+            if (e.key === ' ' || e.code === 'Space') {
+                if (isAnimating || betLoading || isAutoRunning) return;
+                e.preventDefault();
+                if (e.repeat) return;
+                void handleBetRef.current();
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [amount, isAnimating, betLoading, isAutoRunning]);
+
     const handleStartAuto = async () => {
         if (isAutoRunning) return;
         if (isAnimating || betLoading) return;
@@ -426,27 +472,6 @@ export default function PlinkoPage() {
         );
     };
 
-    const presetChip = (label, value) => (
-        <Button
-            key={label}
-            size="sm"
-            flex="1"
-            minW="0"
-            h="36px"
-            fontSize="xs"
-            fontWeight="700"
-            bg="#2a2d2e"
-            color="rgba(255,255,255,0.88)"
-            borderRadius="8px"
-            border="1px solid rgba(255,255,255,0.06)"
-            _hover={{ bg: '#35393b' }}
-            isDisabled={isAnimating || isAutoRunning}
-            onClick={() => setPresetAmount(value)}
-        >
-            {label}
-        </Button>
-    );
-
     return (
         <Box
             px={{ base: '12px', sm: '16px', md: '24px' }}
@@ -534,87 +559,16 @@ export default function PlinkoPage() {
                                         <FormLabel color="#fff" fontSize="sm" fontWeight="bold" mb="8px" textAlign="left">
                                             Amount
                                         </FormLabel>
-                                        <GradientBorder borderRadius="20px" w="100%">
-                                            <Flex
-                                                w="100%"
-                                                align="center"
-                                                justify="space-between"
-                                                bg="#323738"
-                                                borderRadius="18px"
-                                                h="46px"
-                                                pl="16px"
-                                                pr="0"
-                                            >
-                                                <Input
-                                                    bg="transparent"
-                                                    border="transparent"
-                                                    fontSize="xl"
-                                                    fontWeight="bold"
-                                                    h="auto"
-                                                    p="0"
-                                                    color="white"
-                                                    type="text"
-                                                    value={amount}
-                                                    onChange={handleAmountChange}
-                                                    onBlur={handleAmountBlur}
-                                                    _focus={{ boxShadow: 'none' }}
-                                                    flex="1"
-                                                />
-                                                <HStack spacing="0" align="stretch" h="100%">
-                                                    <Button
-                                                        size="sm"
-                                                        h="100%"
-                                                        minW="36px"
-                                                        px="8px"
-                                                        bg="transparent"
-                                                        color="#fff"
-                                                        fontSize="xs"
-                                                        borderRadius="0"
-                                                        borderLeft="1px solid rgba(255, 255, 255, 0.1)"
-                                                        _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                        onClick={() => {
-                                                            const cur = parseFloat(amount || MIN_AMOUNT);
-                                                            setAmount(
-                                                                Math.max(
-                                                                    MIN_AMOUNT,
-                                                                    Math.min(maxAmount, cur / 2)
-                                                                ).toFixed(2)
-                                                            );
-                                                        }}
-                                                    >
-                                                        /2
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        h="100%"
-                                                        minW="36px"
-                                                        px="8px"
-                                                        bg="transparent"
-                                                        color="#fff"
-                                                        fontSize="xs"
-                                                        borderRadius="0"
-                                                        borderLeft="1px solid rgba(255, 255, 255, 0.1)"
-                                                        borderTopRightRadius="18px"
-                                                        borderBottomRightRadius="18px"
-                                                        _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                        onClick={() => {
-                                                            const cur = parseFloat(amount || MIN_AMOUNT);
-                                                            setAmount(
-                                                                Math.min(maxAmount, cur * 2).toFixed(2)
-                                                            );
-                                                        }}
-                                                    >
-                                                        ×2
-                                                    </Button>
-                                                </HStack>
-                                            </Flex>
-                                        </GradientBorder>
-                                        <HStack spacing="8px" mt="10px" w="100%">
-                                            {presetChip('1', 1)}
-                                            {presetChip('5', 5)}
-                                            {presetChip('10', 10)}
-                                            {presetChip('20', 20)}
-                                        </HStack>
+                                        <GamePillAmountField
+                                            value={amount}
+                                            onChange={handleAmountChange}
+                                            onBlur={handleAmountBlur}
+                                            minAmount={MIN_AMOUNT}
+                                            maxAmount={maxAmount}
+                                            disabled={isAnimating || isAutoRunning}
+                                            onApplyAmount={setPresetAmount}
+                                            quickPresets={[1, 5, 10, 20]}
+                                        />
                                     </FormControl>
 
                                     <FormControl w="100%" maxW={PANEL_INNER_MAX_W}>
@@ -751,6 +705,16 @@ export default function PlinkoPage() {
                                         maxW={PANEL_INNER_MAX_W}
                                         lineHeight="1.5"
                                     >
+                                        <b>A</b> — halve amount · <b>S</b> — double · <b>Space</b> — bet (not while typing
+                                        in a field or during auto bet).
+                                    </Text>
+                                    <Text
+                                        fontSize="10px"
+                                        color="rgba(255,255,255,0.45)"
+                                        textAlign="center"
+                                        maxW={PANEL_INNER_MAX_W}
+                                        lineHeight="1.5"
+                                    >
                                         Outcomes are resolved on the server; history and totals are saved to your account.
                                     </Text>
                                 </VStack>
@@ -760,90 +724,16 @@ export default function PlinkoPage() {
                                         <FormLabel color="#fff" fontSize="sm" fontWeight="bold" mb="8px" textAlign="left">
                                             Amount
                                         </FormLabel>
-                                        <GradientBorder borderRadius="20px" w="100%">
-                                            <Flex
-                                                w="100%"
-                                                align="center"
-                                                justify="space-between"
-                                                bg="#323738"
-                                                borderRadius="18px"
-                                                h="46px"
-                                                pl="16px"
-                                                pr="0"
-                                            >
-                                                <Input
-                                                    bg="transparent"
-                                                    border="transparent"
-                                                    fontSize="xl"
-                                                    fontWeight="bold"
-                                                    h="auto"
-                                                    p="0"
-                                                    color="white"
-                                                    type="text"
-                                                    value={amount}
-                                                    onChange={handleAmountChange}
-                                                    onBlur={handleAmountBlur}
-                                                    _focus={{ boxShadow: 'none' }}
-                                                    flex="1"
-                                                    isDisabled={isAnimating || isAutoRunning}
-                                                />
-                                                <HStack spacing="0" align="stretch" h="100%">
-                                                    <Button
-                                                        size="sm"
-                                                        h="100%"
-                                                        minW="36px"
-                                                        px="8px"
-                                                        bg="transparent"
-                                                        color="#fff"
-                                                        fontSize="xs"
-                                                        borderRadius="0"
-                                                        borderLeft="1px solid rgba(255, 255, 255, 0.1)"
-                                                        _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                        onClick={() => {
-                                                            const cur = parseFloat(amount || MIN_AMOUNT);
-                                                            setAmount(
-                                                                Math.max(
-                                                                    MIN_AMOUNT,
-                                                                    Math.min(maxAmount, cur / 2)
-                                                                ).toFixed(2)
-                                                            );
-                                                        }}
-                                                        isDisabled={isAnimating || isAutoRunning}
-                                                    >
-                                                        /2
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        h="100%"
-                                                        minW="36px"
-                                                        px="8px"
-                                                        bg="transparent"
-                                                        color="#fff"
-                                                        fontSize="xs"
-                                                        borderRadius="0"
-                                                        borderLeft="1px solid rgba(255, 255, 255, 0.1)"
-                                                        borderTopRightRadius="18px"
-                                                        borderBottomRightRadius="18px"
-                                                        _hover={{ bg: 'rgba(255,255,255,0.1)' }}
-                                                        onClick={() => {
-                                                            const cur = parseFloat(amount || MIN_AMOUNT);
-                                                            setAmount(
-                                                                Math.min(maxAmount, cur * 2).toFixed(2)
-                                                            );
-                                                        }}
-                                                        isDisabled={isAnimating || isAutoRunning}
-                                                    >
-                                                        ×2
-                                                    </Button>
-                                                </HStack>
-                                            </Flex>
-                                        </GradientBorder>
-                                        <HStack spacing="8px" mt="10px" w="100%">
-                                            {presetChip('1', 1)}
-                                            {presetChip('5', 5)}
-                                            {presetChip('10', 10)}
-                                            {presetChip('20', 20)}
-                                        </HStack>
+                                        <GamePillAmountField
+                                            value={amount}
+                                            onChange={handleAmountChange}
+                                            onBlur={handleAmountBlur}
+                                            minAmount={MIN_AMOUNT}
+                                            maxAmount={maxAmount}
+                                            disabled={isAnimating || isAutoRunning}
+                                            onApplyAmount={setPresetAmount}
+                                            quickPresets={[1, 5, 10, 20]}
+                                        />
                                     </FormControl>
 
                                     <FormControl w="100%" maxW={PANEL_INNER_MAX_W}>
@@ -1088,6 +978,16 @@ export default function PlinkoPage() {
                                     >
                                         {isAutoRunning ? 'Stop Auto Bet' : 'Start Auto Bet'}
                                     </Button>
+                                    <Text
+                                        fontSize="10px"
+                                        color="rgba(255,255,255,0.45)"
+                                        textAlign="center"
+                                        maxW={PANEL_INNER_MAX_W}
+                                        lineHeight="1.5"
+                                    >
+                                        <b>A</b> — halve amount · <b>S</b> — double · <b>Space</b> — bet (when not typing
+                                        in a field; disabled during auto bet).
+                                    </Text>
                                 </VStack>
                             )}
                         </CardBody>

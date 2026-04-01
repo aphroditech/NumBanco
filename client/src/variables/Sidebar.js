@@ -21,7 +21,6 @@ import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
 import MinesPage from "views/Mines/MinesPage";
-import PlinkoPage from "views/Plinko/PlinkoPage";
 import AToZPage from "views/AToZ/AToZ";
 import CardGamePage from "views/CardGame/CardGamePage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
@@ -49,6 +48,8 @@ import TwistPage from "views/Twist/TwistPage";
 import DonutLargeIcon from "@mui/icons-material/DonutLarge";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import DicePage from "views/Dice/DicePage";
+import HashDicePage from "views/HashDice/HashDicePage";
+import PlinkoPage from "views/Plinko/PlinkoPage";
 import KenoPage from "views/Keno/KenoPage";
 import WheelPage from "views/Wheel/Wheel";
 import AttractionsIcon from '@mui/icons-material/Attractions';
@@ -59,6 +60,8 @@ import SnakePage from "views/Snakes/Snakes";
 import SnakeIcon from '@mui/icons-material/Whatshot';
 import DiamondPage from "views/Diamond/DiamondPage";
 import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
+import CropPortraitIcon from '@mui/icons-material/CropPortrait';
+import TarotPage from "views/Tarot/TarotPage";
 
 export const TierA = {
     path: "/tierA",
@@ -109,6 +112,14 @@ export const Dice = {
     name: "DICE",
     icon: <FaDice style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DicePage,
+    layout: "/game",
+}
+
+export const HashDice = {
+    path: "/hash-dice",
+    name: "HASH DICE",
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: HashDicePage,
     layout: "/game",
 }
 
@@ -309,5 +320,13 @@ export const Diamond = {
     name: "DIAMOND",
     icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: DiamondPage,
+    layout: "/game",
+}
+
+export const Tarot = {
+    path: "/tarot",
+    name: "TAROT",
+    icon: <CropPortraitIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TarotPage,
     layout: "/game",
 }

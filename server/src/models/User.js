@@ -359,6 +359,48 @@ const userSchema = new mongoose.Schema({
     ],
     default: []
   },
+
+  /** Hash Dice: cumulative stake and gross payout totals (same idea as minesAmount / minesWinAmount). */
+  hashBetAmount: {
+    type: Number,
+    default: 0,
+  },
+  hashWinAmount: {
+    type: Number,
+    default: 0,
+  },
+  /** 0 = normal win-rate table; 1 = reduced rates (DB multipliers). */
+  hashMode: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 1,
+  },
+  /** Consecutive wins since last loss; used with hashMinLossEveryNBets to force a loss. */
+  hashConsecutiveWins: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  hashHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        payout: { type: Number, required: true },
+        side: { type: Number, required: true },
+        roll: { type: Number, default: 0 },
+        isWin: { type: Boolean, required: true },
+        winAmount: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        hashMode: { type: Number, default: 0 },
+        effectiveWinRate: { type: Number, default: 0 },
+        forcedLoss: { type: Boolean, default: false },
+        createAt: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  },
+
   cocoMode: {
     type: Number,
     default: 0, // 0=easy, 1=normal, 2=hard
@@ -1080,6 +1122,55 @@ const userSchema = new mongoose.Schema({
   diamondMode: {
     type: Number,
     default: 1,
+  },
+
+  tarotHistory: {
+    type: [
+      {
+        betAmount: { type: Number, required: true },
+        totalMultiplier: { type: Number, default: 0 },
+        profit: { type: Number, default: 0 },
+        busted: { type: Boolean, default: false },
+        base: {
+          value: { type: Number, default: 0 },
+          ratePct: { type: Number, default: 0 },
+        },
+        left: {
+          value: { type: Number, default: 0 },
+          ratePct: { type: Number, default: 0 },
+        },
+        right: {
+          value: { type: Number, default: 0 },
+          ratePct: { type: Number, default: 0 },
+        },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+  /** Tarot lifetime aggregates for mode automation. */
+  tarotTotalBetAmount: {
+    type: Number,
+    default: 0,
+  },
+  tarotTotalProfit: {
+    type: Number,
+    default: 0,
+  },
+  /** revenue = tarotTotalProfit - tarotTotalBetAmount */
+  tarotRevenue: {
+    type: Number,
+    default: 0,
+  },
+  /** 0: easy, 1: normal, 2: hard */
+  tarotMode: {
+    type: Number,
+    default: 1,
+    min: 0,
+    max: 2,
   },
 
   updownHistory: {

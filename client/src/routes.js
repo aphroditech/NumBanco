@@ -78,7 +78,8 @@ import ThreeNumbersPage from "views/ThreeNumbers/ThreeNumbersPage";
 import SnakesPage from "views/Snakes/Snakes";
 import Diamond from "views/Diamond/DiamondPage";
 import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
-
+import TarotPage from "views/Tarot/TarotPage";
+import HashDicePage from "views/HashDice/HashDicePage";
 
 import {
   DocumentIcon,
@@ -341,6 +342,21 @@ var dashRoutes = [
     name: "DIAMOND",
     icon: <DiamondIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: Diamond,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/tarot",
+    name: "TAROT",
+    component: TarotPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/hash-dice",
+    name: "HASH DICE",
+    icon: <Filter9Icon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: HashDicePage,
     layout: "/game",
   },
   {

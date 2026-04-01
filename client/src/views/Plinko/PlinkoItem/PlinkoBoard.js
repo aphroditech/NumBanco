@@ -241,6 +241,26 @@ function smoothstep01(t) {
     return x * x * (3 - 2 * x);
 }
 
+/** Same transform stack as the bucket keycap press — keeps the ball glued to the card while it dips. */
+function KeycapSyncGroup({ cx, bucketCy, children }) {
+    return (
+        <g transform={`translate(${cx}, ${bucketCy})`}>
+            <g>
+                <animateTransform
+                    attributeName="transform"
+                    type="translate"
+                    additive="replace"
+                    values="0 0; 0 2.35; 0 0.15; 0 0"
+                    keyTimes="0;0.1;0.32;1"
+                    dur="0.32s"
+                    fill="freeze"
+                />
+                <g transform={`translate(${-cx}, ${-bucketCy})`}>{children}</g>
+            </g>
+        </g>
+    );
+}
+
 export default function PlinkoBoard({
     rows,
     multipliers,
@@ -297,9 +317,7 @@ export default function PlinkoBoard({
         y: yRow(0, n) - 2.35,
         visible: false,
     }));
-    /** Brief cyan burst on the bucket when the ball lands (paired with highlightSlot). */
-    const [landFlashSlot, setLandFlashSlot] = useState(null);
-    /** Bumps when a new result lands so SVG animations restart cleanly. */
+    /** Bumps when a new result lands so SVG land animations restart cleanly. */
     const [landEffectKey, setLandEffectKey] = useState(0);
     const rafRef = useRef(null);
     const activeSlotRef = useRef(null);
@@ -411,16 +429,20 @@ export default function PlinkoBoard({
     }, [dropTick, pathSteps, n, runAnimation]);
 
     useEffect(() => {
-        if (highlightSlot == null) {
-            setLandFlashSlot(null);
-            return;
-        }
-        setLandFlashSlot(highlightSlot);
+        if (highlightSlot == null) return;
         setLandEffectKey((k) => k + 1);
-        /* Keep burst layers mounted while parent highlight is active (no early timeout). */
     }, [highlightSlot]);
 
     const hi = isAnimating ? null : highlightSlot != null ? highlightSlot : activeSlotRef.current;
+
+    const bucketCyAll = BUCKET_TOP + BUCKET_HEIGHT * 0.42;
+    const keycapCx =
+        highlightSlot != null ? bucketCenters[highlightSlot] ?? bucketCenterX(highlightSlot, n) : null;
+    const ballKeycapSync =
+        ball.visible &&
+        !isAnimating &&
+        highlightSlot != null &&
+        activeSlotRef.current === highlightSlot;
 
     const dropLock = dropBallSizeRef.current;
     const rBall = ball.visible && dropLock ? dropLock.r : ballRadius;
@@ -569,9 +591,9 @@ export default function PlinkoBoard({
                         const cx = bucketCenters[i] ?? bucketCenterX(i, n);
                         const cw = bucketWidth;
                         const isHi = hi === i;
-                        const isLandHit = landFlashSlot === i;
+                        const isLandHit = highlightSlot === i;
                         const isCenter = i === midIdx;
-                        const bucketCy = BUCKET_TOP + BUCKET_HEIGHT * 0.42;
+                        const bucketCy = bucketCyAll;
                         const label = formatMultLabel(m);
                         const fontSize =
                             (label.includes('k')
@@ -935,41 +957,51 @@ export default function PlinkoBoard({
                     })}
 
                     {ball.visible &&
-                        (ballImageSrc ? (
-                            <g>
-                                <defs>
-                                    <clipPath id={ballClipId}>
-                                        <circle cx={ball.x} cy={ball.y} r={rBall} />
-                                    </clipPath>
-                                </defs>
-                                <image
-                                    href={ballImageSrc}
-                                    x={ball.x - rBall}
-                                    y={ball.y - rBall}
-                                    width={rBall * 2}
-                                    height={rBall * 2}
-                                    clipPath={`url(#${ballClipId})`}
-                                    preserveAspectRatio="xMidYMid slice"
-                                />
+                        (() => {
+                            const ballNode = ballImageSrc ? (
+                                <g>
+                                    <defs>
+                                        <clipPath id={ballClipId}>
+                                            <circle cx={ball.x} cy={ball.y} r={rBall} />
+                                        </clipPath>
+                                    </defs>
+                                    <image
+                                        href={ballImageSrc}
+                                        x={ball.x - rBall}
+                                        y={ball.y - rBall}
+                                        width={rBall * 2}
+                                        height={rBall * 2}
+                                        clipPath={`url(#${ballClipId})`}
+                                        preserveAspectRatio="xMidYMid slice"
+                                    />
+                                    <circle
+                                        cx={ball.x}
+                                        cy={ball.y}
+                                        r={rBall}
+                                        fill="none"
+                                        stroke="rgba(0,0,0,0.35)"
+                                        strokeWidth={wBall}
+                                    />
+                                </g>
+                            ) : (
                                 <circle
                                     cx={ball.x}
                                     cy={ball.y}
                                     r={rBall}
-                                    fill="none"
+                                    fill="#f5f5f5"
                                     stroke="rgba(0,0,0,0.35)"
                                     strokeWidth={wBall}
                                 />
-                            </g>
-                        ) : (
-                            <circle
-                                cx={ball.x}
-                                cy={ball.y}
-                                r={rBall}
-                                fill="#f5f5f5"
-                                stroke="rgba(0,0,0,0.35)"
-                                strokeWidth={wBall}
-                            />
-                        ))}
+                            );
+                            if (ballKeycapSync && keycapCx != null) {
+                                return (
+                                    <KeycapSyncGroup cx={keycapCx} bucketCy={bucketCyAll}>
+                                        {ballNode}
+                                    </KeycapSyncGroup>
+                                );
+                            }
+                            return ballNode;
+                        })()}
                 </svg>
             </Box>
         </Box>

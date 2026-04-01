@@ -94,11 +94,8 @@ const MAX_AMOUNT = 20;
 const DIAMOND_PANEL_MIN_H = { base: "auto", md: "360px" };
 const DIAMOND_MAIN_CARD_MIN_H = { base: "auto", md: "min(520px, 88vh)" };
 
-const DIAMOND_MODES = {
-    easy: { label: "Easy" },
-    normal: { label: "Normal" },
-    hard: { label: "Hard" },
-};
+/** Paytable under RESULT MINIMUM is fixed UI: always Normal weights/rates, not the server round mode. */
+const DIAMOND_PAYTABLE_DISPLAY_MODE = "normal";
 
 /** Shared multipliers (Normal ladder); only weights differ per mode — matches server. */
 const DIAMOND_FALLBACK_RATES = [0, 0.2, 1.2, 2.5, 6, 15, 70];
@@ -308,8 +305,9 @@ export default function DiamondPage() {
     const [diamondLiveSuppressUntil, setDiamondLiveSuppressUntil] = useState(0);
     const [diamondModes, setDiamondModes] = useState(null);
     const [revenueAutoMode, setRevenueAutoMode] = useState(null);
-    const [mode, setMode] = useState("normal");
-    const [paytableRows, setPaytableRows] = useState(() => buildDefaultPaytableRowsForMode("normal"));
+    const [paytableRows, setPaytableRows] = useState(() =>
+        buildDefaultPaytableRowsForMode(DIAMOND_PAYTABLE_DISPLAY_MODE)
+    );
 
     useEffect(() => {
         let cancelled = false;
@@ -328,9 +326,9 @@ export default function DiamondPage() {
     }, []);
 
     useEffect(() => {
-        const tiers = diamondModes?.[mode]?.tiers;
+        const tiers = diamondModes?.[DIAMOND_PAYTABLE_DISPLAY_MODE]?.tiers;
         if (!Array.isArray(tiers) || tiers.length === 0) {
-            setPaytableRows(buildDefaultPaytableRowsForMode(mode));
+            setPaytableRows(buildDefaultPaytableRowsForMode(DIAMOND_PAYTABLE_DISPLAY_MODE));
             return;
         }
         setPaytableRows(
@@ -341,7 +339,7 @@ export default function DiamondPage() {
                 pattern: DIAMOND_PAYTABLE_PATTERNS[t.index] ?? DIAMOND_PAYTABLE_PATTERNS[0],
             }))
         );
-    }, [diamondModes, mode]);
+    }, [diamondModes]);
 
     const revenueBandLo = revenueAutoMode?.normalBandMin ?? -20;
     const revenueBandHi = revenueAutoMode?.normalBandMax ?? 20;
@@ -436,8 +434,6 @@ export default function DiamondPage() {
         try {
             const data = await diamondPlay({ betAmount: bet }, dispatch, history);
             const round = data?.diamond;
-            const appliedMode = String(round?.mode || mode);
-            if (DIAMOND_MODES[appliedMode]) setMode(appliedMode);
             keys = round?.keys;
             mult = Number(round?.mult ?? 0);
             win = Number(round?.win ?? 0);
@@ -791,7 +787,7 @@ export default function DiamondPage() {
                                                         <VStack
                                                             align="flex-end"
                                                             spacing={0}
-                                                            minW={{ base: "52px", md: "58px" }}
+                                                            minW={{ base: "64px", md: "72px" }}
                                                             flexShrink={0}
                                                         >
                                                             <Text
@@ -809,6 +805,7 @@ export default function DiamondPage() {
                                                                 color="rgba(255,255,255,0.4)"
                                                                 fontVariantNumeric="tabular-nums"
                                                                 lineHeight="1.1"
+                                                                whiteSpace="nowrap"
                                                             >
                                                                 {pct}%
                                                             </Text>
@@ -1030,7 +1027,7 @@ export default function DiamondPage() {
                                     Each row is a tier.
                                 </Text>
                                 <Text color="rgba(255,255,255,0.82)" fontSize="sm" lineHeight="tall">
-                                    The percentage under each multiplier is the weight for the tier.
+                                    Under each multiplier, <strong>rate: …%</strong> is the weight (chance) for that tier.
                                 </Text>
                             </Box>
                             <Box>

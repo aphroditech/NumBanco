@@ -44,6 +44,8 @@ import threeNumbers from "assets/img/Games/threeNumbers.jpg"
 import diamond from "assets/img/Games/diamond.jpg"
 import snakes from "assets/img/Games/snake.jpg"
 import cryptoCrash from "assets/img/Games/cryptoCrash.jpg"
+import tarot from "assets/img/Games/tarot.jpg"
+import hashDice from "assets/img/Games/hash.jpg"
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -66,6 +68,7 @@ const DASHBOARD_GAMES = [
     { img: cloud, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
     { img: dove, name: "LUCKY HOP", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: dice, name: "Dice", path: "/game/dice", reduxKey: "diceUsers", tickMs: 5200 },
+    { img: hashDice, name: "Hash Dice", path: "/game/hash-dice", reduxKey: "hashDiceUsers", tickMs: 5300 },
     { img: coco, name: "Coco", path: "/game/coco", reduxKey: "cocoUsers", tickMs: 4600 },
     { img: wheel, name: "Wheel", path: "/game/wheel", reduxKey: "wheelUsers", tickMs: 4600 },
     { img: snakes, name: "Snakes", path: "/game/snakes", reduxKey: "snakesUsers", tickMs: 3600 },
@@ -78,6 +81,8 @@ const DASHBOARD_GAMES = [
     { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
     { img: coinImage, name: "Coin", path: "/game/coin", reduxKey: "coinUsers", tickMs: 3600 },
+    { img: keno, name: "Keno", path: "/game/keno", reduxKey: "kenoUsers", tickMs: 3600 },
+    { img: tarot, name: "Tarot", path: "/game/tarot", reduxKey: "tarotUsers", tickMs: 3600 },
 ];
 
 function stepOneGameDisplay(path, reduxKey, prev, au) {
