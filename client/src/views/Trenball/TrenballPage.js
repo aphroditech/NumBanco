@@ -1458,7 +1458,16 @@ export default function TrenballPage() {
 
               <HStack spacing={1}>
                 <Menu placement="top-start" autoSelect={false}>
-                  <Tooltip label="Settings" hasArrow bg="#11161d" color="#fff" fontSize="xs" openDelay={200}>
+                  <Tooltip
+                    label="Settings"
+                    hasArrow
+                    bg="#11161d"
+                    color="#fff"
+                    fontSize="xs"
+                    openDelay={200}
+                    closeOnClick={false}
+                    shouldWrapChildren
+                  >
                     <MenuButton
                       as={IconButton}
                       icon={<SettingsIcon style={{ fontSize: 20, color: MUTED }} />}
