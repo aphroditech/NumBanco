@@ -1272,6 +1272,36 @@ const userSchema = new mongoose.Schema({
     default: [],
   },
 
+  /** Fast Crash (parity) — mirrors FastCrashHistory collection. */
+  fastcrashHistory: {
+    type: [
+      {
+        _id: { type: mongoose.Schema.Types.ObjectId },
+        roundId: { type: Number, required: true },
+        userName: { type: String, default: "" },
+        avatar: { type: String, default: "" },
+        side: {
+          type: String,
+          required: true,
+          enum: ["green", "red", "violet", "number"],
+        },
+        digit: { type: Number, min: 0, max: 9 },
+        betAmount: { type: Number, required: true },
+        winAmount: { type: Number, default: 0 },
+        winningDigit: { type: Number, min: 0, max: 9 },
+        resultColor: {
+          type: String,
+          enum: ["green", "red", "violet"],
+        },
+        createAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
   /** Cloud Spread — round summaries (like rubicHistory / pumpingHistory). */
   cloudSpreadHistory: {
     type: [

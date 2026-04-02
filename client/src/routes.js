@@ -49,6 +49,7 @@ import PumpingPage from "views/Pumping/PumpingPage"
 import GravityPage from "views/Gravity/GravityPage"
 import DoublePage from "views/Double/DoublePage"
 import TrenballPage from "views/Trenball/TrenballPage"
+import FastCrashPage from "views/FastCrash/FastCrashPage"
 import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import FishingPage from "views/Fishing/FishingPage";
 import CardGamePage from "views/CardGame/CardGamePage";
@@ -84,7 +85,6 @@ import SnakesPage from "views/Snakes/Snakes";
 import Diamond from "views/Diamond/DiamondPage";
 import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 import TarotPage from "views/Tarot/TarotPage";
-import HashDicePage from "views/HashDice/HashDicePage";
 
 import {
   DocumentIcon,
@@ -125,6 +125,14 @@ var dashRoutes = [
     name: "TRENBALL",
     icon: <RocketIconMui style={{ fontSize: "24px", color: "#3bc117" }} />,
     component: TrenballPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
+    path: "/fast-crash",
+    name: "FAST CRASH",
+    icon: <RocketLaunchIcon style={{ fontSize: "24px", color: "#4caf50" }} />,
+    component: FastCrashPage,
     layout: "/game",
   },
   // {

@@ -19,6 +19,7 @@ import JokerCrashPage from "views/JokerCrash/JokerCrashPage";
 import GravityPage from "views/Gravity/GravityPage";
 import DoublePage from "views/Double/DoublePage";
 import TrenballPage from "views/Trenball/TrenballPage";
+import FastCrashPage from "views/FastCrash/FastCrashPage";
 import CloudSpreadPage from "views/CloudSpread/CloudSpreadPage";
 import Dove from "views/DovePage/Dove";
 import Coco from "views/Coco/CocoPage";
@@ -252,6 +253,14 @@ export const TrenballGame = {
     name: "PULSE CRASH",
     icon: <RocketIcon style={{ fontSize: "24px", color: "#00d4ff" }} />,
     component: TrenballPage,
+    layout: "/game",
+}
+
+export const FastCrashGame = {
+    path: "/fast-crash",
+    name: "FAST CRASH",
+    icon: <RocketLaunchIcon style={{ fontSize: "24px", color: "#4caf50" }} />,
+    component: FastCrashPage,
     layout: "/game",
 }
 

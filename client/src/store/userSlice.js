@@ -9,6 +9,7 @@ const initialState = {
         gravityUsers: 0,
         doubleUsers: 0,
         trenballUsers: 0,
+        fastcrashUsers: 0,
         plinkoUsers: 0,
         cloudSpreadUsers: 0,
         doveUsers: 0,
@@ -27,7 +28,8 @@ const initialState = {
         cardGameUsers: 0,
         tarotUsers: 0,
         hashDiceUsers: 0,
-        totalActiveUsers: 0
+        totalActiveUsers: 0,
+        fastcrashUsers: 0,
     },
     lootAvailable: false,
     lootRemainingMs: 0
