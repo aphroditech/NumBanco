@@ -851,9 +851,9 @@ export default function SnakesPage() {
                     {formatMult(tile.mult)}×
                 </Text>
             );
-        }
+    }
 
-        return (
+    return (
             <PerimeterTile
                 isActive={isActive}
                 isLanded={isLanded}

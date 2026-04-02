@@ -42,6 +42,10 @@ import rockSvg from 'assets/img/Rock/rock.svg';
 import paperSvg from 'assets/img/Rock/paper.svg';
 import scissorsSvg from 'assets/img/Rock/scissors.svg';
 
+import thinking from "assets/img/Rock/thinking.gif";
+import win from "assets/img/Rock/win.gif";
+import lose from "assets/img/Rock/lose.gif";
+
 const CHOICES = {
     rock: { key: 'rock', label: 'Rock', src: rockSvg },
     paper: { key: 'paper', label: 'Paper', src: paperSvg },
@@ -135,41 +139,13 @@ function houseChoiceHouseWins(player) {
     return 'rock';
 }
 
-/**
- * After a card is passed, its multiplier M becomes the basis for the **next** reveal:
- * target P(win) ≈ 1/M (clamped), fixed tie share, remainder lose — normalized to sum to 1.
- */
-function rollOutcomeFromOddsMult(playerChoice, oddsMult) {
-    if (!Number.isFinite(oddsMult) || oddsMult <= 0) {
-        const house = randomChoice();
-        return { house, outcome: pickWinner(playerChoice, house) };
-    }
-    let pWin = Math.min(0.45, Math.max(0.12, 1 / oddsMult));
-    const pTie = 0.26;
-    let pLose = 1 - pWin - pTie;
-    if (pLose < 0.1) {
-        pLose = 0.1;
-        const budget = 1 - pLose;
-        const wsum = pWin + pTie;
-        pWin = wsum > 0 ? (pWin / wsum) * budget : budget * 0.5;
-        const pt = wsum > 0 ? (pTie / wsum) * budget : budget * 0.5;
-        const r = Math.random();
-        if (r < pWin) return { house: houseChoicePlayerWins(playerChoice), outcome: 'player' };
-        if (r < pWin + pt) return { house: playerChoice, outcome: 'tie' };
-        return { house: houseChoiceHouseWins(playerChoice), outcome: 'house' };
-    }
-    const r = Math.random();
-    if (r < pWin) return { house: houseChoicePlayerWins(playerChoice), outcome: 'player' };
-    if (r < pWin + pTie) return { house: playerChoice, outcome: 'tie' };
-    return { house: houseChoiceHouseWins(playerChoice), outcome: 'house' };
-}
-
 /** Single ladder column: face-down (card back), revealed hand, multiplier below. */
 function LadderSlot({
     mult,
     result,
     isNextToReveal,
     isResolving,
+    actualMultiplier, // The actual multiplier that was active when this result occurred
 }) {
     const faceDown = !result;
     const outcome = result?.outcome;
@@ -202,6 +178,10 @@ function LadderSlot({
     const box = `${CARD_W_PX}px`;
     /** Fixed body height so every ladder column matches (face-down and revealed). */
     const cardH = { base: '124px', md: '136px' };
+
+    // Use actual multiplier for ties (the multiplier that was active when the tie occurred)
+    // For other outcomes, use the slot's theoretical multiplier
+    const displayMultiplier = (result && outcome === 'tie' && actualMultiplier) ? actualMultiplier : mult;
 
     const multTone =
         isNextToReveal && faceDown
@@ -373,7 +353,7 @@ function LadderSlot({
                     fontfeaturesettings="'tnum'"
                     letterSpacing="0.04em"
                 >
-                    {mult.toFixed(2)}×
+                    {displayMultiplier.toFixed(2)}×
                 </Text>
             </Box>
         </Flex>
@@ -381,35 +361,35 @@ function LadderSlot({
 }
 
 /** Player portrait — layered box-shadow only (rim, depth, cyan bloom). */
-// function RockPlayerAvatar({ user }) {
-//     const src = user?.avatar || '/avatars/pfp1.png';
-//     const box = { base: '50px', sm: '58px', md: '68px' };
+function RockPlayerAvatar({ user }) {
+    const src = user?.avatar || '/avatars/pfp1.png';
+    const box = { base: '50px', sm: '58px', md: '68px' };
 
-//     return (
-//         <Flex direction="column" align="center" justify="flex-end" flexShrink={0} pb={{ base: 0.5, md: 0 }}>
-//             <Box
-//                 position="relative"
-//                 w={box}
-//                 h={box}
-//                 borderRadius="full"
-//                 overflow="hidden"
-//                 bg="#0c0f14"
-//             >
-//                 <Image src={src} alt="Your avatar" w="100%" h="100%" objectFit="cover" draggable={false} />
-//             </Box>
-//             <Text
-//                 mt={1.5}
-//                 fontSize="8px"
-//                 fontWeight="800"
-//                 letterSpacing="0.18em"
-//                 color="rgba(255,255,255,0.4)"
-//                 textTransform="uppercase"
-//             >
-//                 You
-//             </Text>
-//         </Flex>
-//     );
-// }
+    return (
+        <Flex direction="column" align="center" justify="flex-end" flexShrink={0} pb={{ base: 0.5, md: 0 }}>
+            <Box
+                position="relative"
+                w={box}
+                h={box}
+                borderRadius="full"
+                overflow="hidden"
+                bg="#0c0f14"
+            >
+                <Image src={src} alt="Your avatar" w="100%" h="100%" objectFit="cover" draggable={false} />
+            </Box>
+            <Text
+                mt={1.5}
+                fontSize="8px"
+                fontWeight="800"
+                letterSpacing="0.18em"
+                color="rgba(255,255,255,0.4)"
+                textTransform="uppercase"
+            >
+                You
+            </Text>
+        </Flex>
+    );
+}
 
 export default function RockPage() {
     const user = useSelector((state) => state.user.userInfo) || {};
@@ -445,6 +425,9 @@ export default function RockPage() {
     const winFxTimerRef = useRef(null);
     const bustFxTimerRef = useRef(null);
     const [sessionProfit, setSessionProfit] = useState(0);
+    // Timer for showing win image for 1 second after regular wins
+    const winImageTimerRef = useRef(null);
+    const [showWinImage, setShowWinImage] = useState(false);
     /** Multiplier M from the last **passed** card (win or tie); shapes next reveal odds. */
     const [passOddsMult, setPassOddsMult] = useState(null);
     /** After first BET of a round, hands are enabled; each hand click places a bet. */
@@ -454,6 +437,43 @@ export default function RockPage() {
     const [rowTranslateX, setRowTranslateX] = useState(0);
 
     const amountNum = useMemo(() => clampBet(amount, maxAmount), [amount, maxAmount]);
+
+    // Determine which GIF to display based on game state
+    const getCurrentGif = () => {
+        // Win conditions: cashout success or win flash visible
+        if (winFxVisible || winFlash) {
+            return win;
+        }
+        
+        // Check if we should show win image for 1 second after regular win
+        if (showWinImage) {
+            return win;
+        }
+        
+        // Check if there's a recent win in slot results (but don't show win image immediately)
+        const slotIndices = Object.keys(slotResults).map(Number).sort((a, b) => b - a);
+        if (slotIndices.length > 0) {
+            const latestSlot = slotIndices[0];
+            const latestResult = slotResults[latestSlot];
+            if (latestResult && latestResult.outcome === 'player') {
+                // Don't immediately return win - let timer handle it
+                return thinking;
+            }
+            if (latestResult && latestResult.outcome === 'house') {
+                return lose;
+            }
+        }
+        
+        // Lose conditions: bust effect visible
+        if (bustFxVisible) {
+            return lose;
+        }
+        
+        // Default: thinking
+        return thinking;
+    };
+
+    const currentGif = getCurrentGif();
 
     const clearWinFxTimer = useCallback(() => {
         if (winFxTimerRef.current != null) {
@@ -521,6 +541,12 @@ export default function RockPage() {
         setBustReason('');
         setPickingUnlocked(false);
         setPick(null);
+        // Clear win image timer
+        if (winImageTimerRef.current) {
+            clearTimeout(winImageTimerRef.current);
+            winImageTimerRef.current = null;
+        }
+        setShowWinImage(false);
     }, []);
 
     const resetBoard = useCallback(() => {
@@ -628,9 +654,24 @@ export default function RockPage() {
 
             setSlotResults((prev) => ({
                 ...prev,
-                [slotIdx]: { house, outcome },
+                [slotIdx]: { house, outcome, actualMultiplier: accumulatedMult },
             }));
             dispatch(setRockLastHouse({ house, outcome }));
+
+            // If player won a regular round, show win image for 1 second
+            if (outcome === 'player') {
+                // Clear any existing timer
+                if (winImageTimerRef.current) {
+                    clearTimeout(winImageTimerRef.current);
+                }
+                // Show win image immediately
+                setShowWinImage(true);
+                // Hide win image after 1 second and return to thinking
+                winImageTimerRef.current = setTimeout(() => {
+                    setShowWinImage(false);
+                    winImageTimerRef.current = null;
+                }, 1000);
+            }
 
             if (outcome === 'house') {
                 const bangPayload = {
@@ -1058,6 +1099,25 @@ export default function RockPage() {
               `,
                         }}
                     >
+                        {/* GIF Display Circle - Top Left */}
+                        <Box
+                            position="absolute"
+                            top="20px"
+                            left="20px"
+                            w="80px"
+                            h="80px"
+                            overflow="hidden"
+                            zIndex={10}
+                        >
+                            <Image
+                                src={currentGif}
+                                alt="Game state"
+                                w="100%"
+                                h="100%"
+                                objectFit="cover"
+                                draggable={false}
+                            />
+                        </Box>
                         <AnimatePresence>
                             {winFxVisible && winFlash && (
                                 <motion.div
@@ -1369,8 +1429,9 @@ export default function RockPage() {
                                                     key={idx}
                                                     mult={multiplierForSlotIndex(idx)}
                                                     result={slotResults[idx]}
-                                                    isNextToReveal={idx === nextSlot && phase === 'playing'}
+                                                    isNextToReveal={idx === nextSlot}
                                                     isResolving={isResolving}
+                                                    actualMultiplier={slotResults[idx]?.actualMultiplier}
                                                 />
                                             ),
                                         )}
@@ -1614,7 +1675,7 @@ export default function RockPage() {
                                                 );
                                             })}
                                         </Flex>
-                                        {/* <Flex
+                                        <Flex
                                             justify={{ base: 'flex-end', md: 'flex-start' }}
                                             w={{ base: '100%', md: 'auto' }}
                                             position="absolute"
@@ -1623,7 +1684,7 @@ export default function RockPage() {
                                             pr={{ base: 1, sm: 2, md: 0 }}
                                         >
                                             <RockPlayerAvatar user={user} />
-                                        </Flex> */}
+                                        </Flex>
                                     </Flex>
                                 </Flex>
                             </Flex>

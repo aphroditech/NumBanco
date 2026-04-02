@@ -64,7 +64,7 @@ import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import KenoPage from "views/Keno/KenoPage";
 import RangePage from "views/Range/RangePage";
 import HdrStrongIcon from '@mui/icons-material/HdrStrong';
-
+import ApiIcon from '@mui/icons-material/Api';
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
 import AttractionsIcon from '@mui/icons-material/Attractions';
@@ -84,6 +84,7 @@ import Diamond from "views/Diamond/DiamondPage";
 import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 import TarotPage from "views/Tarot/TarotPage";
 import HashDicePage from "views/HashDice/HashDicePage";
+import TwoDicePage from "views/TwoDice/TwoDicePage";
 
 import RockPage from "views/Rock/RockPage";
 import PanToolIcon from '@mui/icons-material/PanTool';
@@ -181,6 +182,15 @@ var dashRoutes = [
     component: KenoPage,
     layout: "/game",
   },
+  {
+    redirect: true,
+    path: "/two-dice",
+    name: "TWO DICE",
+    icon: <ApiIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwoDicePage,
+    layout: "/game",
+  },
+
   {
     redirect: true,
     path: "/three-numbers",

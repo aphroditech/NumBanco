@@ -68,6 +68,9 @@ import CropPortraitIcon from '@mui/icons-material/CropPortrait';
 import TarotPage from "views/Tarot/TarotPage";
 import RockPage from "views/Rock/RockPage";
 import PanToolIcon from '@mui/icons-material/PanTool';
+import TwoDicePage from "views/TwoDice/TwoDicePage";
+import ApiIcon from '@mui/icons-material/Api';
+
 export const TierA = {
     path: "/tierA",
     name: "Tier A",
@@ -110,6 +113,14 @@ export const Reward = {
     icon: <CurrencyExchangeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: "Reward",
     layout: "/admin",
+}
+
+export const TwoDice = {
+    path: "/two-dice",
+    name: "TWO DICE",
+    icon: <ApiIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwoDicePage,
+    layout: "/game",
 }
 
 export const Dice = {

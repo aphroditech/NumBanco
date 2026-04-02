@@ -18,7 +18,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
-import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, Keno, Plinko, CardGame, JokerCrash, Gravity, DoubleGame, DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, Snakes, Diamond, Range, Tarot, HashDice, CryptoCrash, ThreeNumbers, Rock } from "variables/Sidebar";
+import { TierA, TierB, TierC, DailyLoot, Reward, Jackal, Mines, Rocket, Rubic, Pumping, CloudSpread, Fishing, Keno, Plinko, CardGame, JokerCrash, Gravity, DoubleGame, DoveGame, CocoGame, AToZGame, AlphaTreeGame, Coin, Twist, Dice, Wheel, Climb, Snakes, Diamond, Range, Tarot, HashDice, CryptoCrash, ThreeNumbers, Rock, TwoDice } from "variables/Sidebar";
 import { Separator } from "components/Separator/Separator";
 import SidebarButtonConfirm from "./SidebarItem/SidebarButtonConfirm";
 import SidebarButtonLink from "./SidebarItem/SidebarButtonLink";
@@ -29,7 +29,7 @@ function Sidebar(props) {
   let variantChange = "0.2s linear";
   const mainPanel = React.useRef();
   const [menuOpen, setMenuOpen] = React.useState(true);
-  const [gamesOpen, setGamesOpen] = React.useState(true);
+  const [gamesOpen, setGamesOpen] = React.useState(false);
   const createLinks = (routes) => {
 
     return routes.map((prop, key) => {
@@ -81,6 +81,7 @@ function Sidebar(props) {
               <SidebarButtonLink value={HashDice} />
               <SidebarButtonLink value={Plinko} />
               <SidebarButtonLink value={Mines} />
+              <SidebarButtonLink value={TwoDice} />
               <SidebarButtonLink value={DoveGame} />
               <SidebarButtonLink value={CocoGame} />
               <SidebarButtonLink value={AlphaTreeGame} />
@@ -260,6 +261,7 @@ export function SidebarResponsive(props) {
                 <SidebarButtonLink value={Climb} />
                 <SidebarButtonLink value={Diamond} />
                 <SidebarButtonLink value={Tarot} />
+                <SidebarButtonLink value={TwoDice} />
               </Stack>
             </Collapse>
           </Box>
