@@ -46,6 +46,7 @@ import { initializeHashDiceSettings } from './initHashDiceSettings.js';
 import { initializeHashDiceBotSettings } from './initHashDiceBotSettings.js';
 import { initTrenballBotSettings } from './initTrenballBotSettings.js';
 import { trimHashDiceResultsCollection } from '../services/hashDice/hashDiceResult.service.js';
+import { initRockSettings } from './initRockSettings.js';
 
 
 export const initializeDatabase = async () => {
@@ -75,6 +76,7 @@ export const initializeDatabase = async () => {
     await initializePlinkoBotSettings();
     await initializeHashDiceSettings();
     await initializeHashDiceBotSettings();
+    await initRockSettings();
     await initTrenballBotSettings();
     await trimHashDiceResultsCollection();
     await initializeClimbSettings();

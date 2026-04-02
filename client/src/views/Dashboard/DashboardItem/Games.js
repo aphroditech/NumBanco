@@ -47,7 +47,9 @@ import range from "assets/img/Games/range.jpg"
 import cryptoCrash from "assets/img/Games/cryptoCrash.jpg"
 import tarot from "assets/img/Games/tarot.jpg"
 import hashDice from "assets/img/Games/hash.jpg"
+import rock from "assets/img/Games/rock.jpg"
 import fastCrash from "assets/img/Games/fast.jpg"
+
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -68,6 +70,7 @@ const DASHBOARD_GAMES = [
     { img: doubleGame, name: "Double", path: "/game/double", reduxKey: "doubleUsers", tickMs: 5800 },
     { img: plinko, name: "Plinko", path: "/game/plinko", reduxKey: "plinkoUsers", tickMs: 5400 },
     { img: cloud, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
+    { img: rock, name: "Rock", path: "/game/rock", reduxKey: "rockUsers", tickMs: 3600 },
     { img: dove, name: "LUCKY HOP", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: dice, name: "Dice", path: "/game/dice", reduxKey: "diceUsers", tickMs: 5200 },
     { img: hashDice, name: "Hash Dice", path: "/game/hash-dice", reduxKey: "hashDiceUsers", tickMs: 5300 },

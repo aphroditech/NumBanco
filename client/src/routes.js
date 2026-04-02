@@ -60,13 +60,12 @@ import MinesPage from "views/Mines/MinesPage";
 import AlphaTreePage from "views/AlphaTree/AlphaTree";
 import CoinPage from "views/Coin/CoinPage";
 import DicePage from "views/Dice/DicePage";
-import HashDicePage from "views/HashDice/HashDicePage";
 import PlinkoPage from "views/Plinko/PlinkoPage";
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import KenoPage from "views/Keno/KenoPage";
 import RangePage from "views/Range/RangePage";
 import HdrStrongIcon from '@mui/icons-material/HdrStrong';
-
+import ApiIcon from '@mui/icons-material/Api';
 import Mining from "views/Mining/Mining";
 import RocketShotPage from "views/RocketShot/RocketShot"
 import AttractionsIcon from '@mui/icons-material/Attractions';
@@ -85,7 +84,11 @@ import SnakesPage from "views/Snakes/Snakes";
 import Diamond from "views/Diamond/DiamondPage";
 import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 import TarotPage from "views/Tarot/TarotPage";
+import HashDicePage from "views/HashDice/HashDicePage";
+import TwoDicePage from "views/TwoDice/TwoDicePage";
 
+import RockPage from "views/Rock/RockPage";
+import PanToolIcon from '@mui/icons-material/PanTool';
 import {
   DocumentIcon,
   PersonIcon,
@@ -149,6 +152,14 @@ var dashRoutes = [
   },
   {
     redirect: true,
+    path: "/rock",
+    name: "ROCK",
+    icon: <PanToolIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RockPage,
+    layout: "/game",
+  },
+  {
+    redirect: true,
     path: "/wheel",
     name: "WHEEL",
     icon: <AttractionsIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
@@ -171,7 +182,7 @@ var dashRoutes = [
     component: HashDicePage,
     layout: "/game",
   },
-  
+
   {
     redirect: true,
     path: "/keno",
@@ -180,6 +191,15 @@ var dashRoutes = [
     component: KenoPage,
     layout: "/game",
   },
+  {
+    redirect: true,
+    path: "/two-dice",
+    name: "TWO DICE",
+    icon: <ApiIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwoDicePage,
+    layout: "/game",
+  },
+
   {
     redirect: true,
     path: "/three-numbers",

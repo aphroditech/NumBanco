@@ -49,7 +49,7 @@ import { tarotBot } from "./services/tarot/tarotBot.service.js";
 import { snakeBot } from "./services/Snakes/SnakeBot.Service.js";
 import { rangeBot } from "./services/range/rangeBot.service.js";
 import { cryptoCrashBot } from "./services/cryptoCrash/cryptoCrashBot.service.js";
-
+import { rockBot } from "./services/rock/rockBotService.js";
 
 dotenv.config();
 
@@ -105,12 +105,13 @@ connectDB()
             // diamondBot(ablyCore);
             // rangeBot(ablyCore);
             // cryptoCrashBot(ablyCore);
-            startTrenballGameLoop(ablyCore).catch((e) =>
-              console.error("[trenball] failed to start loop:", e?.message || e)
-            );
-            startFastCrashGameLoop(ablyCore).catch((e) =>
-              console.error("[fastcrash] failed to start loop:", e?.message || e)
-            );
+            // rockBot(ablyCore)
+            // startTrenballGameLoop(ablyCore).catch((e) =>
+            //   console.error("[trenball] failed to start loop:", e?.message || e)
+            // );
+            // startFastCrashGameLoop(ablyCore).catch((e) =>
+            //   console.error("[fastcrash] failed to start loop:", e?.message || e)
+            // );
             // tarotBot(ablyCore);
             // getUserStatusChannel(ablyCore);
             // startBetEngine(ablyCore, 0);

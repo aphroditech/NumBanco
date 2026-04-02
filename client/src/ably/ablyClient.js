@@ -5,15 +5,14 @@ import Ably from "ably";
 const ABLY_KEY = process.env.REACT_APP_ABLY_KEY;
 
 if (!ABLY_KEY) {
-    console.error("❌ [Client] ABLY_KEY is not set! Real-time updates will not work.");
+  console.error("❌ [Client] ABLY_KEY is not set! Real-time updates will not work.");
 }
 
-console.log("🔑 [Client] Using Ably API Key:", ABLY_KEY ? (ABLY_KEY.substring(0, 10) + "..." + ABLY_KEY.substring(ABLY_KEY.length - 5)) : "NOT SET");
 
 const ablyClient = new Ably.Realtime({
-    key: ABLY_KEY,
-    clientId: `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    echoMessages: false, // Don't echo our own messages
+  key: ABLY_KEY,
+  clientId: `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  echoMessages: false, // Don't echo our own messages
 });
 
 // Enhanced connection state monitoring
@@ -25,7 +24,7 @@ ablyClient.connection.on((stateChange) => {
     stateChange.current,
     stateChange.reason ? `(Reason: ${stateChange.reason})` : ""
   );
-  
+
   if (stateChange.current === 'connected') {
     console.log("✅ [Ably] Successfully connected to Ably!");
   } else if (stateChange.current === 'disconnected' || stateChange.current === 'suspended') {

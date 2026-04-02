@@ -67,6 +67,10 @@ import HdrStrongIcon from '@mui/icons-material/HdrStrong';
 import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 import CropPortraitIcon from '@mui/icons-material/CropPortrait';
 import TarotPage from "views/Tarot/TarotPage";
+import RockPage from "views/Rock/RockPage";
+import PanToolIcon from '@mui/icons-material/PanTool';
+import TwoDicePage from "views/TwoDice/TwoDicePage";
+import ApiIcon from '@mui/icons-material/Api';
 
 export const TierA = {
     path: "/tierA",
@@ -110,6 +114,14 @@ export const Reward = {
     icon: <CurrencyExchangeIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: "Reward",
     layout: "/admin",
+}
+
+export const TwoDice = {
+    path: "/two-dice",
+    name: "TWO DICE",
+    icon: <ApiIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: TwoDicePage,
+    layout: "/game",
 }
 
 export const Dice = {
@@ -357,5 +369,13 @@ export const Tarot = {
     name: "TAROT",
     icon: <CropPortraitIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
     component: TarotPage,
+    layout: "/game",
+}
+
+export const Rock = {
+    path: "/rock",
+    name: "ROCK",
+    icon: <PanToolIcon style={{ fontSize: "24px", color: "#00D4FF" }} />,
+    component: RockPage,
     layout: "/game",
 }
