@@ -14,6 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import ablyClient from "../../ably/ablyClient";
+import FastCrashHistory from "./FashCrashItem/FastCrashHistory";
 import { trenballScrollbarXStrip, trenballScrollbarY } from "../Trenball/trenballScrollbarStyles";
 import {
   getFastCrashState,
@@ -1173,6 +1174,7 @@ export default function FastCrashPage() {
           )}
         </GridItem>
       </Grid>
+      <FastCrashHistory />
     </Flex>
   );
 }

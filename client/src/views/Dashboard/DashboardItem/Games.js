@@ -84,7 +84,7 @@ const DASHBOARD_GAMES = [
     { img: twist, name: "Twist", path: "/game/twist", reduxKey: "twistUsers", tickMs: 5600 },
     { img: climb, name: "Climb", path: "/game/climb", reduxKey: "climbUsers", tickMs: 5200 },
     { img: trenballImg, name: "PulseCrash", path: "/game/trenball", reduxKey: "trenballUsers", tickMs: 4000 },
-    { img: hashDice, name: "Fast Crash", path: "/game/fast-crash", reduxKey: "fastcrashUsers", tickMs: 4000 },
+    { img: hashDice, name: "Hash Dice", path: "/game/hash-dice", reduxKey: "hashDiceUsers", tickMs: 4000 },
     { img: diamond, name: "Diamond", path: "/game/diamond", reduxKey: "diamondUsers", tickMs: 5100 },
     { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },

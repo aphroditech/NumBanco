@@ -67,6 +67,7 @@ import HdrStrongIcon from '@mui/icons-material/HdrStrong';
 import CryptoCrashPage from "views/CryptoCrash/CryptoCrashPage";
 import CropPortraitIcon from '@mui/icons-material/CropPortrait';
 import TarotPage from "views/Tarot/TarotPage";
+import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined';
 import RockPage from "views/Rock/RockPage";
 import PanToolIcon from '@mui/icons-material/PanTool';
 import TwoDicePage from "views/TwoDice/TwoDicePage";
@@ -271,7 +272,7 @@ export const TrenballGame = {
 export const FastCrashGame = {
     path: "/fast-crash",
     name: "FAST CRASH",
-    icon: <RocketLaunchIcon style={{ fontSize: "24px", color: "#4caf50" }} />,
+    icon: <RocketLaunchOutlinedIcon style={{ fontSize: "24px", color: "#00d4ff" }} />,
     component: FastCrashPage,
     layout: "/game",
 }

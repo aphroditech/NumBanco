@@ -53,11 +53,11 @@ export default function Dashboard() {
                     <RealTimeWinner />
                 </Box>
             </Grid> 
-            <Grid templateColumns={{ base: '1fr', '2xl': 'repeat(3, 1fr)' }} gap='18px' my='6px' >
+            <Grid templateColumns={{ base: '1fr', '2xl': '1fr 2fr' }} gap='18px' my='6px' >
                 <Box gridColumn={{ base: '1', '2xl': '1' }} minW={0}>
                     <Transaction />
                 </Box>
-                <Box gridColumn={{ base: '1', '2xl': '2 / span 2' }} minW={0}>
+                <Box gridColumn={{ base: '1', '2xl': '2' }} minW={0}>
                     <TopBestWinner />
                 </Box>
             </Grid>

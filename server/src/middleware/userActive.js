@@ -56,6 +56,13 @@ export const userActive = async () => {
         const hashDiceUsers = countByActive(21) + 52;
         const diamondUsers = countByActive(21) + 58;
         const tarotUsers = countByActive(22) + 50;
+        const fastcrashUsers = countByActive(23) + 120;
+        const coinUsers = countByActive(24) + 150;
+        const trenballUsers = countByActive(25) + 98;
+        const wheelUsers = countByActive(26) + 126;
+        const rangeUsers = countByActive(27) + 89;
+        const rockUsers = countByActive(28) + 84;
+        const snakesUsers = countByActive(29) + 87;
         const totalActiveUsers =
             plinkoUsers +
             tierAUsers +
@@ -80,7 +87,14 @@ export const userActive = async () => {
             climbUsers +
             diamondUsers +
             hashDiceUsers +
-            tarotUsers;
+            tarotUsers +
+            fastcrashUsers +
+            coinUsers +
+            trenballUsers +
+            wheelUsers +
+            rangeUsers +
+            rockUsers +
+            snakesUsers;
         const result = {
             offlineUsers,
             onlineUsers,
@@ -109,7 +123,15 @@ export const userActive = async () => {
             hashDiceUsers,
             diamondUsers,
             tarotUsers,
-            totalActiveUsers
+            fastcrashUsers,
+            totalActiveUsers,
+            otherPageUsers,
+            coinUsers,
+            trenballUsers,
+            wheelUsers,
+            rangeUsers,
+            rockUsers,
+            snakesUsers
         };
 
         cachedActiveUsers = result;

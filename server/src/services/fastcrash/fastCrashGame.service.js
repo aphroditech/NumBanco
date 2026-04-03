@@ -569,7 +569,6 @@ async function revealAndSettle(ably, roundIdForTimers) {
   let winningColor;
   const roll = Math.random();
 
-  console.log("winrate", winRate);
   if (A > C && A > (2 * C + 4.5 * B)) {
     // A is too high: B & C share winRate (40% by default)
     if (roll < winRate) {
