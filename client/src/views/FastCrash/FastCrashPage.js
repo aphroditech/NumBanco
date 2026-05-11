@@ -14,7 +14,6 @@ import {
 } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import ablyClient from "../../ably/ablyClient";
-import FastCrashHistory from "./FashCrashItem/FastCrashHistory";
 import { trenballScrollbarXStrip, trenballScrollbarY } from "../Trenball/trenballScrollbarStyles";
 import {
   getFastCrashState,
@@ -46,7 +45,7 @@ const WHITE = "#ffffff";
 const TAB_ACTIVE = GREEN;
 
 const PAYOUT = { green: 1.96, red: 1.96, violet: 4.5, number: 9 };
-const MIN_BET = 0.1;
+const MIN_BET = 0.0001;
 const MAX_LIVE = 60;
 
 const NUM_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
@@ -83,8 +82,7 @@ function formatGameDisplayId(roundId) {
 
 function colorForDigit(d) {
   const n = Math.floor(Number(d));
-  if (n === 0) return "red"; // Red/violet split should align with red
-  if (n === 5) return "green"; // Green/violet split should align with green
+  if (n === 0 || n === 5) return "violet";
   return n % 2 === 1 ? "green" : "red";
 }
 
@@ -97,16 +95,14 @@ function circleBgForDigit(d) {
   return RED;
 }
 
-const MAX_BEAD_ROAD_STACK = 5;
-
 /** Baccarat-style bead road: same color stacks in a column; color change starts a new column. */
 function buildBeadRoadColumns(recentResults) {
   const list = Array.isArray(recentResults) ? [...recentResults].reverse() : [];
   const cols = [];
   let lastColor = null;
   for (const r of list) {
-    const c = colorForDigit(r?.digit);
-    if (lastColor === null || c !== lastColor || cols[cols.length - 1].length >= MAX_BEAD_ROAD_STACK) {
+    const c = r?.color || colorForDigit(r?.digit);
+    if (lastColor === null || c !== lastColor) {
       cols.push([r]);
     } else {
       cols[cols.length - 1].push(r);
@@ -172,27 +168,13 @@ export default function FastCrashPage() {
   const [state, setState] = useState(null);
   const [clockOffset, setClockOffset] = useState(0);
   const [liveRows, setLiveRows] = useState([]);
-  const [betAmount, setBetAmount] = useState("0.1");
+  const [betAmount, setBetAmount] = useState("0.0001");
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
   const [tab, setTab] = useState("continuous");
   const [selColor, setSelColor] = useState(null);
   const [selDigit, setSelDigit] = useState(null);
   const [showMoreLive, setShowMoreLive] = useState(false);
-
-  const scrollContainerRef = useRef(null);
-
-  const scrollToStart = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-    }
-  };
-
-  const scrollToEnd = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({ left: scrollContainerRef.current.scrollWidth, behavior: 'smooth' });
-    }
-  };
 
   const initializedRef = useRef(false);
   const lastSyncRoundIdRef = useRef(null);
@@ -276,6 +258,20 @@ export default function FastCrashPage() {
       const incomingBetId = data?.betId ? String(data.betId) : "";
       if (incomingBetId && recentOwnBetIdsRef.current.get(incomingBetId)) {
         recentOwnBetIdsRef.current.delete(incomingBetId);
+        defer(() => {
+          setState((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  greenTotalBet: data.greenTotalBet ?? prev.greenTotalBet,
+                  redTotalBet: data.redTotalBet ?? prev.redTotalBet,
+                  violetTotalBet: data.violetTotalBet ?? prev.violetTotalBet,
+                  numberTotalBet: data.numberTotalBet ?? prev.numberTotalBet,
+                }
+              : prev
+          );
+        });
+        return;
       }
       defer(() => {
         setLiveRows((prev) => dedupeLive([data, ...(Array.isArray(prev) ? prev : [])]));
@@ -356,8 +352,6 @@ export default function FastCrashPage() {
     }
     return Number(state.timeLeftMs) || 0;
   }, [state, phase, serverNow, tick]);
-
-  const disableBettingControls = busy || phase !== "betting";
 
   const mmss = useMemo(() => {
     const sec = Math.max(0, Math.ceil(timeLeftMs / 1000));
@@ -466,27 +460,22 @@ export default function FastCrashPage() {
   };
 
   const bumpAmount = (delta) => {
-    const cur = round2(Number(betAmount) || 0); // Use round2 for current value
-    setBetAmount(String(Math.max(MIN_BET, round2(cur + delta))));
+    const cur = round4(Number(betAmount) || 0);
+    setBetAmount(String(Math.max(MIN_BET, round4(cur + delta))));
   };
 
   const joinBtn = (colorKey, label, mult, bg, border) => {
     const active = selColor === colorKey && selDigit == null;
     const disabled = busy || phase !== "betting";
-    const isGreen = colorKey === "green";
-    const isViolet = colorKey === "violet";
-    const isRed = colorKey === "red";
-    const hasPermanentEffect = isGreen || isViolet || isRed;
-    
     return (
       <Button
         h="auto"
         py={3}
         px={2}
         borderRadius="10px"
-        bg={CARD} // Always use CARD background
+        bg={active ? border : CARD}
         borderWidth="2px"
-        borderColor={border} // Always use the specific color for the border
+        borderColor={active ? border : "rgba(255,255,255,0.06)"}
         color={WHITE}
         _hover={
           disabled
@@ -497,12 +486,10 @@ export default function FastCrashPage() {
                 boxShadow: `0 8px 24px ${border}44`,
               }
         }
-        _active={{ bg: CARD, borderColor: border }} // Ensure background and border don't change on click
-        isDisabled={disableBettingControls}
+        isDisabled={disabled}
         onClick={() => {
           setSelColor(colorKey);
           setSelDigit(null);
-          placeBet();
         }}
         flex="1"
         minW={0}
@@ -545,44 +532,6 @@ export default function FastCrashPage() {
         overflow="hidden"
         bg={PANEL}
       >
-        {/* Result Modal Overlay */}
-        {phase === "result" && state?.winningDigit != null && (
-          <Flex
-            position="fixed" // Changed from absolute to fixed
-            top="0"
-            left="0"
-            width="100%"
-            height="100%"
-            justifyContent="center"
-            alignItems="center"
-            zIndex="999" // High z-index to overlay all content
-            bg="rgba(0,0,0,0.7)" // Semi-transparent dark overlay
-          >
-            <VStack
-              bg={CHART_BG_DEEP}
-              borderRadius="md"
-              p={6}
-              spacing={4}
-              align="center"
-              boxShadow="lg"
-              maxW="300px"
-            >
-              <HStack spacing={4} align="center">
-                <Text fontSize="xl" color={GREEN}>✨</Text>
-                <TrendCircle digit={state.winningDigit} size="60px" /> {/* Larger size for winning digit */}
-                <Text fontSize="xl" color={GREEN}>✨</Text>
-              </HStack>
-              <Box
-                width="80%"
-                borderBottom="1px dashed rgba(255,255,255,0.3)" // Dashed separator
-              />
-              <Text fontSize="md" fontWeight="bold" color={MUTED} textTransform="uppercase">
-                WINNING NUMBER
-              </Text>
-            </VStack>
-          </Flex>
-        )}
-
         <GridItem minW={0}>
           <VStack align="stretch" spacing={0}>
             {/* Header */}
@@ -633,17 +582,16 @@ export default function FastCrashPage() {
                       key={n}
                       h="42px"
                       borderRadius="8px"
-                      bg={CARD} // Always use CARD background
+                      bg={on ? "#3d4450" : CARD}
                       color={WHITE}
                       fontWeight="800"
                       fontSize="lg"
-                      borderWidth="1px" // Always use 1px border width
-                      borderColor="rgba(255,255,255,0.08)" // Always use this border color
-                      isDisabled={disableBettingControls}
+                      borderWidth={on ? "2px" : "1px"}
+                      borderColor={on ? GREEN : "rgba(255,255,255,0.08)"}
+                      isDisabled={busy || phase !== "betting"}
                       onClick={() => {
                         setSelDigit(n);
                         setSelColor(null);
-                        placeBet();
                       }}
                     >
                       {n}
@@ -661,246 +609,251 @@ export default function FastCrashPage() {
               {phase === "betting" && <Box h="3px" bg={GREEN} boxShadow={`0 0 12px ${GREEN}66`} />}
               <Box px={{ base: 2, md: 3 }} pt={3} pb={1}>
                 <Flex justify="space-between" align="center" mb={3} px={1}>
-                  <Text 
-                    fontSize="xs" 
-                    color={LABEL_GRAY} 
-                    fontWeight="700" 
-                    letterSpacing="0.02em"
-                    cursor="pointer"
-                    onClick={scrollToStart}
-                    _hover={{ color: WHITE }}
-                    transition="color 0.2s ease"
-                  >
+                  <Text fontSize="xs" color={LABEL_GRAY} fontWeight="700" letterSpacing="0.02em">
                     ← Old
                   </Text>
                   <Text fontSize="xs" color={phase === "betting" ? GREEN : MUTED} fontWeight="800" textTransform="uppercase">
                     {phase === "betting" ? "Place your bets" : "Result"}
                   </Text>
-                  <Text 
-                    fontSize="xs" 
-                    color={LABEL_GRAY} 
-                    fontWeight="700" 
-                    letterSpacing="0.02em"
-                    cursor="pointer"
-                    onClick={scrollToEnd}
-                    _hover={{ color: WHITE }}
-                    transition="color 0.2s ease"
-                  >
+                  <Text fontSize="xs" color={LABEL_GRAY} fontWeight="700" letterSpacing="0.02em">
                     New →
                   </Text>
                 </Flex>
 
-                <Box
-                  h="180px" // Reduced fixed height
-                  bg={CHART_BG}
-                  borderRadius="md"
-                  border="1px solid rgba(255,255,255,0.06)"
-                  overflow="hidden" // Clip content if it overflows
-                >
-                  {tab === "continuous" && (
-                    <Box
-                      ref={scrollContainerRef}
-                      h="100%" // Fill parent height
-                      overflowX="auto"
-                      overflowY="hidden" // Only horizontal scroll
-                      sx={trenballScrollbarXStrip}
-                      py={1} // Reduced vertical padding
-                      px={2}
-                    >
-                      <Flex align="flex-start" gap="4px" minW="min-content" h="100%">
-                        {beadRoadColumns.length === 0 && (
-                          <Text fontSize="sm" color={MUTED} px={2} py={6}>
-                            No history yet — rounds will stack here in columns when the same color repeats.
-                          </Text>
-                        )}
-                        {beadRoadColumns.map((col, ci) => (
-                          <VStack
-                            key={`col-${ci}`}
-                            spacing="3px"
-                            justify="flex-start"
-                            align="center"
-                            minW="28px"
-                          >
-                            {col.map((r) => (
-                              <Tooltip
-                                key={`${r.roundId}-${r.digit}`}
-                                label={`Round ${r.roundId} → ${r.digit}`}
-                                openDelay={250}
-                                hasArrow
-                              >
-                                <Box>
-                                  <TrendCircle digit={r.digit} size="26px" />
-                                </Box>
-                              </Tooltip>
-                            ))}
-                          </VStack>
-                        ))}
-                        {phase === "betting" && (
-                          <VStack spacing="3px" justify="flex-end" minW="28px" align="center">
-                            <Tooltip label="Current round" hasArrow>
-                              <Box
-                                w="26px"
-                                h="26px"
-                                borderRadius="full"
-                                bg="#4a5058"
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                                color={WHITE}
-                                fontWeight="800"
-                                fontSize="sm"
-                                boxShadow="inset 0 1px 0 rgba(255,255,255,0.08)"
-                              >
-                                ?
+                {tab === "continuous" && (
+                  <Box
+                    minH="140px"
+                    maxH="280px"
+                    overflowX="auto"
+                    overflowY="hidden"
+                    sx={trenballScrollbarXStrip}
+                    bg={CHART_BG}
+                    borderRadius="md"
+                    border="1px solid rgba(255,255,255,0.06)"
+                    py={3}
+                    px={2}
+                  >
+                    <Flex align="flex-end" gap="4px" minW="min-content" minH="120px">
+                      {beadRoadColumns.length === 0 && (
+                        <Text fontSize="sm" color={MUTED} px={2} py={6}>
+                          No history yet — rounds will stack here in columns when the same color repeats.
+                        </Text>
+                      )}
+                      {beadRoadColumns.map((col, ci) => (
+                        <VStack
+                          key={`col-${ci}`}
+                          spacing="3px"
+                          justify="flex-end"
+                          align="center"
+                          minW="28px"
+                        >
+                          {col.map((r) => (
+                            <Tooltip
+                              key={`${r.roundId}-${r.digit}`}
+                              label={`Round ${r.roundId} → ${r.digit}`}
+                              openDelay={250}
+                              hasArrow
+                            >
+                              <Box>
+                                <TrendCircle digit={r.digit} size="26px" />
                               </Box>
                             </Tooltip>
-                          </VStack>
-                        )}
-                      </Flex>
-                    </Box>
-                  )}
+                          ))}
+                        </VStack>
+                      ))}
+                      {phase === "betting" && (
+                        <VStack spacing="3px" justify="flex-end" minW="28px" align="center">
+                          <Tooltip label="Current round" hasArrow>
+                            <Box
+                              w="26px"
+                              h="26px"
+                              borderRadius="full"
+                              bg="#4a5058"
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              color={WHITE}
+                              fontWeight="800"
+                              fontSize="sm"
+                              boxShadow="inset 0 1px 0 rgba(255,255,255,0.08)"
+                            >
+                              ?
+                            </Box>
+                          </Tooltip>
+                        </VStack>
+                      )}
+                    </Flex>
+                  </Box>
+                )}
 
-                  {tab === "record" && (
-                    <Box
-                      h="100%" // Fill parent height
-                      position="relative"
-                      overflowY="auto" // Allow Y scroll for this tab
-                      overflowX="hidden"
-                      sx={{
-                        ...trenballScrollbarY,
-                        maskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 92%, transparent 100%)",
-                        WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 92%, transparent 100%)",
-                      }}
-                      p={3}
+                {tab === "record" && (
+                  <Box
+                    position="relative"
+                    maxH="260px"
+                    overflowY="auto"
+                    overflowX="hidden"
+                    sx={{
+                      ...trenballScrollbarY,
+                      maskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 92%, transparent 100%)",
+                      WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 92%, transparent 100%)",
+                    }}
+                    bg={CHART_BG}
+                    borderRadius="md"
+                    border="1px solid rgba(255,255,255,0.06)"
+                    p={3}
+                  >
+                    <Grid
+                      templateColumns="repeat(auto-fill, minmax(44px, 1fr))"
+                      gap={3}
+                      rowGap={4}
                     >
-                      <Grid
-                        templateColumns="repeat(auto-fill, minmax(44px, 1fr))"
-                        gap={3}
-                        rowGap={4}
-                      >
-                        {recentDisplay.length === 0 && phase !== "betting" ? (
-                          <Box gridColumn="1 / -1" py={6}>
-                            <Text fontSize="sm" color={MUTED} textAlign="center">
-                              No completed rounds yet.
-                            </Text>
-                          </Box>
-                        ) : (
-                          <>
-                            {recentDisplay.map((r) => (
-                              <Box key={`${r.roundId}-${r.digit}`} display="flex" justifyContent="center">
-                                <TrendCircle digit={r.digit} size="28px" />
-                              </Box>
-                            ))}
-                            {phase === "betting" && state?.roundId != null && (
-                              <Box display="flex" justifyContent="center">
-                                <Box
-                                  w="28px"
-                                  h="28px"
-                                  borderRadius="full"
-                                  bg="#4a5058"
-                                  display="flex"
-                                  alignItems="center"
-                                  justifyContent="center"
-                                  color={WHITE}
-                                  fontWeight="800"
-                                  fontSize="sm"
-                                >
-                                  ?
-                                </Box>
-                              </Box>
-                            )}
-                          </>
-                        )}
-                      </Grid>
-                    </Box>
-                  )}
-
-                  {tab === "probability" && (
-                    <VStack
-                      h="100%" // Fill parent height
-                      align="stretch"
-                      spacing={4}
-                      p={4}
-                      overflowY="auto" // Add overflow if content exceeds
-                    >
-                      <Text textAlign="center" fontSize="sm" color={LABEL_GRAY} fontWeight="600">
-                        Last {probStats.n} times
-                      </Text>
-
-                      <HStack spacing={2} align="center" mb={4} px={1}>
-                        <Flex align="center" gap={2} flex="1">
-                          <Flex
-                            w="24px" h="24px" borderRadius="full" bg={GREEN}
-                            align="center" justifyContent="center" fontSize="11px"
-                            fontWeight="900" color="white"
-                          > G </Flex>
-                          <Box flex="1" h="10px" borderRadius="full" bg="rgba(0,0,0,0.35)" overflow="hidden">
-                            <Box h="100%" w={`${probStats.pctG}%`} bg={GREEN} borderRadius="full" transition="width 0.35s ease" />
-                          </Box>
-                          <Text fontSize="sm" fontWeight="800" color={WHITE} w="28px" textAlign="right">
-                            {probStats.g}
+                      {recentDisplay.length === 0 && phase !== "betting" ? (
+                        <Box gridColumn="1 / -1" py={6}>
+                          <Text fontSize="sm" color={MUTED} textAlign="center">
+                            No completed rounds yet.
                           </Text>
-                        </Flex>
-
-                        <Flex align="center" gap={2} flex="1">
-                          <Flex
-                            w="24px" h="24px" borderRadius="full" bg={RED}
-                            align="center" justifyContent="center" fontSize="11px"
-                            fontWeight="900" color="white"
-                          > R </Flex>
-                          <Box flex="1" h="10px" borderRadius="full" bg="rgba(0,0,0,0.35)" overflow="hidden">
-                            <Box h="100%" w={`${probStats.pctR}%`} bg={RED} borderRadius="full" transition="width 0.35s ease" />
-                          </Box>
-                          <Text fontSize="sm" fontWeight="800" color={WHITE} w="28px" textAlign="right">
-                            {probStats.rd}
+                        </Box>
+                      ) : (
+                        <>
+                      {recentDisplay.map((r) => (
+                        <VStack key={`${r.roundId}-${r.digit}`} spacing={1} align="center">
+                          <Text fontSize="11px" fontWeight="800" color={WHITE} lineHeight="1">
+                            {r.roundId}
                           </Text>
-                        </Flex>
-
-                        <Flex align="center" gap={2} flex="1">
-                          <Flex
-                            w="24px" h="24px" borderRadius="full" bg={VIOLET}
-                            align="center" justifyContent="center" fontSize="11px"
-                            fontWeight="900" color="white"
-                          > V </Flex>
-                          <Box flex="1" h="10px" borderRadius="full" bg="rgba(0,0,0,0.35)" overflow="hidden">
-                            <Box h="100%" w={`${probStats.pctV}%`} bg={VIOLET} borderRadius="full" transition="width 0.35s ease" />
-                          </Box>
-                          <Text fontSize="sm" fontWeight="800" color={WHITE} w="28px" textAlign="right">
-                            {probStats.v}
+                          <TrendCircle digit={r.digit} size="28px" />
+                        </VStack>
+                      ))}
+                      {phase === "betting" && state?.roundId != null && (
+                        <VStack spacing={1} align="center">
+                          <Text fontSize="11px" fontWeight="800" color={LABEL_GRAY} lineHeight="1">
+                            {state.roundId}
                           </Text>
-                        </Flex>
-                      </HStack>
-
-                      <Grid
-                        templateColumns="repeat(5, 1fr)"
-                        templateRows="repeat(2, auto)"
-                        gap={0}
-                        borderWidth="1px"
-                        borderColor="rgba(255,255,255,0.1)"
-                        borderRadius="md"
-                        overflow="hidden"
-                      >
-                        {NUM_ORDER.map((d) => (
-                          <GridItem
-                            key={d}
-                            borderRightWidth="1px"
-                            borderBottomWidth="1px"
-                            borderColor="rgba(255,255,255,0.08)"
+                          <Box
+                            w="28px"
+                            h="28px"
+                            borderRadius="full"
+                            bg="#4a5058"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            color={WHITE}
+                            fontWeight="800"
+                            fontSize="sm"
                           >
-                            <VStack spacing={1} py={2} px={1} bg="rgba(0,0,0,0.12)">
-                              <Box display="flex" alignItems="center" justifyContent="center">
-                                <TrendCircle digit={d} size="24px" />
-                              </Box>
-                              <Text fontSize="sm" fontWeight="800" color={WHITE}>
-                                {probStats.digitCount[d] ?? 0}
-                              </Text>
-                            </VStack>
-                          </GridItem>
-                        ))}
-                      </Grid>
+                            ?
+                          </Box>
+                        </VStack>
+                      )}
+                        </>
+                      )}
+                    </Grid>
+                  </Box>
+                )}
+
+                {tab === "probability" && (
+                  <VStack align="stretch" spacing={4} bg={CHART_BG} borderRadius="md" border="1px solid rgba(255,255,255,0.06)" p={4}>
+                    <Text textAlign="center" fontSize="sm" color={LABEL_GRAY} fontWeight="600">
+                      Last {probStats.n} times
+                    </Text>
+
+                    <VStack spacing={3} align="stretch">
+                      <Flex align="center" gap={3}>
+                        <Flex
+                          w="24px"
+                          h="24px"
+                          borderRadius="full"
+                          bg={GREEN}
+                          align="center"
+                          justify="center"
+                          fontSize="11px"
+                          fontWeight="900"
+                          color="white"
+                          flexShrink={0}
+                        >
+                          G
+                        </Flex>
+                        <Box flex="1" h="10px" borderRadius="full" bg="rgba(0,0,0,0.35)" overflow="hidden">
+                          <Box h="100%" w={`${probStats.pctG}%`} bg={GREEN} borderRadius="full" transition="width 0.35s ease" />
+                        </Box>
+                        <Text fontSize="sm" fontWeight="800" color={WHITE} w="28px" textAlign="right">
+                          {probStats.g}
+                        </Text>
+                      </Flex>
+                      <Flex align="center" gap={3}>
+                        <Flex
+                          w="24px"
+                          h="24px"
+                          borderRadius="full"
+                          bg={RED}
+                          align="center"
+                          justify="center"
+                          fontSize="11px"
+                          fontWeight="900"
+                          color="white"
+                          flexShrink={0}
+                        >
+                          R
+                        </Flex>
+                        <Box flex="1" h="10px" borderRadius="full" bg="rgba(0,0,0,0.35)" overflow="hidden">
+                          <Box h="100%" w={`${probStats.pctR}%`} bg={RED} borderRadius="full" transition="width 0.35s ease" />
+                        </Box>
+                        <Text fontSize="sm" fontWeight="800" color={WHITE} w="28px" textAlign="right">
+                          {probStats.rd}
+                        </Text>
+                      </Flex>
+                      <Flex align="center" gap={3}>
+                        <Flex
+                          w="24px"
+                          h="24px"
+                          borderRadius="full"
+                          bg={VIOLET}
+                          align="center"
+                          justify="center"
+                          fontSize="11px"
+                          fontWeight="900"
+                          color="white"
+                          flexShrink={0}
+                        >
+                          V
+                        </Flex>
+                        <Box flex="1" h="10px" borderRadius="full" bg="rgba(0,0,0,0.35)" overflow="hidden">
+                          <Box h="100%" w={`${probStats.pctV}%`} bg={VIOLET} borderRadius="full" transition="width 0.35s ease" />
+                        </Box>
+                        <Text fontSize="sm" fontWeight="800" color={WHITE} w="28px" textAlign="right">
+                          {probStats.v}
+                        </Text>
+                      </Flex>
                     </VStack>
-                  )}
-                </Box>
+
+                    <Grid
+                      templateColumns="repeat(5, 1fr)"
+                      templateRows="repeat(2, auto)"
+                      gap={0}
+                      borderWidth="1px"
+                      borderColor="rgba(255,255,255,0.1)"
+                      borderRadius="md"
+                      overflow="hidden"
+                    >
+                      {NUM_ORDER.map((d) => (
+                        <GridItem
+                          key={d}
+                          borderRightWidth="1px"
+                          borderBottomWidth="1px"
+                          borderColor="rgba(255,255,255,0.08)"
+                        >
+                          <VStack spacing={1} py={2} px={1} bg="rgba(0,0,0,0.12)">
+                            <Box display="flex" alignItems="center" justifyContent="center">
+                              <TrendCircle digit={d} size="24px" />
+                            </Box>
+                            <Text fontSize="sm" fontWeight="800" color={WHITE}>
+                              {probStats.digitCount[d] ?? 0}
+                            </Text>
+                          </VStack>
+                        </GridItem>
+                      ))}
+                    </Grid>
+                  </VStack>
+                )}
 
                 {/* Tabs — bottom bar (reference layout) */}
                 <Flex
@@ -964,18 +917,17 @@ export default function FastCrashPage() {
                     type="text"
                     inputMode="decimal"
                     value={betAmount}
-                    readOnly={disableBettingControls} // Disabled when not betting
                     onChange={(e) => {
                       const raw = e.target.value;
                       if (raw === "") {
                         setBetAmount("");
                         return;
                       }
-                      if (!/^\d*(\.\d{0,2})?$/.test(raw)) return;
+                      if (!/^\d*(\.\d{0,6})?$/.test(raw)) return;
                       setBetAmount(raw);
                     }}
                     onBlur={() => {
-                      const p = round2(Number(betAmount)); // Use round2 for two decimal places
+                      const p = round4(Number(betAmount));
                       setBetAmount(String(Number.isFinite(p) ? Math.max(MIN_BET, p) : MIN_BET));
                     }}
                     variant="unstyled"
@@ -984,57 +936,45 @@ export default function FastCrashPage() {
                     fontSize="md"
                     _focus={{ boxShadow: "none" }}
                   />
-                  <HStack spacing={0} h="100%" borderRightRadius="md" overflow="hidden">
+                  <HStack spacing={0} h="100%">
                     <Button
                       h="100%"
                       borderRadius={0}
                       bg="transparent"
                       borderLeft="1px solid rgba(255,255,255,0.1)"
                       fontSize="xs"
-                      color="white"
                       onClick={() => preset(round4(Number(betAmount) / 2))}
-                      _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                      isDisabled={disableBettingControls} // Disabled when not betting
                     >
                       1/2
                     </Button>
                     <Button
                       h="100%"
-                      color="white"
                       borderRadius={0}
                       bg="transparent"
                       borderLeft="1px solid rgba(255,255,255,0.1)"
                       fontSize="xs"
                       onClick={() => preset(round4(Number(betAmount) * 2))}
-                      _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                      isDisabled={disableBettingControls} // Disabled when not betting
                     >
                       2x
                     </Button>
                     <VStack spacing={0} h="100%" borderLeft="1px solid rgba(255,255,255,0.1)">
                       <IconButton
-                        color="white"
                         aria-label="up"
                         size="xs"
                         h="50%"
                         borderRadius={0}
                         variant="ghost"
                         icon={<KeyboardArrowUpIcon sx={{ fontSize: 16 }} />}
-                        onClick={() => bumpAmount(0.01)} // Increment by 0.01
-                        _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                        isDisabled={disableBettingControls} // Disabled when not betting
+                        onClick={() => bumpAmount(0.0001)}
                       />
                       <IconButton
-                        color="white"
                         aria-label="down"
                         size="xs"
                         h="50%"
                         borderRadius={0}
                         variant="ghost"
                         icon={<KeyboardArrowDownIcon sx={{ fontSize: 16 }} />}
-                        onClick={() => bumpAmount(-0.01)} // Decrement by 0.01
-                        _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                        isDisabled={disableBettingControls} // Disabled when not betting
+                        onClick={() => bumpAmount(-0.0001)}
                       />
                     </VStack>
                   </HStack>
@@ -1052,12 +992,25 @@ export default function FastCrashPage() {
                     fontWeight="800"
                     _hover={{ bg: "#32363e", color: WHITE }}
                     onClick={() => preset(v)}
-                    isDisabled={disableBettingControls} // Disabled when not betting
                   >
                     {v >= 1000 ? "1.0k" : v}
                   </Button>
                 ))}
               </HStack>
+              <Button
+                w="100%"
+                h="48px"
+                borderRadius="10px"
+                bg={GREEN}
+                color="#0e120f"
+                fontWeight="900"
+                fontSize="md"
+                _hover={{ bg: "#5ed36a" }}
+                isDisabled={busy || phase !== "betting"}
+                onClick={placeBet}
+              >
+                Bet now
+              </Button>
               <HStack mt={3} spacing={3} justify="flex-start">
                 <IconButton
                   aria-label="settings"
@@ -1065,6 +1018,9 @@ export default function FastCrashPage() {
                   size="sm"
                   icon={<SettingsIcon sx={{ color: MUTED }} />}
                 />
+                <Text fontSize="xs" color={MUTED}>
+                  Balance: {round4(balance)}
+                </Text>
               </HStack>
             </Box>
           </VStack>
@@ -1174,7 +1130,6 @@ export default function FastCrashPage() {
           )}
         </GridItem>
       </Grid>
-      <FastCrashHistory />
     </Flex>
   );
 }

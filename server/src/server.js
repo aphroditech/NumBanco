@@ -49,7 +49,7 @@ import { tarotBot } from "./services/tarot/tarotBot.service.js";
 import { snakeBot } from "./services/Snakes/SnakeBot.Service.js";
 import { rangeBot } from "./services/range/rangeBot.service.js";
 import { cryptoCrashBot } from "./services/cryptoCrash/cryptoCrashBot.service.js";
-import { rockBot } from "./services/rock/rockBotService.js";
+
 
 dotenv.config();
 
@@ -105,7 +105,6 @@ connectDB()
             // diamondBot(ablyCore);
             // rangeBot(ablyCore);
             // cryptoCrashBot(ablyCore);
-            // rockBot(ablyCore)
             startTrenballGameLoop(ablyCore).catch((e) =>
               console.error("[trenball] failed to start loop:", e?.message || e)
             );
@@ -162,7 +161,7 @@ connectDB()
             // aToZBot(ablyDiceGames);
             // twistBot(ablyDiceGames);
             // kenoBot(ablyDiceGames);
-            // threeNumbersBot(ablyDiceGames);
+            threeNumbersBot(ablyDiceGames);
         });
 
         /*
@@ -180,12 +179,12 @@ connectDB()
             // cocoBot(ablyMiningGames);
             // alphaTreeBot(ablyMiningGames);
             // doveBot(ablyMiningGames);
-            minesBot(ablyMiningGames);
+            // minesBot(ablyMiningGames);
             plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
             hashDiceBot(ablyMiningGames).catch((e) => console.error("[hashDiceBot] start:", e?.message || e));
             startGravityGameLoop(ablyMiningGames);
-            setCloudSpreadAbly(ablyMiningGames);
-            cloudSpreadBot().catch(console.error);
+            // setCloudSpreadAbly(ablyMiningGames);
+            // cloudSpreadBot().catch(console.error);
             startDoubleGameLoop(ablyMiningGames);
             // snakeBot(ablyMiningGames);
         });

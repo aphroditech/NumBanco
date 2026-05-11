@@ -18,7 +18,7 @@ const FastCrashRoundSchema = new mongoose.Schema({
   roundId: { type: Number, required: true, unique: true, index: true },
   phase: {
     type: String,
-    enum: ["betting", "rolling", "result", "closed"],
+    enum: ["betting", "result", "closed"],
     default: "betting",
   },
   startAt: { type: Date, required: true },

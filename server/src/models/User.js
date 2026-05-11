@@ -520,14 +520,6 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  rockAmount: {
-    type: Number,
-    default: 0
-  },
-  rockWinAmount: {
-    type: Number,
-    default: 0
-  },
   cloudAmount: {
     type: Number,
     default: 0
@@ -736,7 +728,7 @@ const userSchema = new mongoose.Schema({
     ],
     default: []
   },
-
+  
   threeNumbersMode: {
     type: String,
     default: 1

@@ -2,12 +2,10 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import FastCrashRound from "../../models/fastcrash/FastCrashRound.js";
 import FastCrashHistory from "../../models/fastcrash/FastCrashHistory.js";
-import FastCrashSetting from "../../models/fastcrash/FastCrashSetting.js";
 import User from "../../models/User.js";
 
 const BETTING_MS = 20000;
-const ROLLING_MS = 3000; // New: 3 seconds for the disabled phase
-const RESULT_MS = 3000; // 3 seconds for result display
+const RESULT_MS = 3500;
 
 export const PAYOUT_MULT = {
   green: 1.96,
@@ -104,27 +102,17 @@ async function publish(ably, event, data) {
 function phaseFromRound(round, nowMs = Date.now()) {
   if (!round?.bettingEndsAt) return "betting";
   const betEnd = new Date(round.bettingEndsAt).getTime();
-  
   if (nowMs < betEnd) return "betting";
-
-  const rollingEnd = betEnd + ROLLING_MS;
-  if (nowMs < rollingEnd) return "rolling";
-
-  // If we have a winning digit, we are in the result phase until roundEndsAt
-  if (round.winningDigit != null) {
-    if (!round.roundEndsAt) return "result";
-    const roundEnd = new Date(round.roundEndsAt).getTime();
-    if (nowMs < roundEnd) return "result";
-    return "closed";
-  }
-
-  // If no winning digit yet, we must be in rolling (or waiting for reveal)
-  return "rolling";
+  if (!round.roundEndsAt) return "result";
+  const roundEnd = new Date(round.roundEndsAt).getTime();
+  if (nowMs < roundEnd) return "result";
+  return "closed";
 }
 
 async function loadRecentResultsFromDb(limit = PREVIOUS_RESULTS_COUNT) {
   const rows = await FastCrashRound.find(
     {
+      phase: { $in: ["result", "closed"] },
       winningDigit: { $exists: true, $ne: null },
       resultColor: { $exists: true, $ne: null },
     },
@@ -156,14 +144,12 @@ async function createRound() {
   const roundId = latest?.roundId ? latest.roundId + 1 : 1;
   const now = new Date();
   const bettingEndsAt = new Date(now.getTime() + BETTING_MS);
-  const roundEndsAt = new Date(bettingEndsAt.getTime() + ROLLING_MS + RESULT_MS);
 
   const round = await FastCrashRound.create({
     roundId,
     phase: "betting",
     startAt: now,
     bettingEndsAt,
-    roundEndsAt, // New: Added roundEndsAt
     users: [],
   });
 
@@ -185,9 +171,6 @@ export async function getFastCrashStateSnapshot() {
   let timeLeftMs = 0;
   const betEnd = new Date(currentRound.bettingEndsAt).getTime();
   if (phase === "betting") timeLeftMs = Math.max(0, betEnd - nowMs);
-  else if (phase === "rolling") {
-    timeLeftMs = Math.max(0, (betEnd + ROLLING_MS) - nowMs);
-  }
   else if (phase === "result" && currentRound.roundEndsAt) {
     timeLeftMs = Math.max(0, new Date(currentRound.roundEndsAt).getTime() - nowMs);
   }
@@ -212,7 +195,6 @@ export async function getFastCrashStateSnapshot() {
     payouts: { ...PAYOUT_MULT },
     timers: {
       bettingSeconds: BETTING_MS / 1000,
-      rollingSeconds: ROLLING_MS / 1000, // New: Rolling seconds
       resultSeconds: RESULT_MS / 1000,
     },
   };
@@ -333,23 +315,16 @@ export async function placeFastCrashBet({ user, amount, side, digit }) {
     isBot,
   };
 
-  // Update the database and retrieve the updated round document
-  const updatedRoundDoc = await FastCrashRound.findOneAndUpdate(
+  currentRound.users = Array.isArray(currentRound.users) ? currentRound.users : [];
+  currentRound.users.push(newUserBet);
+
+  await FastCrashRound.updateOne(
     { _id: currentRound._id },
     {
       ...(Object.keys(roundInc).length ? { $inc: roundInc } : {}),
       $push: { users: newUserBet },
-    },
-    { new: true } // Return the modified document rather than the original
+    }
   );
-
-  if (updatedRoundDoc) {
-    currentRound = updatedRoundDoc.toObject ? updatedRoundDoc.toObject() : updatedRoundDoc; // Refresh global currentRound
-  } else {
-    // This scenario indicates a problem: the round was not found for update.
-    console.error(`[fastcrash] Error: currentRound (id: ${currentRound._id}) not found for bet update.`);
-    throw new Error("Failed to update round with new bet.");
-  }
 
   if (s === "green") currentRound.greenTotalBet = round2((currentRound.greenTotalBet || 0) + parsedAmount);
   if (s === "red") currentRound.redTotalBet = round2((currentRound.redTotalBet || 0) + parsedAmount);
@@ -531,98 +506,7 @@ async function revealAndSettle(ably, roundIdForTimers) {
   if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
   if (currentRound.winningDigit != null) return;
 
-  const bets = Array.isArray(currentRound.users) ? currentRound.users : [];
-  
-  // A = Green, B = Violet, C = Red (Only real user bets)
-  let A = 0;
-  let B = 0;
-  let C = 0;
-  let totalNumberBets = 0;
-  const digitBets = new Array(10).fill(0);
-
-  for (const b of bets) {
-    if (b.isBot) continue;
-
-    const amt = Number(b.betAmount || 0);
-    if (b.side === "green") A += amt;
-    else if (b.side === "violet") B += amt;
-    else if (b.side === "red") C += amt;
-    else if (b.side === "number" && b.digit != null) {
-      const d = Math.floor(Number(b.digit));
-      if (d >= 0 && d <= 9) {
-        digitBets[d] += amt;
-        totalNumberBets += amt;
-      }
-    }
-  }
-
-  // Fetch win rate from DB settings
-  let winRate = 0.4;
-  try {
-    const settings = await FastCrashSetting.findOne({ key: "default" });
-    if (settings) winRate = settings.winRate40;
-  } catch (err) {
-    console.warn("[fastcrash] failed to fetch settings:", err.message);
-  }
-
-  const D = totalNumberBets * 0.1;
-  let winningColor;
-  const roll = Math.random();
-
-  if (A > C && A > (2 * C + 4.5 * B)) {
-    // A is too high: B & C share winRate (40% by default)
-    if (roll < winRate) {
-      winningColor = Math.random() < 0.5 ? "violet" : "red";
-    } else {
-      winningColor = "green";
-    }
-  } else if (C > A && C > (2 * A + 4.5 * B)) {
-    // C is too high: B & A share winRate (40% by default)
-    if (roll < winRate) {
-      winningColor = Math.random() < 0.5 ? "violet" : "green";
-    } else {
-      winningColor = "red";
-    }
-  } else {
-    // Standard balancing: pick the side with fewer bets
-    if (A > C) winningColor = "red";
-    else if (C > A) winningColor = "green";
-    else winningColor = Math.random() < 0.5 ? "green" : "red";
-  }
-
-  // Define digit pools for each color
-  const colorPools = {
-    violet: [0, 5],
-    green: [1, 3, 7, 9],
-    red: [2, 4, 6, 8],
-  };
-
-  const pool = colorPools[winningColor];
-  
-  // Find winning digit: less than D but nearest to D
-  let winningDigit = null;
-  let bestDiff = Infinity;
-
-  // Only attempt the D logic if there are actual user number bets
-  if (totalNumberBets > 0) {
-    for (const d of pool) {
-      const bet = digitBets[d];
-      if (bet < D) {
-        const diff = D - bet;
-        if (diff < bestDiff) {
-          bestDiff = diff;
-          winningDigit = d;
-        }
-      }
-    }
-  }
-
-  // Fallback: If no digit meets the D criteria (or no user bets),
-  // pick a random digit from the winning color's pool to ensure variety.
-  if (winningDigit === null) {
-    winningDigit = pool[Math.floor(Math.random() * pool.length)];
-  }
-
+  const winningDigit = crypto.randomInt(0, 10);
   const resultColor = resultColorFromDigit(winningDigit);
   const roundEndsAt = new Date(Date.now() + RESULT_MS);
 
@@ -651,6 +535,8 @@ async function revealAndSettle(ably, roundIdForTimers) {
     console.error("[fastcrash] settle error:", e?.message || e);
   }
 
+  await publish(ably, EVENT_STATE, await getFastCrashStateSnapshot());
+
   const delayAdvance = Math.max(0, roundEndsAt.getTime() - Date.now());
   const docId = String(currentRound._id);
   setTimeout(async () => {
@@ -663,10 +549,8 @@ async function closeRoundAndAdvance(ably, roundIdForTimers, roundDocIdStr) {
     if (!currentRound || currentRound.roundId !== roundIdForTimers) return;
     if (String(currentRound._id) !== roundDocIdStr) return;
 
-    // Mark previous round as closed
     await FastCrashRound.updateOne({ _id: currentRound._id }, { $set: { phase: "closed" } });
 
-    // Create and schedule the next round
     currentRound = await createRound();
     settled = false;
     scheduleRoundTimers(ably, currentRound);
@@ -679,18 +563,7 @@ async function closeRoundAndAdvance(ably, roundIdForTimers, roundDocIdStr) {
 function scheduleRoundTimers(ably, roundForTimers) {
   if (!roundForTimers?.bettingEndsAt) return;
   const roundIdForTimers = roundForTimers.roundId;
-  const betEnd = new Date(roundForTimers.bettingEndsAt).getTime();
-
-  // Schedule a state update when betting ends to signal the rolling phase
-  const delayRolling = Math.max(0, betEnd - Date.now());
-  setTimeout(async () => {
-    if (currentRound && currentRound.roundId === roundIdForTimers) {
-      await publish(ably, EVENT_STATE, await getFastCrashStateSnapshot());
-    }
-  }, delayRolling);
-
-  // Schedule revealAndSettle to run after BETTING_MS + ROLLING_MS
-  const delayReveal = Math.max(0, (betEnd + ROLLING_MS) - Date.now());
+  const delayReveal = Math.max(0, new Date(roundForTimers.bettingEndsAt).getTime() - Date.now());
   setTimeout(async () => {
     try {
       await revealAndSettle(ably, roundIdForTimers);
@@ -703,57 +576,19 @@ function scheduleRoundTimers(ably, roundForTimers) {
 async function maybeRunBots(ably) {
   if (!currentRound) return;
   if (phaseFromRound(currentRound) !== "betting") return;
-
-  // Fetch bot settings from DB
-  let settings = {
-    botMaxPerTick: 6,
-    botMinBet: 0.1,
-    botMaxBet: 20,
-    botGreenWeight: 40,
-    botRedWeight: 40,
-    botVioletWeight: 10,
-    botNumberWeight: 10,
-  };
-
-  try {
-    const dbSettings = await FastCrashSetting.findOne({ key: "default" });
-    if (dbSettings) {
-      settings = {
-        botMaxPerTick: dbSettings.botMaxPerTick ?? 6,
-        botMinBet: dbSettings.botMinBet ?? 0.1,
-        botMaxBet: dbSettings.botMaxBet ?? 20,
-        botGreenWeight: dbSettings.botGreenWeight ?? 40,
-        botRedWeight: dbSettings.botRedWeight ?? 40,
-        botVioletWeight: dbSettings.botVioletWeight ?? 10,
-        botNumberWeight: dbSettings.botNumberWeight ?? 10,
-      };
-    }
-  } catch (err) {
-    console.warn("[fastcrash] failed to fetch bot settings:", err.message);
-  }
-
-  const totalWeight = settings.botGreenWeight + settings.botRedWeight + settings.botVioletWeight + settings.botNumberWeight;
+  const maxBetsPerTick = 6;
+  const sides = ["green", "red", "violet", "number"];
   let placed = 0;
-
-  for (let i = 0; i < 24 && placed < settings.botMaxPerTick; i += 1) {
+  for (let i = 0; i < 24 && placed < maxBetsPerTick; i += 1) {
     const botUserId = botUserIds[Math.floor(Math.random() * botUserIds.length)]?.userId;
     if (!botUserId) break;
     const botUser = await User.findOne({ userId: botUserId });
     if (!botUser) continue;
-
-    // Weighted side selection
-    const roll = Math.random() * totalWeight;
-    let side;
-    if (roll < settings.botGreenWeight) side = "green";
-    else if (roll < settings.botGreenWeight + settings.botRedWeight) side = "red";
-    else if (roll < settings.botGreenWeight + settings.botRedWeight + settings.botVioletWeight) side = "violet";
-    else side = "number";
-
+    const side = sides[Math.floor(Math.random() * sides.length)];
     const digit = side === "number" ? crypto.randomInt(0, 10) : undefined;
-    const lo = settings.botMinBet;
-    const hi = Math.min(settings.botMaxBet, Number(botUser.balance ?? 0));
+    const lo = 0.1;
+    const hi = Math.min(20, Number(botUser.balance ?? 0));
     if (hi < lo) continue;
-
     const amount = round2(lo + Math.random() * (hi - lo));
     try {
       const { row, round } = await placeFastCrashBet({ user: botUser, amount, side, digit });
@@ -768,32 +603,9 @@ async function maybeRunBots(ably) {
 export async function startFastCrashGameLoop(ably) {
   if (loopStarted) return;
   loopStarted = true;
-
-  // Initialize default settings if not exists
-  try {
-    const existing = await FastCrashSetting.findOne({ key: "default" });
-    if (!existing) {
-      await FastCrashSetting.create({ 
-        key: "default", 
-        winRate40: 0.4,
-        botMaxPerTick: 6,
-        botMinBet: 0.1,
-        botMaxBet: 20,
-        botGreenWeight: 40,
-        botRedWeight: 40,
-        botVioletWeight: 10,
-        botNumberWeight: 10
-      });
-      console.log("[fastcrash] Default settings initialized.");
-    }
-  } catch (err) {
-    console.warn("[fastcrash] failed to initialize settings:", err.message);
-  }
-
   try {
     recentResults = await loadRecentResultsFromDb(PREVIOUS_RESULTS_COUNT);
-  } catch (err) {
-    console.error("[fastcrash] failed to load recent results:", err);
+  } catch {
     recentResults = [];
   }
 
@@ -803,20 +615,7 @@ export async function startFastCrashGameLoop(ably) {
     botUserIds = [];
   }
 
-  // Check if there is an active round before creating a new one
-  const latest = await FastCrashRound.findOne({}).sort({ roundId: -1 });
-  
-  const now = Date.now();
-  const isExpired = latest?.roundEndsAt && new Date(latest.roundEndsAt).getTime() < now;
-
-  if (latest && !isExpired && (latest.phase === "betting" || latest.phase === "rolling" || latest.phase === "result")) {
-    currentRound = latest.toObject ? latest.toObject() : latest;
-    settled = currentRound.phase === "result" && currentRound.winningDigit != null;
-  } else {
-    currentRound = await createRound();
-    settled = false;
-  }
-  
+  currentRound = await createRound();
   scheduleRoundTimers(ably, currentRound);
   await publish(ably, EVENT_STATE, await getFastCrashStateSnapshot());
 
