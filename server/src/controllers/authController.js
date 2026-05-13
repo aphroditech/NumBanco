@@ -17,7 +17,7 @@ import crypto from "crypto";
 export const register = async (req, res) => {
     try {
 
-        const { userAuthId, altas, password, email, partnerId, countryCode } = req.body;
+        const { userAuthId, altas, password, email, partnerId, countryCode, ipAddress } = req.body;
 
         const existsId = await User.findOne({ userAuthId });
         if (existsId) {
@@ -43,6 +43,7 @@ export const register = async (req, res) => {
             wallets: wallets,
             active: 1,
             country: countryCode,
+            ipAddress: ipAddress,
             totalhistory: [{
                 amount: 5,
                 type: "free",
@@ -93,14 +94,15 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
     try {
-        const { userAuthId, password } = req.body;
+        const { userAuthId, password, countryCode, ipAddress } = req.body;
+        console.log("county code", countryCode);
+
         const user = await User.findOne(
             { userAuthId },
             {
                 "wallets.eth.privateKey": 0,
                 "wallets.bsc.privateKey": 0,
                 "wallets.tron.privateKey": 0,
-                country: 0,
                 pumpingMode: 0,
                 rubicMode: 0,
                 partnerId: 0,
@@ -154,6 +156,8 @@ export const login = async (req, res) => {
             user.membership = 2;
         }
         user.active = 1;
+        user.country = countryCode;
+        user.ipAddress = ipAddress;
         await user.save();
 
         // Normal login if no 2FA

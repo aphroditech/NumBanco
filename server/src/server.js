@@ -71,6 +71,7 @@ app.locals.ablyMiningGames = ablyMiningGames;
 connectDB()
     .then(async () => {
         try {
+            console.log("mongodb connected");
             await initializeDatabase();
         } catch (err) {
             console.error("❌ Database initialization failed:", err);
@@ -142,7 +143,7 @@ connectDB()
 
             // rocketBot(ablyCrashGames);
             // jokerCrashBot(ablyCrashGames);
-            // pumpingBot(ablyCrashGames);
+            pumpingBot(ablyCrashGames);
             // wheelBot(ablyCrashGames);
             /** Wheel live feed uses `wheelResult` / `WHEEL_RESULT` on core Ably (see `wheelController` / client hook). */
         });
