@@ -43,7 +43,7 @@ function SignUp({ setIsAuth }) {
     =============================== */
 
     const [countryCode, setCountryCode] = useState("");
-
+    const [ipAddress, setIpAddress] = useState("");
 
 
     useEffect(() => {
@@ -59,6 +59,9 @@ function SignUp({ setIsAuth }) {
     
                 if (data?.country_code) {
                     setCountryCode(data.country_code);
+                }
+                if (data?.ip) {
+                    setIpAddress(data.ip);
                 }
     
             } catch (error) {
@@ -103,7 +106,7 @@ function SignUp({ setIsAuth }) {
 
         window.addEventListener("keydown", handleEnter);
         return () => window.removeEventListener("keydown", handleEnter);
-    }, [data, agreed, showEmail, countryCode]);
+    }, [data, agreed, showEmail, countryCode, ipAddress]);
 
     /* ===============================
        Validation
@@ -159,6 +162,7 @@ function SignUp({ setIsAuth }) {
             password: data.password,
             partnerId: data.partner,
             countryCode: countryCode, // ✅ Correct country
+            ipAddress: ipAddress,
         };
 
         if (showEmail && data.email) {

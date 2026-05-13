@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { useHistory, NavLink } from "react-router-dom";
 import {
@@ -31,6 +31,34 @@ function SignIn({ setIsAuth }) {
 
     const remembered = JSON.parse(localStorage.getItem("rememberMe"));
 
+    const [countryCode, setCountryCode] = useState("");
+    const [ipAddress, setIpAddress] = useState("");
+
+    useEffect(() => {
+        const fetchCountry = async () => {
+            try {
+                const response = await fetch("https://ipapi.co/json/");
+    
+                if (!response.ok) {
+                    throw new Error("Country fetch failed");
+                }
+    
+                const data = await response.json();
+    
+                if (data?.country_code) {
+                    setCountryCode(data.country_code);
+                }
+                if (data?.ip) {
+                    setIpAddress(data.ip);
+                }
+            } catch (error) {
+                console.warn("Failed to resolve country from IP", error);
+            }
+        };
+    
+        fetchCountry();
+    }, []);
+
     const [data, setData] = useState({
         userAuthId: remembered?.userAuthId || "",
         password: remembered?.password || "",
@@ -56,6 +84,13 @@ function SignIn({ setIsAuth }) {
     const onClick = async () => {
         if (!validate()) return;
 
+        const payload = {
+            userAuthId: data.userAuthId,
+            password: data.password,
+            countryCode,
+            ipAddress,
+        };
+
         setIsLoading(true);
         if (rememberMe) {
             localStorage.setItem("rememberMe", JSON.stringify(data));
@@ -63,7 +98,7 @@ function SignIn({ setIsAuth }) {
             localStorage.removeItem("rememberMe");
         }
 
-        const res = await login(data, history, dispatch, setIsAuth);
+        const res = await login(payload, history, dispatch, setIsAuth);
         if (res === "Success") {
             setIsLoading(false);
         } else {

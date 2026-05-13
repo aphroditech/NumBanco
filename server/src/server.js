@@ -98,6 +98,7 @@ app.locals.ablyMiningGames = ablyMiningGames;
 connectDB()
     .then(async () => {
         try {
+            console.log("mongodb connected");
             await initializeDatabase();
         } catch (err) {
             console.error("❌ Database initialization failed:", err);
