@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 import https from "https";
-import http from "http";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import app from "./app.js";
 import { createAblyClient } from "./config/ably.js";
 import { connectDB } from "./config/db.js";
@@ -49,38 +50,13 @@ import { tarotBot } from "./services/tarot/tarotBot.service.js";
 import { snakeBot } from "./services/Snakes/SnakeBot.Service.js";
 import { rangeBot } from "./services/range/rangeBot.service.js";
 import { cryptoCrashBot } from "./services/cryptoCrash/cryptoCrashBot.service.js";
-
+import { rockBot } from "./services/rock/rockBotService.js";
 
 dotenv.config();
 
 const PORT = process.env.API_PORT || 5000;
-
-/**
- * Bots are started from Ably `connected`. On a fast VPS the connection can reach
- * `connected` before `once("connected")` is registered, so the handler never runs.
- * Call the callback immediately if already connected, otherwise wait for the event.
- */
-function whenAblyReady(ably, label, fn) {
-    const run = () => {
-        console.log(`✅ ${label} Ably connected`);
-        try {
-            fn();
-        } catch (e) {
-            console.error(`[${label}] startup error:`, e?.message || e);
-        }
-    };
-    if (ably.connection.state === "connected") {
-        run();
-    } else {
-        ably.connection.once("connected", run);
-        ably.connection.once("failed", () => {
-            console.error(
-                `❌ ${label} Ably connection failed — bots on this link will not run.`,
-                ably.connection.errorReason || ""
-            );
-        });
-    }
-}
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const certsDir = path.join(__dirname, "../certs");
 
 const ablyCore = createAblyClient("core");
 const ablyFinance = createAblyClient("finance");
@@ -98,6 +74,7 @@ app.locals.ablyMiningGames = ablyMiningGames;
 connectDB()
     .then(async () => {
         try {
+            console.log("mongodb connected");
             await initializeDatabase();
         } catch (err) {
             console.error("❌ Database initialization failed:", err);
@@ -109,40 +86,41 @@ connectDB()
         //     console.error("[cloud-spread] failed to start game loop:", err);
         // });
 
-        // Load SSL certificates
-        // const sslOptions = {
-        //     key: fs.readFileSync(process.env.SSL_KEY_PATH || './certs/key.pem'),
-        //     cert: fs.readFileSync(process.env.SSL_CERT_PATH || './certs/cert.pem')
-        // };
+        const sslOptions = {
+            key: fs.readFileSync(process.env.SSL_KEY_PATH || path.join(certsDir, "key.pem")),
+            cert: fs.readFileSync(process.env.SSL_CERT_PATH || path.join(certsDir, "cert.pem")),
+        };
 
-        /** 0.0.0.0 avoids some Windows / IPv6 localhost mismatch issues vs binding to default. */
-        http.createServer(app).listen(PORT, () => {
-            console.log(`🚀 HTTP Server listening on ${PORT} port.`);
+        https.createServer(sslOptions, app).listen(PORT, () => {
+            console.log(`🚀 HTTPS Server listening on port ${PORT}.`);
         });
-        // https.createServer(sslOptions, app).listen(PORT, () => {
-        //     console.log(`🚀 HTTPS Server running on port ${PORT}`);
 
-        // });
+        ablyCore.connection.once("connected", () => {
 
-        whenAblyReady(ablyCore, "Core", () => {
-            climbBot(ablyCore);
-            diamondBot(ablyCore);
-            rangeBot(ablyCore);
-            cryptoCrashBot(ablyCore);
-            startTrenballGameLoop(ablyCore).catch((e) =>
-              console.error("[trenball] failed to start loop:", e?.message || e)
-            );
-            startFastCrashGameLoop(ablyCore).catch((e) =>
-              console.error("[fastcrash] failed to start loop:", e?.message || e)
-            );
-            tarotBot(ablyCore);
-            getUserStatusChannel(ablyCore);
-            startBetEngine(ablyCore, 0);
-            startBetEngine(ablyCore, 1);
-            startBetEngine(ablyCore, 2);
+            console.log("✅ Core Ably connected");
+
+            // climbBot(ablyCore);
+            // diamondBot(ablyCore);
+            // rangeBot(ablyCore);
+            // cryptoCrashBot(ablyCore);
+            // rockBot(ablyCore)
+            // startTrenballGameLoop(ablyCore).catch((e) =>
+            //   console.error("[trenball] failed to start loop:", e?.message || e)
+            // );
+            // startFastCrashGameLoop(ablyCore).catch((e) =>
+            //   console.error("[fastcrash] failed to start loop:", e?.message || e)
+            // );
+            // tarotBot(ablyCore);
+            // getUserStatusChannel(ablyCore);
+            // startBetEngine(ablyCore, 0);
+            // startBetEngine(ablyCore, 1);
+            // startBetEngine(ablyCore, 2);
 
         });
-        whenAblyReady(ablyFinance, "Finance", () => {
+        ablyFinance.connection.once("connected", () => {
+
+            console.log("💰 Finance Ably connected");
+
             // confirmDepositEngine(ablyFinance);
             // tronEngine(ablyFinance);
             // startPartnerDepositCron(ablyFinance);
@@ -156,11 +134,14 @@ connectDB()
         ========================================
         */
 
-        whenAblyReady(ablyCrashGames, "Crash games", () => {
-            rocketBot(ablyCrashGames);
-            jokerCrashBot(ablyCrashGames);
+        ablyCrashGames.connection.once("connected", () => {
+
+            console.log("🎯 Crash Games Ably connected");
+
+            // rocketBot(ablyCrashGames);
+            // jokerCrashBot(ablyCrashGames);
             pumpingBot(ablyCrashGames);
-            wheelBot(ablyCrashGames);
+            // wheelBot(ablyCrashGames);
             /** Wheel live feed uses `wheelResult` / `WHEEL_RESULT` on core Ably (see `wheelController` / client hook). */
         });
 
@@ -170,14 +151,16 @@ connectDB()
         ========================================
         */
 
-        whenAblyReady(ablyDiceGames, "Dice games", () => {
-            rubicBot(ablyDiceGames);
-            coinFlipBot(ablyDiceGames);
-            cardGameBot(ablyDiceGames);
-            aToZBot(ablyDiceGames);
-            twistBot(ablyDiceGames);
-            kenoBot(ablyDiceGames);
-            threeNumbersBot(ablyDiceGames);
+        ablyDiceGames.connection.once("connected", () => {
+            console.log("🎲 Dice Games Ably connected");
+
+            // rubicBot(ablyDiceGames);
+            // coinFlipBot(ablyDiceGames);
+            // cardGameBot(ablyDiceGames);
+            // aToZBot(ablyDiceGames);
+            // twistBot(ablyDiceGames);
+            // kenoBot(ablyDiceGames);
+            // threeNumbersBot(ablyDiceGames);
         });
 
         /*
@@ -186,20 +169,23 @@ connectDB()
         ========================================
         */
 
-        whenAblyReady(ablyMiningGames, "Mining games", () => {
-            miningBot(ablyMiningGames);
-            fishingBot(ablyMiningGames);
-            cocoBot(ablyMiningGames);
-            alphaTreeBot(ablyMiningGames);
-            doveBot(ablyMiningGames);
-            minesBot(ablyMiningGames);
-            plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
-            hashDiceBot(ablyMiningGames).catch((e) => console.error("[hashDiceBot] start:", e?.message || e));
-            startGravityGameLoop(ablyMiningGames);
-            setCloudSpreadAbly(ablyMiningGames);
-            cloudSpreadBot().catch(console.error);
-            startDoubleGameLoop(ablyMiningGames);
-            snakeBot(ablyMiningGames);
+        ablyMiningGames.connection.once("connected", () => {
+
+            console.log("⛏️ Mining Games Ably connected");
+
+            // miningBot(ablyMiningGames);
+            // fishingBot(ablyMiningGames);
+            // cocoBot(ablyMiningGames);
+            // alphaTreeBot(ablyMiningGames);
+            // doveBot(ablyMiningGames);
+            // minesBot(ablyMiningGames);
+            // plinkoBot(ablyMiningGames).catch((e) => console.error("[plinkoBot] start:", e?.message || e));
+            // hashDiceBot(ablyMiningGames).catch((e) => console.error("[hashDiceBot] start:", e?.message || e));
+            // startGravityGameLoop(ablyMiningGames);
+            // setCloudSpreadAbly(ablyMiningGames);
+            // cloudSpreadBot().catch(console.error);
+            // startDoubleGameLoop(ablyMiningGames);
+            // snakeBot(ablyMiningGames);
         });
 
         /*
