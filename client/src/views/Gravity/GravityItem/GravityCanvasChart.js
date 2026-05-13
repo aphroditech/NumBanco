@@ -306,6 +306,36 @@ export default React.memo(function GravityUltimateChartCanvas({
       ctx.fillStyle = endpointColor;
       ctx.fill();
 
+      // Show the very first graph value (start point) so users can compare start vs current.
+      const firstX = getX(first.time);
+      const firstY = getY(first.price);
+      const firstValue = Number(first.price).toFixed(2);
+      const startColor = "#8ea2b5";
+
+      ctx.beginPath();
+      ctx.arc(firstX, firstY, 2.8, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(firstX, firstY, 1.3, 0, Math.PI * 2);
+      ctx.fillStyle = startColor;
+      ctx.fill();
+
+      ctx.save();
+      ctx.font = "700 11px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.textBaseline = "bottom";
+      const startLabel = `Start: ${firstValue}`;
+      const labelPad = 8;
+      const labelW = ctx.measureText(startLabel).width;
+      const minLabelX = labelW / 2 + 6;
+      const maxLabelX = w - labelW / 2 - 6;
+      const labelX = Math.max(minLabelX, Math.min(maxLabelX, firstX + labelPad + labelW / 2));
+      const labelY = Math.max(14, Math.min(h - 6, firstY - 6));
+      ctx.fillText(startLabel, labelX - labelW / 2, labelY);
+      ctx.restore();
+
       // Live value tooltip (canvas-following, no React re-render).
       // Clamp anchor X so translate(-50%, …) doesn't clip at left/right edges (parent overflow:hidden).
       if (tooltipRef.current) {

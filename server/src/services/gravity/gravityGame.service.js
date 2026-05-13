@@ -684,7 +684,7 @@ export async function startGravityGameLoop(ably) {
       await publishPhase("viewing");
     }, delayViewing);
 
-    // Graph end: settle → full state (result) → RESULT_MS → next round (one chain; no orphaned second timer).
+    // Graph end: settle -> publish result -> hold RESULT_MS -> advance round.
     const delaySettleAndAdvance = Math.max(0, startAtMs + BETTING_MS + VIEWING_MS - Date.now());
     setTimeout(async () => {
       try {
@@ -692,9 +692,11 @@ export async function startGravityGameLoop(ably) {
         lastBroadcastPhase = "result";
         await settleRound(ably);
         await publish(ably, EVENT_STATE, await getGravityStateSnapshot());
-        // if (RESULT_MS > 0) {
-        //   await new Promise((r) => setTimeout(r, RESULT_MS));
-        // } // No longer needed: client handles result phase.
+        // Keep result visible on the server for the configured result window.
+        // This guarantees all clients see the same 3s result phase before next round.
+        if (RESULT_MS > 0) {
+          await new Promise((r) => setTimeout(r, RESULT_MS));
+        }
         await closeGravityRoundAndAdvance(roundIdForTimers, roundDocIdStr);
       } catch (e) {
         console.error("[gravityGame] settle/advance error:", e?.message || e);

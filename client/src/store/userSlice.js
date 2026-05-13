@@ -28,8 +28,7 @@ const initialState = {
         cardGameUsers: 0,
         tarotUsers: 0,
         hashDiceUsers: 0,
-        totalActiveUsers: 0,
-        fastcrashUsers: 0,
+        totalActiveUsers: 0
     },
     lootAvailable: false,
     lootRemainingMs: 0

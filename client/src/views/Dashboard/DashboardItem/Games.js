@@ -20,6 +20,7 @@ import tierC from "assets/img/Games/tierC.jpg";
 import rubic from "assets/img/Games/dice5.jpg";
 import pumping from "assets/img/Games/pumping.jpg";
 import gravity from "assets/img/Games/gravity.jpg";
+import cloudSpread from "assets/img/Games/gravity.jpg";
 import dove from "assets/img/Games/dove.jpg"
 import coco from "assets/img/Games/coco.jpg"
 import jackal from "assets/img/Games/jackal.jpg"
@@ -47,9 +48,6 @@ import range from "assets/img/Games/range.jpg"
 import cryptoCrash from "assets/img/Games/cryptoCrash.jpg"
 import tarot from "assets/img/Games/tarot.jpg"
 import hashDice from "assets/img/Games/hash.jpg"
-import rock from "assets/img/Games/rock.jpg"
-import fastCrash from "assets/img/Games/fast.jpg"
-
 
 const DEFAULT_DISPLAY_TICK_MS = 3000;
 const DISPLAY_RANGE_ABOVE_BASE = 10;
@@ -70,7 +68,6 @@ const DASHBOARD_GAMES = [
     { img: doubleGame, name: "Double", path: "/game/double", reduxKey: "doubleUsers", tickMs: 5800 },
     { img: plinko, name: "Plinko", path: "/game/plinko", reduxKey: "plinkoUsers", tickMs: 5400 },
     { img: cloud, name: "Cloud Spread", path: "/game/cloud-spread", reduxKey: "cloudSpreadUsers", tickMs: 6200 },
-    { img: rock, name: "Rock", path: "/game/rock", reduxKey: "rockUsers", tickMs: 3600 },
     { img: dove, name: "LUCKY HOP", path: "/game/dove", reduxKey: "doveUsers", tickMs: 5200 },
     { img: dice, name: "Dice", path: "/game/dice", reduxKey: "diceUsers", tickMs: 5200 },
     { img: hashDice, name: "Hash Dice", path: "/game/hash-dice", reduxKey: "hashDiceUsers", tickMs: 5300 },
@@ -84,13 +81,12 @@ const DASHBOARD_GAMES = [
     { img: twist, name: "Twist", path: "/game/twist", reduxKey: "twistUsers", tickMs: 5600 },
     { img: climb, name: "Climb", path: "/game/climb", reduxKey: "climbUsers", tickMs: 5200 },
     { img: trenballImg, name: "PulseCrash", path: "/game/trenball", reduxKey: "trenballUsers", tickMs: 4000 },
-    { img: hashDice, name: "Hash Dice", path: "/game/hash-dice", reduxKey: "hashDiceUsers", tickMs: 4000 },
+    { img: hashDice, name: "Fast Crash", path: "/game/fast-crash", reduxKey: "fastcrashUsers", tickMs: 4000 },
     { img: diamond, name: "Diamond", path: "/game/diamond", reduxKey: "diamondUsers", tickMs: 5100 },
     { img: alphaTree, name: "Alpha Tree", path: "/game/alpha-tree", reduxKey: "alphaTreeUsers", tickMs: 9900 },
     { img: digits, name: "Digits", path: "/game/digits", reduxKey: "aToZUsers", tickMs: 3600 },
     { img: coinImage, name: "Coin", path: "/game/coin", reduxKey: "coinUsers", tickMs: 3600 },
     { img: tarot, name: "Tarot", path: "/game/tarot", reduxKey: "tarotUsers", tickMs: 3600 },
-    { img: fastCrash, name: "Fast Crash", path: "/game/fast-crash", reduxKey: "fastcrashUsers", tickMs: 3600 },
 
 ];
 
